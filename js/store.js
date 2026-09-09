@@ -33,11 +33,22 @@ var Store = (function () {
   ];
 
   /* ---------- דרגות בהיררכיית הצוות ---------- */
+  /* המזהים קבועים ואין לשנותם — רשומות צוות קיימות מפנות אליהם */
   var STAFF_LEVELS = [
-    { id: 'lead',      name: 'גננת / מנהלת',  icon: '👩‍🏫', tone: 'purple', weight: 3 },
-    { id: 'assistant', name: 'סייעת',          icon: '🧑‍🍼', tone: 'pink',   weight: 2 },
-    { id: 'aide',      name: 'מטפלת / עוזרת',  icon: '🤱',   tone: 'green',  weight: 2 },
-    { id: 'external',  name: 'מורה לחוג',      icon: '🎵',   tone: 'blue',   weight: 1 }
+    { id: 'manager',    name: 'מנהלת',              icon: '👩‍💼', tone: 'peach',  weight: 4 },
+    { id: 'lead',       name: 'גננת',               icon: '👩‍🏫', tone: 'purple', weight: 3 },
+    { id: 'assistant',  name: 'סייעת',              icon: '🧑‍🍼', tone: 'pink',   weight: 2 },
+    { id: 'aide',       name: 'מטפלת / עוזרת',      icon: '🤱',   tone: 'green',  weight: 2 },
+    { id: 'paramedic',  name: 'מטפל/ת פרא-רפואי',   icon: '🩺',   tone: 'mint',   weight: 2 },
+    { id: 'external',   name: 'מורה לחוג',          icon: '🎵',   tone: 'blue',   weight: 1 },
+    { id: 'volunteer',  name: 'מתנדב/ת',            icon: '🤝',   tone: 'yellow', weight: 1 }
+  ];
+
+  /* ---------- הצעות לשדה התפקיד (טקסט חופשי) ---------- */
+  var STAFF_ROLES = [
+    'מנהלת', 'גננת', 'סייעת', 'מטפלת', 'אב/אם בית',
+    'מטפל/ת פרא-רפואי', 'קלינאי/ת תקשורת', 'מרפא/ה בעיסוק', 'פיזיותרפיסט/ית',
+    'מורה לחוג', 'מתנדב/ת'
   ];
 
   /* ---------- שנת לימודים ברירת מחדל ---------- */
@@ -274,6 +285,7 @@ var Store = (function () {
     PAY_METHODS: PAY_METHODS,
     AUDIENCES: AUDIENCES,
     STAFF_LEVELS: STAFF_LEVELS,
+    STAFF_ROLES: STAFF_ROLES,
     get state() { return state; },
     load: load, save: save, reset: reset,
     uid: uid, list: list, find: find, add: add, update: update, remove: remove,

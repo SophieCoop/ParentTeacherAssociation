@@ -174,7 +174,16 @@ var UI = (function () {
       if (f.max !== undefined) extra += ' max="' + f.max + '"';
       if (f.step !== undefined) extra += ' step="' + f.step + '"';
       if (f.type === 'number') extra += ' inputmode="decimal"';
-      html = '<input class="input" type="' + (f.type || 'text') + '" id="' + id + '" name="' + esc(f.name) + '" value="' + esc(val) + '"' + ph + req + extra + '>';
+      // רשימת הצעות לשדה טקסט חופשי — מציעה בלי להגביל
+      var list = '';
+      if (f.suggestions && f.suggestions.length) {
+        var listId = id + '-list';
+        extra += ' list="' + listId + '"';
+        list = '<datalist id="' + listId + '">' +
+          f.suggestions.map(function (o) { return '<option value="' + esc(o) + '"></option>'; }).join('') +
+          '</datalist>';
+      }
+      html = '<input class="input" type="' + (f.type || 'text') + '" id="' + id + '" name="' + esc(f.name) + '" value="' + esc(val) + '"' + ph + req + extra + '>' + list;
     }
 
     return '<div class="field"' + (f.half ? ' style="margin-bottom:0"' : '') + '>' +

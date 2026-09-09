@@ -69,7 +69,8 @@ Views.staff = (function () {
         { name: 'name', label: 'שם מלא', value: t.name, required: true, placeholder: 'הדס כהן' },
         { name: 'level', label: 'דרגה בהיררכיה', type: 'chips', value: t.level,
           options: Store.STAFF_LEVELS.map(function (l) { return { value: l.id, label: l.name, icon: l.icon }; }) },
-        { name: 'role', label: 'תפקיד', value: t.role, placeholder: 'גננת / סייעת / מטפלת' },
+        { name: 'role', label: 'תפקיד', value: t.role, placeholder: 'גננת / סייעת / מטפלת',
+          suggestions: Store.STAFF_ROLES, hint: 'אפשר לבחור מהרשימה או לכתוב תפקיד חופשי' },
         { name: 'phone', label: 'טלפון', type: 'tel', value: t.phone, placeholder: '050-1234567', half: true },
         { name: 'birthDate', label: 'יום הולדת', type: 'date', value: t.birthDate, half: true }
       ],
