@@ -106,4 +106,9 @@ var App = (function () {
   };
 })();
 
-document.addEventListener('DOMContentLoaded', App.init);
+/* הפעלה — עמידה גם במצב שבו הסקריפט נטען אחרי שהמסמך כבר מוכן */
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', App.init);
+} else {
+  App.init();
+}
