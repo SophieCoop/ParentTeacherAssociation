@@ -139,13 +139,26 @@ var Cloud = (function () {
     }).then(function (d) { saveSession(d); });
   }
 
+  /* האם יש במכשיר נתונים אמיתיים שעוד לא הועלו לענן?
+     שינויים שנעשו לפני ההתחברות אינם מסומנים כ"ממתינים", ובלי הבדיקה
+     הזו התחברות ראשונה הייתה מאמצת את גרסת הענן ומוחקת אותם בשקט. */
+  function hasLocalContent() {
+    var st = Store.state;
+    var lists = ['children', 'staff', 'budgetItems', 'payments', 'expenses', 'ideas', 'events'];
+    for (var i = 0; i < lists.length; i++) {
+      if ((st[lists[i]] || []).length) return true;
+    }
+    return !!(st.gan && st.gan.name);
+  }
+
   /* ---------- התחברות ---------- */
   function signIn(email, password) {
     return api('/auth/v1/token?grant_type=password', {
       method: 'POST', auth: false, body: { email: email, password: password }
     }).then(function (d) {
       saveSession(d);
-      meta.lastServerAt = null;   // מכשיר חדש — מושכים מהענן מאפס
+      meta.lastServerAt = null;          // מכשיר חדש — משווים מול הענן מאפס
+      meta.dirty = hasLocalContent();    // יש נתונים מקומיים? הם לא ייעלמו בשקט
       saveMeta();
       return sync(true);
     });
@@ -157,7 +170,7 @@ var Cloud = (function () {
     }).then(function (d) {
       if (d && d.access_token) {
         saveSession(d);
-        meta.dirty = true;        // מה שכבר קיים במכשיר עוד לא הועלה
+        meta.dirty = hasLocalContent();   // מה שכבר קיים במכשיר עוד לא הועלה
         saveMeta();
         return sync(true).then(function () { return { confirmed: true }; });
       }
