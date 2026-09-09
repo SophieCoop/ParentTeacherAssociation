@@ -64,6 +64,41 @@ Views.budget = (function () {
   }
 
   /* ---------- לשונית: סעיפי תקציב ---------- */
+
+  /* הרשימה מחולקת לפי קהל היעד, עם קו הפרדה וסכום ביניים לכל קבוצה */
+  var GROUPS = [
+    { id: 'children',  icon: '🧒',    name: 'מתנות לילדים' },
+    { id: 'staff_edu', icon: '👩‍🏫',  name: 'מתנות לצוות החינוכי' },
+    { id: '',          icon: '💰',    name: 'סעיפים כלליים' }
+  ];
+
+  function groupHead(group, sum, count) {
+    return '<div class="group-head">' +
+      '<span class="g-label">' + group.icon + ' ' + UI.esc(group.name) + '</span>' +
+      '<span class="g-line"></span>' +
+      '<span class="g-sum">' + count + (count === 1 ? ' סעיף' : ' סעיפים') + ' · ' + UI.money(sum) + '</span>' +
+      '</div>';
+  }
+
+  function itemRow(st, b, total) {
+    var cat = Store.category(b.categoryId);
+    var amount = Calc.itemAmount(st, b);
+    var share = total > 0 ? (amount / total) * 100 : 0;
+    var per = b.audience
+      ? UI.money(b.perPerson) + ' × ' + Calc.audienceLabel(b.audience, Calc.audienceCount(st, b.audience))
+      : '';
+    return '<div class="row" data-action="budget-edit" data-id="' + b.id + '" style="background:' + UI.toneVar(cat.tone) + '55">' +
+      '<div class="r-ico" style="background:#fff">' + cat.icon + '</div>' +
+      '<div class="r-body">' +
+        '<div class="r-name">' + UI.esc(b.title || cat.name) + '</div>' +
+        '<div class="r-sub" style="white-space:normal">' + (per ? per + ' · ' : '') + UI.esc(cat.name) +
+          (b.date ? ' · 🗓 ' + UI.dateShort(b.date) : '') + '</div>' +
+      '</div>' +
+      '<div class="r-end"><div class="r-amount">' + UI.money(amount) + '</div>' +
+      '<div class="r-pct">' + share.toFixed(1) + '%</div></div>' +
+      '</div>';
+  }
+
   function tabItems() {
     var st = Store.state;
     var items = st.budgetItems.slice().sort(function (a, b) {
@@ -81,26 +116,15 @@ Views.budget = (function () {
       });
     }
 
-    html += items.map(function (b) {
-      var cat = Store.category(b.categoryId);
-      var amount = Calc.itemAmount(st, b);
-      var share = total > 0 ? (amount / total) * 100 : 0;
-      var per = b.audience
-        ? UI.money(b.perPerson) + ' × ' + Calc.audienceLabel(b.audience, Calc.audienceCount(st, b.audience))
-        : '';
-      return '<div class="row" data-action="budget-edit" data-id="' + b.id + '" style="background:' + UI.toneVar(cat.tone) + '55">' +
-        '<div class="r-ico" style="background:#fff">' + cat.icon + '</div>' +
-        '<div class="r-body">' +
-          '<div class="r-name">' + UI.esc(b.title || cat.name) + '</div>' +
-          '<div class="r-sub">' + (per ? per + ' · ' : '') + UI.esc(cat.name) +
-            (b.date ? ' · 🗓 ' + UI.dateShort(b.date) : '') + '</div>' +
-        '</div>' +
-        '<div class="r-end"><div class="r-amount">' + UI.money(amount) + '</div>' +
-        '<div class="r-pct">' + share.toFixed(1) + '%</div></div>' +
-        '</div>';
-    }).join('');
+    GROUPS.forEach(function (g) {
+      var group = items.filter(function (b) { return (b.audience || '') === g.id; });
+      if (!group.length) return;
+      var sum = group.reduce(function (acc, b) { return acc + Calc.itemAmount(st, b); }, 0);
+      html += groupHead(g, sum, group.length);
+      html += group.map(function (b) { return itemRow(st, b, total); }).join('');
+    });
 
-    html += '<div class="row" style="background:var(--primary-soft);box-shadow:none;margin-top:14px">' +
+    html += '<div class="row" style="background:var(--primary-soft);box-shadow:none;margin-top:18px">' +
       '<div class="r-ico" style="background:#fff">💰</div>' +
       '<div class="r-body"><div class="r-name">סה״כ כל הקטגוריות</div>' +
       '<div class="r-sub">' + items.length + ' סעיפים</div></div>' +

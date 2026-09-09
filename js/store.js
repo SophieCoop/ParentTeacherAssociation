@@ -96,6 +96,26 @@ var Store = (function () {
     }
   }
 
+  /* שמות קודמים של קטגוריות ברירת המחדל.
+     שם ששונה בגרסה חדשה מתעדכן גם אצל מי שכבר יש לו נתונים שמורים —
+     אבל רק אם הוא עדיין נושא שם ברירת מחדל ישן, כדי לא לדרוס
+     קטגוריה שהמשתמש שינה בעצמו. */
+  var RENAMED_CATEGORIES = {
+    'cat-holiday': ['מתנה לחג לילדים ולצוות', 'מתנות לחג'],
+    'cat-yearend': ['מתנת סוף שנה לילדים ולצוות', 'מתנות סוף שנה']
+  };
+
+  function migrateCategories(categories) {
+    DEFAULT_CATEGORIES.forEach(function (def) {
+      var legacy = RENAMED_CATEGORIES[def.id];
+      if (!legacy) return;
+      categories.forEach(function (c) {
+        if (c.id === def.id && legacy.indexOf(c.name) > -1) c.name = def.name;
+      });
+    });
+    return categories;
+  }
+
   function migrate(data) {
     var base = blankState();
     Object.keys(base).forEach(function (k) {
@@ -105,6 +125,7 @@ var Store = (function () {
     data.gan = Object.assign({}, base.gan, data.gan || {});
     data.settings = Object.assign({}, base.settings, data.settings || {});
     if (!Array.isArray(data.categories) || !data.categories.length) data.categories = base.categories;
+    else migrateCategories(data.categories);
     return data;
   }
 
