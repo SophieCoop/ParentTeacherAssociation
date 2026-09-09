@@ -190,7 +190,7 @@ ul{margin:0;padding:0;list-style:none}
 }
 .input::placeholder{color:#BFB8CC}
 .input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(155,140,224,.16)}
-select.input{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:left 18px top 50%,left 13px top 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-inline-start:34px}
+select.input{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:left 13px top 50%,left 18px top 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-inline-start:34px}
 textarea.input{min-height:78px;resize:vertical}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 

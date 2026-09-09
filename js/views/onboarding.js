@@ -41,10 +41,12 @@ Views.onboarding = (function () {
   }
 
   function footer(n, nextLabel) {
+    // בשלב האחרון אין על מה לדלג — כפתור אחד בלבד, אחרת שני הכפתורים
+    // אומרים את אותו הדבר
     return '<div class="mt">' +
       '<button class="btn" data-action="wiz-next">' + UI.esc(nextLabel || 'המשך') + '</button>' +
-      '<button class="btn soft" style="margin-top:9px" data-action="wiz-skip">' +
-      (n === 4 ? 'סיום — כניסה לאפליקציה' : 'דילוג על השלב הזה') + '</button>' +
+      (n === 4 ? '' :
+        '<button class="btn soft" style="margin-top:9px" data-action="wiz-skip">דילוג על השלב הזה</button>') +
       '</div>';
   }
 
