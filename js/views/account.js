@@ -91,8 +91,25 @@ Views.account = (function () {
             UI.modal({
               title: 'כמעט סיימנו 📬',
               subtitle: 'שלחנו מייל אישור לכתובת ' + v.email,
-              body: '<p class="small">צריך ללחוץ על הקישור במייל כדי להפעיל את החשבון, ואז לחזור לכאן ולהתחבר.</p>' +
-                    '<button class="btn mt" data-action="acc-signin">להתחברות</button>'
+              body: '<p class="small">צריך ללחוץ על הקישור שבמייל כדי להפעיל את החשבון.</p>' +
+                    '<div class="note"><div class="n-ico">💡</div><div>' +
+                    '<b>הקישור ייפתח בעמוד ריק — זה תקין.</b>' +
+                    'האישור מתבצע בלחיצה עצמה, גם אם לא נפתח שום דבר. אחרי הלחיצה חוזרים לכאן.' +
+                    '</div></div>' +
+                    '<button class="btn mt js-retry">כבר אישרתי — התחברות</button>' +
+                    '<button class="btn soft" style="margin-top:9px" data-action="acc-signin">התחברות ידנית</button>',
+              onMount: function (root2, close2) {
+                root2.querySelector('.js-retry').addEventListener('click', function () {
+                  UI.toast('מתחבר…');
+                  Cloud.signIn(v.email, v.password).then(function () {
+                    close2();
+                    App.render();
+                    UI.toast('מחוברים ✓ הנתונים מסונכרנים');
+                  }, function (err) {
+                    UI.toast(err && err.message ? err.message : 'ההתחברות נכשלה');
+                  });
+                });
+              }
             });
             return;
           }
