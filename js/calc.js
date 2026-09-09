@@ -50,14 +50,10 @@ var Calc = (function () {
 
   /* ---------- קהל יעד של סעיף תקציב ---------- */
   /* סעיף יכול להיות סכום כולל, או סכום לאדם שמוכפל במספר הילדים
-     או אנשי הצוות החינוכי. כשמתווסף ילד לרשימה, הסעיף מתעדכן מאליו. */
+     או אנשי הצוות. כשמתווסף ילד לרשימה, הסעיף מתעדכן מאליו. */
   var AUDIENCE_COUNTS = {
-    children: function (state) { return (state.children || []).length; },
-    staff_edu: function (state) {
-      return (state.staff || []).filter(function (t) {
-        return Store.staffLevel(t.level).edu === true;
-      }).length;
-    }
+    children:  function (state) { return (state.children || []).length; },
+    staff_edu: function (state) { return (state.staff || []).length; }
   };
 
   function audienceCount(state, audience) {
@@ -67,7 +63,7 @@ var Calc = (function () {
 
   function audienceLabel(audience, count) {
     if (audience === 'children')  return count + (count === 1 ? ' ילד/ה' : ' ילדים');
-    if (audience === 'staff_edu') return count + (count === 1 ? ' איש/ת צוות' : ' אנשי צוות חינוכי');
+    if (audience === 'staff_edu') return count + (count === 1 ? ' איש/ת צוות' : ' אנשי צוות');
     return '';
   }
 

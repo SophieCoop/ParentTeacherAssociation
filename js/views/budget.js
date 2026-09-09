@@ -214,7 +214,7 @@ Views.budget = (function () {
       return '<div class="note" style="background:#FDF0F2;margin:0"><div class="n-ico">⚠️</div><div>' +
         (audience === 'children'
           ? 'אין ילדים ברשימה — הוסיפו ילדים כדי שהסכום יחושב'
-          : 'אין אנשי צוות חינוכי ברשימה — הוסיפו צוות כדי שהסכום יחושב') +
+          : 'אין אנשי צוות ברשימה — הוסיפו צוות כדי שהסכום יחושב') +
         '</div></div>';
     }
 
