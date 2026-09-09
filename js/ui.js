@@ -160,7 +160,7 @@ var UI = (function () {
     } else if (f.type === 'textarea') {
       html = '<textarea class="input" id="' + id + '" name="' + esc(f.name) + '"' + ph + req + '>' + esc(val) + '</textarea>';
     } else if (f.type === 'checkbox') {
-      return '<div class="field"><label class="flex" style="gap:8px;cursor:pointer">' +
+      return '<div class="field" id="field-' + esc(f.name) + '"><label class="flex" style="gap:8px;cursor:pointer">' +
         '<input type="checkbox" id="' + id + '" name="' + esc(f.name) + '"' + (val ? ' checked' : '') + '>' +
         '<span>' + esc(f.label) + '</span></label>' +
         (f.hint ? '<div class="hint">' + esc(f.hint) + '</div>' : '') + '</div>';
@@ -191,7 +191,7 @@ var UI = (function () {
       html = '<input class="input" type="' + (f.type || 'text') + '" id="' + id + '" name="' + esc(f.name) + '" value="' + esc(val) + '"' + ph + req + extra + '>' + list;
     }
 
-    return '<div class="field"' + (f.half ? ' style="margin-bottom:0"' : '') + '>' +
+    return '<div class="field" id="field-' + esc(f.name) + '"' + (f.half ? ' style="margin-bottom:0"' : '') + '>' +
       '<label for="' + id + '">' + esc(f.label) + (f.required ? ' *' : '') + '</label>' +
       html +
       (f.hint ? '<div class="hint">' + esc(f.hint) + '</div>' : '') +

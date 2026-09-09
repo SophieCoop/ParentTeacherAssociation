@@ -90,6 +90,7 @@ Views.budget = (function () {
       var bits = [UI.money(bd.rate)];
       if (bd.perPerson) bits.push('× ' + Calc.audienceLabel(bd.audience, bd.count));
       if (bd.monthly)   bits.push('× ' + bd.months + ' ח׳');
+      if (bd.customWindow) bits.push('(' + UI.dateDayMonth(b.startDate) + '–' + UI.dateDayMonth(b.endDate) + ')');
       per = bits.join(' ');
     }
     return '<div class="row" data-action="budget-edit" data-id="' + b.id + '" style="background:' + UI.toneVar(cat.tone) + '55">' +
@@ -250,7 +251,8 @@ Views.budget = (function () {
   function calcLine(draft) {
     var st = Store.state;
     var bd = Calc.itemBreakdown(st, {
-      audience: draft.audience, basis: draft.basis, period: draft.period, rate: draft.rate
+      audience: draft.audience, basis: draft.basis, period: draft.period, rate: draft.rate,
+      startDate: draft.startDate, endDate: draft.endDate
     });
 
     if (bd.perPerson && bd.count === 0) {
@@ -263,7 +265,7 @@ Views.budget = (function () {
 
     var parts = [UI.money(bd.rate) + (bd.perPerson ? ' לאדם' : '')];
     if (bd.perPerson) parts.push('× ' + Calc.audienceLabel(bd.audience, bd.count));
-    if (bd.monthly)   parts.push('× ' + bd.months + ' חודשים');
+    if (bd.monthly)   parts.push('× ' + bd.months + ' חודשים' + (bd.customWindow ? ' של פעילות' : ''));
 
     var units = Calc.totalShareUnits(st);
     var perParent = units > 0 ? bd.total / units : 0;
@@ -288,7 +290,8 @@ Views.budget = (function () {
   function itemForm(item) {
     var isNew = !item;
     item = item || { categoryId: Store.state.categories[0].id, title: '', date: '', note: '',
-                     audience: '', basis: 'total', period: 'year', rate: '' };
+                     audience: '', basis: 'total', period: 'year', rate: '',
+                     startDate: '', endDate: '' };
 
     var bd = Calc.itemBreakdown(Store.state, item);
     var startAudience = item.audience || '';
@@ -309,10 +312,13 @@ Views.budget = (function () {
           hint: '"לאדם" מוכפל במספר הילדים או אנשי הצוות · "לכולם" הוא סכום אחד לכל הקבוצה' },
         { name: 'period', label: 'תדירות', type: 'chips', value: startPeriod, options: PERIODS,
           hint: '"לחודש" מוכפל במספר חודשי שנת הלימודים' },
+        { name: 'startDate', label: 'תחילת הפעילות', type: 'date', value: item.startDate || '', half: true },
+        { name: 'endDate', label: 'סיום הפעילות', type: 'date', value: item.endDate || '', half: true },
         { name: 'amount', label: amountLabel(startBasis, startPeriod), type: 'number',
           value: startRate, placeholder: '0', step: '1', min: 0 },
         { name: 'calc', type: 'html',
-          html: calcLine({ audience: startAudience, basis: startBasis, period: startPeriod, rate: startRate }) },
+          html: calcLine({ audience: startAudience, basis: startBasis, period: startPeriod, rate: startRate,
+                           startDate: item.startDate || '', endDate: item.endDate || '' }) },
         { name: 'date', label: 'תאריך יעד', type: 'date', value: item.date,
           hint: 'למתי צריך להביא את המתנה / לבצע את ההוצאה' },
         { name: 'note', label: 'הערות', type: 'textarea', value: item.note, placeholder: 'אופציונלי' }
@@ -332,9 +338,24 @@ Views.budget = (function () {
 
         var period = root.querySelector('#f-period').value;
         var rate = root.querySelector('#f-amount').value;
+
+        // חלון הפעילות רלוונטי רק לסעיף חודשי
+        var monthly = period === 'month';
+        ['startDate', 'endDate'].forEach(function (f) {
+          var box = root.querySelector('#field-' + f);
+          if (box) box.style.display = monthly ? '' : 'none';
+        });
+        var grid = root.querySelector('#field-startDate');
+        if (grid && grid.parentNode && grid.parentNode.classList.contains('grid-2')) {
+          grid.parentNode.style.display = monthly ? '' : 'none';
+        }
+
         root.querySelector('label[for="f-amount"]').textContent = amountLabel(basis, period);
-        root.querySelector('#f-calc').innerHTML =
-          calcLine({ audience: audience, basis: basis, period: period, rate: rate });
+        root.querySelector('#f-calc').innerHTML = calcLine({
+          audience: audience, basis: basis, period: period, rate: rate,
+          startDate: root.querySelector('#f-startDate').value,
+          endDate: root.querySelector('#f-endDate').value
+        });
       },
 
       onSubmit: function (v) {
@@ -342,10 +363,13 @@ Views.budget = (function () {
         var basis = (!audience && v.basis === 'per_person') ? 'total' : (v.basis || 'total');
         var period = v.period || 'year';
         var rate = Calc.num(v.amount);
-        var draft = { audience: audience, basis: basis, period: period, rate: rate };
+        var monthly = period === 'month';
+        var draft = { audience: audience, basis: basis, period: period, rate: rate,
+                      startDate: monthly ? v.startDate : '', endDate: monthly ? v.endDate : '' };
         var data = {
           categoryId: v.categoryId, title: v.title, date: v.date, note: v.note,
           audience: audience, basis: basis, period: period, rate: rate,
+          startDate: draft.startDate, endDate: draft.endDate,
           // הסכום השנתי נשמר גם הוא, ומחושב מחדש בתצוגה לפי הנתונים העדכניים
           amount: Calc.itemAmount(Store.state, draft)
         };

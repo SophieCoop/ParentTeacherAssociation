@@ -133,22 +133,26 @@ Views.collection = (function () {
         : '<p class="muted small mb0">עוד לא נרשמו תשלומים.</p>') +
       '</div>';
 
-    /* מחשבון פריסה לתשלומים */
-    var calcAmount = App.vs('instAmount', Math.round(perFull) || 0);
-    var calcCount = App.vs('instCount', 3);
+    /* מחשבון פריסה לתשלומים.
+       הסכום עוקב אחרי הסכום לילד במימון מלא, אלא אם המשתמש הקליד סכום משלו. */
+    var live = Math.round(perFull);
+    var edited = App.vs('instEdited', false);
+    var calcAmount = edited ? Calc.num(App.vs('instAmount', live)) : live;
+    var calcCount = Math.max(1, Calc.num(App.vs('instCount', 3)) || 1);
+
     html += '<div class="card">' +
-      '<div class="card-title"><h2>מחשבון פריסה לתשלומים</h2></div>' +
+      '<div class="card-title"><h2>מחשבון פריסה לתשלומים</h2>' +
+        '<button class="btn sm soft" id="inst-reset" data-action="inst-reset"' +
+          (edited && calcAmount !== live ? '' : ' style="display:none"') + '>עדכון ל-' + UI.money(live) + '</button>' +
+      '</div>' +
       '<div class="grid-2">' +
         '<div class="field mb0"><label>סכום כולל (₪)</label>' +
-          '<input class="input" type="number" data-input="inst-amount" value="' + calcAmount + '"></div>' +
+          '<input class="input" type="number" id="inst-amount" data-input="inst-amount" value="' + calcAmount + '"></div>' +
         '<div class="field mb0"><label>מספר תשלומים</label>' +
-          '<input class="input" type="number" min="1" max="12" data-input="inst-count" value="' + calcCount + '"></div>' +
+          '<input class="input" type="number" min="1" max="12" id="inst-count" data-input="inst-count" value="' + calcCount + '"></div>' +
       '</div>' +
-      '<div class="row mt" style="background:var(--primary-soft);box-shadow:none">' +
-        '<div class="r-ico" style="background:#fff">📅</div>' +
-        '<div class="r-body"><div class="r-name">' + UI.money(Math.round((calcAmount / Math.max(1, calcCount)) * 100) / 100) + ' לתשלום</div>' +
-        '<div class="r-sub">' + calcCount + ' תשלומים חודשיים</div></div>' +
-      '</div>' +
+      '<div id="inst-result">' + instResult(calcAmount, calcCount) + '</div>' +
+      (edited ? '' : '<div class="hint">הסכום מתעדכן אוטומטית לפי הסכום לילד במימון מלא</div>') +
       '</div>';
 
     /* ילדים בחישוב יחסי */
@@ -168,6 +172,32 @@ Views.collection = (function () {
     }
 
     return html;
+  }
+
+  function instResult(amount, count) {
+    var per = Math.round((amount / Math.max(1, count)) * 100) / 100;
+    return '<div class="row mt" style="background:var(--primary-soft);box-shadow:none;margin-bottom:0">' +
+      '<div class="r-ico" style="background:#fff">📅</div>' +
+      '<div class="r-body"><div class="r-name">' + UI.money(per) + ' לתשלום</div>' +
+      '<div class="r-sub">' + count + ' תשלומים חודשיים · סה״כ ' + UI.money(amount) + '</div></div>' +
+      '</div>';
+  }
+
+  /* עדכון התוצאה במקום — ציור מחדש של כל העמוד היה גוזל את המיקוד תוך כדי הקלדה */
+  function refreshInstResult() {
+    var a = document.getElementById('inst-amount');
+    var c = document.getElementById('inst-count');
+    var box = document.getElementById('inst-result');
+    if (!a || !c || !box) return;
+    var amount = Calc.num(a.value);
+    box.innerHTML = instResult(amount, Math.max(1, Calc.num(c.value) || 1));
+
+    var live = Math.round(Calc.fullChildShare(Store.state));
+    var reset = document.getElementById('inst-reset');
+    if (reset) {
+      reset.textContent = 'עדכון ל-' + UI.money(live);
+      reset.style.display = (amount !== live) ? '' : 'none';
+    }
   }
 
   function row(label, value) {
@@ -290,8 +320,19 @@ Views.collection = (function () {
         payForm(Store.find('payments', el.getAttribute('data-id')));
       },
       'nav-children': function () { App.setView('children'); },
-      'inst-amount': function (el) { App.setVs('instAmount', Calc.num(el.value)); App.render(); },
-      'inst-count': function (el) { App.setVs('instCount', Math.max(1, Calc.num(el.value) || 1)); App.render(); },
+      'inst-amount': function (el) {
+        App.setVs('instEdited', true);
+        App.setVs('instAmount', Calc.num(el.value));
+        refreshInstResult();
+      },
+      'inst-count': function (el) {
+        App.setVs('instCount', Math.max(1, Calc.num(el.value) || 1));
+        refreshInstResult();
+      },
+      'inst-reset': function () {
+        App.setVs('instEdited', false);
+        App.render();
+      },
       'col-plan': function (el) {
         var c = Store.find('children', el.getAttribute('data-id'));
         if (!c) return;

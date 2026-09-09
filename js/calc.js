@@ -75,6 +75,15 @@ var Calc = (function () {
     return Math.max(1, Math.round(monthsBetween(a, b)));
   }
 
+  /* מספר חודשי הפעילות של סעיף חודשי — לפי חלון הפעילות שלו
+     (למשל חוג שרץ מנובמבר עד מרץ), ואם לא הוגדר — לפי שנת הלימודים */
+  function itemMonths(state, item) {
+    var a = toDate(item && item.startDate);
+    var b = toDate(item && item.endDate);
+    if (a && b && b > a) return Math.max(1, Math.round(monthsBetween(a, b)));
+    return schoolMonths(state.settings);
+  }
+
   /* פירוק סעיף תקציב לגורמי החישוב שלו:
      הסכום שהוקלד × מספר הנפשות (אם הוא לאדם) × מספר החודשים (אם הוא חודשי).
      "סכום לכל הקטגוריה" אינו מוכפל בנפשות — הוא סכום אחד לכל הקבוצה. */
@@ -95,12 +104,13 @@ var Calc = (function () {
     }
 
     var count = perPerson ? audienceCount(state, item.audience) : 1;
-    var months = monthly ? schoolMonths(state.settings) : 1;
+    var months = monthly ? itemMonths(state, item) : 1;
 
     return {
       rate: rate, perPerson: perPerson, monthly: monthly,
       audience: item.audience || '',
       count: count, months: months,
+      customWindow: monthly && !!(toDate(item.startDate) && toDate(item.endDate)),
       total: round2(rate * count * months)
     };
   }
@@ -389,7 +399,8 @@ var Calc = (function () {
     autoSharePercent: autoSharePercent, sharePercent: sharePercent,
     budgetTotal: budgetTotal, budgetByCategory: budgetByCategory,
     audienceCount: audienceCount, audienceLabel: audienceLabel,
-    itemAmount: itemAmount, itemBreakdown: itemBreakdown, schoolMonths: schoolMonths,
+    itemAmount: itemAmount, itemBreakdown: itemBreakdown,
+    schoolMonths: schoolMonths, itemMonths: itemMonths,
     expensesTotal: expensesTotal, expensesByCategory: expensesByCategory,
     paymentsOf: paymentsOf, paidBy: paidBy, collectedTotal: collectedTotal,
     totalShareUnits: totalShareUnits, fullChildShare: fullChildShare,
