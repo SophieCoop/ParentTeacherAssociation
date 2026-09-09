@@ -232,7 +232,7 @@ Views.budget = (function () {
     { value: 'staff_edu', label: 'צוות חינוכי', icon: '👩‍🏫' }
   ];
   var BASES = [
-    { value: 'total',      label: 'לכל הקטגוריה' },
+    { value: 'total',      label: 'לכולם' },
     { value: 'per_person', label: 'לאדם' }
   ];
   var PERIODS = [
@@ -241,7 +241,7 @@ Views.budget = (function () {
   ];
 
   function amountLabel(basis, period) {
-    return 'סכום ' + (basis === 'per_person' ? 'לאדם' : 'לכל הקטגוריה') +
+    return 'סכום ' + (basis === 'per_person' ? 'לאדם' : 'לכולם') +
            ' ' + (period === 'month' ? 'לחודש' : 'לשנה') + ' (₪)';
   }
 
@@ -306,7 +306,7 @@ Views.budget = (function () {
         { name: 'title', label: 'שם הסעיף', value: item.title, placeholder: 'למשל: מתנה לחג' },
         { name: 'audience', label: 'קהל יעד', type: 'chips', value: startAudience, options: AUDIENCES },
         { name: 'basis', label: 'הסכום הוא', type: 'chips', value: startBasis, options: BASES,
-          hint: '"לאדם" מוכפל במספר הילדים או אנשי הצוות · "לכל הקטגוריה" הוא סכום אחד לכל הקבוצה' },
+          hint: '"לאדם" מוכפל במספר הילדים או אנשי הצוות · "לכולם" הוא סכום אחד לכל הקבוצה' },
         { name: 'period', label: 'תדירות', type: 'chips', value: startPeriod, options: PERIODS,
           hint: '"לחודש" מוכפל במספר חודשי שנת הלימודים' },
         { name: 'amount', label: amountLabel(startBasis, startPeriod), type: 'number',
