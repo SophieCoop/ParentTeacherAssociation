@@ -67,13 +67,48 @@ var Calc = (function () {
     return '';
   }
 
-  /* הסכום האפקטיבי של סעיף — מחושב מחדש בכל פעם, כדי שלא ייווצר
-     פער בין הסכום השמור למספר הילדים בפועל */
-  function itemAmount(state, item) {
-    if (item && item.audience && item.perPerson !== '' && item.perPerson !== null && item.perPerson !== undefined) {
-      return num(item.perPerson) * audienceCount(state, item.audience);
+  /* מספר חודשי הפעילות בשנת הלימודים — לפי התאריכים שבהגדרות */
+  function schoolMonths(settings) {
+    var a = toDate(settings && settings.yearStart);
+    var b = toDate(settings && settings.yearEnd);
+    if (!a || !b || b <= a) return 12;
+    return Math.max(1, Math.round(monthsBetween(a, b)));
+  }
+
+  /* פירוק סעיף תקציב לגורמי החישוב שלו:
+     הסכום שהוקלד × מספר הנפשות (אם הוא לאדם) × מספר החודשים (אם הוא חודשי).
+     "סכום לכל הקטגוריה" אינו מוכפל בנפשות — הוא סכום אחד לכל הקבוצה. */
+  function itemBreakdown(state, item) {
+    item = item || {};
+    var legacy = item.basis === undefined && item.period === undefined;
+
+    var rate, perPerson, monthly;
+    if (legacy) {
+      // סעיפים שנשמרו לפני שנוספו בסיס הסכום והתדירות
+      perPerson = !!(item.audience && item.perPerson !== '' && item.perPerson !== null && item.perPerson !== undefined);
+      monthly = false;
+      rate = perPerson ? num(item.perPerson) : num(item.amount);
+    } else {
+      perPerson = item.basis === 'per_person' && !!item.audience;
+      monthly = item.period === 'month';
+      rate = num(item.rate);
     }
-    return num(item && item.amount);
+
+    var count = perPerson ? audienceCount(state, item.audience) : 1;
+    var months = monthly ? schoolMonths(state.settings) : 1;
+
+    return {
+      rate: rate, perPerson: perPerson, monthly: monthly,
+      audience: item.audience || '',
+      count: count, months: months,
+      total: round2(rate * count * months)
+    };
+  }
+
+  /* הסכום השנתי האפקטיבי — מחושב מחדש בכל תצוגה, כדי שלא ייווצר
+     פער בין מה שנשמר למספר הילדים או לאורך השנה בפועל */
+  function itemAmount(state, item) {
+    return itemBreakdown(state, item).total;
   }
 
   /* ---------- תקציב מתוכנן ---------- */
@@ -353,7 +388,8 @@ var Calc = (function () {
     num: num, round2: round2, toDate: toDate,
     autoSharePercent: autoSharePercent, sharePercent: sharePercent,
     budgetTotal: budgetTotal, budgetByCategory: budgetByCategory,
-    audienceCount: audienceCount, audienceLabel: audienceLabel, itemAmount: itemAmount,
+    audienceCount: audienceCount, audienceLabel: audienceLabel,
+    itemAmount: itemAmount, itemBreakdown: itemBreakdown, schoolMonths: schoolMonths,
     expensesTotal: expensesTotal, expensesByCategory: expensesByCategory,
     paymentsOf: paymentsOf, paidBy: paidBy, collectedTotal: collectedTotal,
     totalShareUnits: totalShareUnits, fullChildShare: fullChildShare,

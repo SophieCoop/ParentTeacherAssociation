@@ -84,9 +84,14 @@ Views.budget = (function () {
     var cat = Store.category(b.categoryId);
     var amount = Calc.itemAmount(st, b);
     var share = total > 0 ? (amount / total) * 100 : 0;
-    var per = b.audience
-      ? UI.money(b.perPerson) + ' × ' + Calc.audienceLabel(b.audience, Calc.audienceCount(st, b.audience))
-      : '';
+    var bd = Calc.itemBreakdown(st, b);
+    var per = '';
+    if (bd.perPerson || bd.monthly) {
+      var bits = [UI.money(bd.rate)];
+      if (bd.perPerson) bits.push('× ' + Calc.audienceLabel(bd.audience, bd.count));
+      if (bd.monthly)   bits.push('× ' + bd.months + ' ח׳');
+      per = bits.join(' ');
+    }
     return '<div class="row" data-action="budget-edit" data-id="' + b.id + '" style="background:' + UI.toneVar(cat.tone) + '55">' +
       '<div class="r-ico" style="background:#fff">' + cat.icon + '</div>' +
       '<div class="r-body">' +
@@ -222,81 +227,127 @@ Views.budget = (function () {
   /* ---------- טופס סעיף תקציב ---------- */
 
   var AUDIENCES = [
-    { value: '',          label: 'סכום כולל', icon: '💰' },
-    { value: 'children',  label: 'ילדים',     icon: '🧒' },
+    { value: '',          label: 'כללי',        icon: '💰' },
+    { value: 'children',  label: 'ילדים',       icon: '🧒' },
     { value: 'staff_edu', label: 'צוות חינוכי', icon: '👩‍🏫' }
   ];
+  var BASES = [
+    { value: 'total',      label: 'לכל הקטגוריה' },
+    { value: 'per_person', label: 'לאדם' }
+  ];
+  var PERIODS = [
+    { value: 'year',  label: 'לשנה' },
+    { value: 'month', label: 'לחודש' }
+  ];
 
-  /* שורת החישוב שמתחת לסכום: לאדם × כמות = סה״כ */
-  function calcLine(audience, perPerson) {
-    if (!audience) return '';
+  function amountLabel(basis, period) {
+    return 'סכום ' + (basis === 'per_person' ? 'לאדם' : 'לכל הקטגוריה') +
+           ' ' + (period === 'month' ? 'לחודש' : 'לשנה') + ' (₪)';
+  }
+
+  /* שורת החישוב החיה: מציגה את כל הגורמים ואת התוצאה השנתית,
+     ולצידה כמה הסעיף מוסיף לכל הורה */
+  function calcLine(draft) {
     var st = Store.state;
-    var count = Calc.audienceCount(st, audience);
-    var per = Calc.num(perPerson);
+    var bd = Calc.itemBreakdown(st, {
+      audience: draft.audience, basis: draft.basis, period: draft.period, rate: draft.rate
+    });
 
-    if (count === 0) {
+    if (bd.perPerson && bd.count === 0) {
       return '<div class="note" style="background:#FDF0F2;margin:0"><div class="n-ico">⚠️</div><div>' +
-        (audience === 'children'
+        (draft.audience === 'children'
           ? 'אין ילדים ברשימה — הוסיפו ילדים כדי שהסכום יחושב'
           : 'אין אנשי צוות ברשימה — הוסיפו צוות כדי שהסכום יחושב') +
         '</div></div>';
     }
 
+    var parts = [UI.money(bd.rate) + (bd.perPerson ? ' לאדם' : '')];
+    if (bd.perPerson) parts.push('× ' + Calc.audienceLabel(bd.audience, bd.count));
+    if (bd.monthly)   parts.push('× ' + bd.months + ' חודשים');
+
+    var units = Calc.totalShareUnits(st);
+    var perParent = units > 0 ? bd.total / units : 0;
+
     return '<div class="row" style="box-shadow:none;background:var(--primary-soft);margin:0">' +
-      '<div class="r-body"><div class="small muted">' +
-        UI.money(per) + ' לאדם  ×  ' + Calc.audienceLabel(audience, count) +
-      '</div>' +
-      '<div class="r-name" style="font-size:18px">= ' + UI.money(per * count) + '</div></div>' +
-      '</div>';
+      '<div class="r-body">' +
+        '<div class="small muted" style="white-space:normal">' + parts.join('  ') + '</div>' +
+        '<div class="r-name" style="font-size:18px">= ' + UI.money(bd.total) + ' לשנה</div>' +
+        (units > 0 ? '<div class="small muted">≈ ' + UI.money(perParent) + ' לכל הורה (לילד במימון מלא)</div>' : '') +
+      '</div></div>';
+  }
+
+  /* סימון הצ׳יפ הנבחר כשהערך משתנה מהקוד ולא מלחיצה */
+  function syncChips(root, name, value) {
+    var box = root.querySelector('[data-chips="' + name + '"]');
+    if (!box) return;
+    Array.prototype.forEach.call(box.querySelectorAll('.chip'), function (c) {
+      c.classList.toggle('on', c.getAttribute('data-chip') === value);
+    });
   }
 
   function itemForm(item) {
     var isNew = !item;
-    item = item || { categoryId: Store.state.categories[0].id, title: '', amount: '',
-                     audience: '', perPerson: '', date: '', note: '' };
+    item = item || { categoryId: Store.state.categories[0].id, title: '', date: '', note: '',
+                     audience: '', basis: 'total', period: 'year', rate: '' };
 
+    var bd = Calc.itemBreakdown(Store.state, item);
     var startAudience = item.audience || '';
-    var startAmount = startAudience ? item.perPerson : item.amount;
-
-    function amountLabel(audience) {
-      return audience ? 'סכום לאדם (₪)' : 'סכום מתוכנן (₪)';
-    }
+    var startBasis  = item.basis  || (bd.perPerson ? 'per_person' : 'total');
+    var startPeriod = item.period || 'year';
+    var startRate   = item.rate !== undefined && item.rate !== '' ? item.rate : bd.rate;
 
     UI.formModal({
       title: isNew ? 'סעיף תקציב חדש' : 'עריכת סעיף',
-      subtitle: 'בחרו קטגוריה, קהל יעד, סכום ותאריך יעד',
+      subtitle: 'קטגוריה, קהל יעד, אופן חישוב הסכום ותאריך יעד',
       submitLabel: 'שמירה',
       fields: [
         { name: 'categoryId', label: 'קטגוריה', type: 'select', value: item.categoryId,
           options: catOptions(), required: true },
         { name: 'title', label: 'שם הסעיף', value: item.title, placeholder: 'למשל: מתנה לחג' },
-        { name: 'audience', label: 'קהל יעד', type: 'chips', value: startAudience, options: AUDIENCES,
-          hint: 'בבחירת ילדים או צוות — מקלידים סכום לאדם והמערכת מכפילה בכמות' },
-        { name: 'amount', label: amountLabel(startAudience), type: 'number', value: startAmount,
-          placeholder: '0', step: '1', min: 0 },
-        { name: 'calc', type: 'html', html: calcLine(startAudience, startAmount) },
+        { name: 'audience', label: 'קהל יעד', type: 'chips', value: startAudience, options: AUDIENCES },
+        { name: 'basis', label: 'הסכום הוא', type: 'chips', value: startBasis, options: BASES,
+          hint: '"לאדם" מוכפל במספר הילדים או אנשי הצוות · "לכל הקטגוריה" הוא סכום אחד לכל הקבוצה' },
+        { name: 'period', label: 'תדירות', type: 'chips', value: startPeriod, options: PERIODS,
+          hint: '"לחודש" מוכפל במספר חודשי שנת הלימודים' },
+        { name: 'amount', label: amountLabel(startBasis, startPeriod), type: 'number',
+          value: startRate, placeholder: '0', step: '1', min: 0 },
+        { name: 'calc', type: 'html',
+          html: calcLine({ audience: startAudience, basis: startBasis, period: startPeriod, rate: startRate }) },
         { name: 'date', label: 'תאריך יעד', type: 'date', value: item.date,
           hint: 'למתי צריך להביא את המתנה / לבצע את ההוצאה' },
         { name: 'note', label: 'הערות', type: 'textarea', value: item.note, placeholder: 'אופציונלי' }
       ],
 
-      /* מעדכן את תווית הסכום ואת שורת החישוב תוך כדי הקלדה */
       onFieldChange: function (name, value, root) {
         var audience = root.querySelector('#f-audience').value;
-        var per = root.querySelector('#f-amount').value;
-        root.querySelector('label[for="f-amount"]').textContent = amountLabel(audience);
-        root.querySelector('#f-calc').innerHTML = calcLine(audience, per);
+        var basisEl  = root.querySelector('#f-basis');
+        var basis    = basisEl.value;
+
+        // "לאדם" חסר משמעות בלי קהל יעד — מתקנים במקום להציג חישוב שגוי
+        if (!audience && basis === 'per_person') {
+          basis = 'total';
+          basisEl.value = 'total';
+          syncChips(root, 'basis', 'total');
+        }
+
+        var period = root.querySelector('#f-period').value;
+        var rate = root.querySelector('#f-amount').value;
+        root.querySelector('label[for="f-amount"]').textContent = amountLabel(basis, period);
+        root.querySelector('#f-calc').innerHTML =
+          calcLine({ audience: audience, basis: basis, period: period, rate: rate });
       },
 
       onSubmit: function (v) {
         var audience = v.audience || '';
-        var entered = Calc.num(v.amount);
+        var basis = (!audience && v.basis === 'per_person') ? 'total' : (v.basis || 'total');
+        var period = v.period || 'year';
+        var rate = Calc.num(v.amount);
+        var draft = { audience: audience, basis: basis, period: period, rate: rate };
         var data = {
           categoryId: v.categoryId, title: v.title, date: v.date, note: v.note,
-          audience: audience,
-          perPerson: audience ? entered : '',
-          // הסכום הכולל נשמר גם הוא, ומחושב מחדש בתצוגה לפי הכמות העדכנית
-          amount: audience ? entered * Calc.audienceCount(Store.state, audience) : entered
+          audience: audience, basis: basis, period: period, rate: rate,
+          // הסכום השנתי נשמר גם הוא, ומחושב מחדש בתצוגה לפי הנתונים העדכניים
+          amount: Calc.itemAmount(Store.state, draft)
         };
         if (isNew) Store.add('budgetItems', data);
         else Store.update('budgetItems', item.id, data);

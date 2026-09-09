@@ -116,6 +116,19 @@ var Store = (function () {
     return categories;
   }
 
+  /* סעיפי תקציב שנשמרו לפני שנוספו בסיס הסכום (לאדם / לכל הקטגוריה)
+     והתדירות (לשנה / לחודש) — מקבלים את המשמעות שהייתה להם בפועל */
+  function migrateBudgetItems(items) {
+    (items || []).forEach(function (b) {
+      if (b.basis !== undefined || b.period !== undefined) return;
+      var wasPerPerson = !!(b.audience && b.perPerson !== '' && b.perPerson !== null && b.perPerson !== undefined);
+      b.basis = wasPerPerson ? 'per_person' : 'total';
+      b.period = 'year';
+      b.rate = wasPerPerson ? b.perPerson : b.amount;
+    });
+    return items;
+  }
+
   function migrate(data) {
     var base = blankState();
     Object.keys(base).forEach(function (k) {
@@ -126,6 +139,7 @@ var Store = (function () {
     data.settings = Object.assign({}, base.settings, data.settings || {});
     if (!Array.isArray(data.categories) || !data.categories.length) data.categories = base.categories;
     else migrateCategories(data.categories);
+    migrateBudgetItems(data.budgetItems);
     return data;
   }
 
@@ -253,7 +267,8 @@ var Store = (function () {
      ['cat-clubs',   'חוגים במימון אישי',             1800, d(N, 6, 30)],
      ['cat-food',    'כיבוד לאירועים',                1680, d(N, 6, 30)],
      ['cat-other',   'קרן חירום',                     1000, '']].forEach(function (b) {
-      s.budgetItems.push({ id: uid('bud'), categoryId: b[0], title: b[1], amount: b[2], date: b[3], note: '' });
+      s.budgetItems.push({ id: uid('bud'), categoryId: b[0], title: b[1], amount: b[2], date: b[3],
+                           note: '', audience: '', basis: 'total', period: 'year', rate: b[2] });
     });
 
     [['cat-bday', 'מתנה ליומולדת של נועה', 320, d(Y, 12, 5)],
