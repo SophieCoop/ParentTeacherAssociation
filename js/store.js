@@ -7,8 +7,8 @@ var Store = (function () {
   /* ---------- קטגוריות ברירת מחדל של סעיפי הוצאה ---------- */
   var DEFAULT_CATEGORIES = [
     { id: 'cat-bday',    name: 'מתנה לילד ליום הולדת',            icon: '🎁', tone: 'pink' },
-    { id: 'cat-holiday', name: 'מתנה לחג לילדים ולצוות',          icon: '🎊', tone: 'yellow' },
-    { id: 'cat-yearend', name: 'מתנת סוף שנה לילדים ולצוות',      icon: '🎓', tone: 'green' },
+    { id: 'cat-holiday', name: 'מתנות לחג',                        icon: '🎊', tone: 'yellow' },
+    { id: 'cat-yearend', name: 'מתנות סוף שנה',                    icon: '🎓', tone: 'green' },
     { id: 'cat-clubs',   name: 'חוגים במימון אישי',               icon: '🎨', tone: 'purple' },
     { id: 'cat-food',    name: 'כיבוד',                            icon: '🧁', tone: 'peach' },
     { id: 'cat-events',  name: 'פעילויות ותרבות',                 icon: '🎪', tone: 'blue' },
@@ -35,13 +35,13 @@ var Store = (function () {
   /* ---------- דרגות בהיררכיית הצוות ---------- */
   /* המזהים קבועים ואין לשנותם — רשומות צוות קיימות מפנות אליהם */
   var STAFF_LEVELS = [
-    { id: 'manager',    name: 'מנהלת',              icon: '👩‍💼', tone: 'peach',  weight: 4 },
-    { id: 'lead',       name: 'גננת',               icon: '👩‍🏫', tone: 'purple', weight: 3 },
-    { id: 'assistant',  name: 'סייעת',              icon: '🧑‍🍼', tone: 'pink',   weight: 2 },
-    { id: 'aide',       name: 'מטפלת / עוזרת',      icon: '🤱',   tone: 'green',  weight: 2 },
-    { id: 'paramedic',  name: 'מטפל/ת פרא-רפואי',   icon: '🩺',   tone: 'mint',   weight: 2 },
-    { id: 'external',   name: 'מורה לחוג',          icon: '🎵',   tone: 'blue',   weight: 1 },
-    { id: 'volunteer',  name: 'מתנדב/ת',            icon: '🤝',   tone: 'yellow', weight: 1 }
+    { id: 'manager',    name: 'מנהלת',              icon: '👩‍💼', tone: 'peach',  weight: 4, edu: false },
+    { id: 'lead',       name: 'גננת',               icon: '👩‍🏫', tone: 'purple', weight: 3, edu: true },
+    { id: 'assistant',  name: 'סייעת',              icon: '🧑‍🍼', tone: 'pink',   weight: 2, edu: true },
+    { id: 'aide',       name: 'מטפלת / עוזרת',      icon: '🤱',   tone: 'green',  weight: 2, edu: true },
+    { id: 'paramedic',  name: 'מטפל/ת פרא-רפואי',   icon: '🩺',   tone: 'mint',   weight: 2, edu: true },
+    { id: 'external',   name: 'מורה לחוג',          icon: '🎵',   tone: 'blue',   weight: 1, edu: false },
+    { id: 'volunteer',  name: 'מתנדב/ת',            icon: '🤝',   tone: 'yellow', weight: 1, edu: false }
   ];
 
   /* ---------- הצעות לשדה התפקיד (טקסט חופשי) ---------- */
@@ -227,8 +227,8 @@ var Store = (function () {
 
     // [קטגוריה, שם הסעיף, סכום, תאריך יעד]
     [['cat-bday',    'מתנות ליום הולדת',              1200, d(N, 5, 15)],
-     ['cat-holiday', 'מתנה לחג לילדים ולצוות',        2100, d(Y, 9, 15)],
-     ['cat-yearend', 'מתנת סוף שנה לילדים ולצוות',    2400, d(N, 6, 15)],
+     ['cat-holiday', 'מתנות לחג לילדים',              2100, d(Y, 9, 15)],
+     ['cat-yearend', 'מתנות סוף שנה לצוות',           2400, d(N, 6, 15)],
      ['cat-clubs',   'חוגים במימון אישי',             1800, d(N, 6, 30)],
      ['cat-food',    'כיבוד לאירועים',                1680, d(N, 6, 30)],
      ['cat-other',   'קרן חירום',                     1000, '']].forEach(function (b) {

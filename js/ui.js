@@ -146,6 +146,11 @@ var UI = (function () {
     var ph = f.placeholder ? ' placeholder="' + esc(f.placeholder) + '"' : '';
     var html = '';
 
+    if (f.type === 'html') {
+      // בלוק תצוגה בלבד — משמש לשורות חישוב שמתעדכנות תוך כדי הקלדה
+      return '<div class="field" id="f-' + esc(f.name) + '">' + (f.html || '') + '</div>';
+    }
+
     if (f.type === 'select') {
       html = '<select class="input" id="' + id + '" name="' + esc(f.name) + '"' + req + '>' +
         (f.options || []).map(function (o) {
@@ -236,13 +241,26 @@ var UI = (function () {
               hidden.value = b.getAttribute('data-chip');
             }
             if (opts.onChipChange) opts.onChipChange(name, hidden.value, root);
+            if (opts.onFieldChange) opts.onFieldChange(name, hidden.value, root);
           });
         });
+
+        if (opts.onFieldChange) {
+          var notify = function (e) {
+            var t = e.target;
+            if (!t || !t.name) return;
+            opts.onFieldChange(t.name, t.value, root);
+          };
+          form.addEventListener('input', notify);
+          form.addEventListener('change', notify);
+          opts.onFieldChange(null, null, root);   // ציור ראשוני
+        }
 
         form.addEventListener('submit', function (e) {
           e.preventDefault();
           var values = {};
           fields.forEach(function (f) {
+            if (f.type === 'html') return;
             var input = root.querySelector('#f-' + f.name);
             if (!input) return;
             if (f.type === 'checkbox') values[f.name] = input.checked;

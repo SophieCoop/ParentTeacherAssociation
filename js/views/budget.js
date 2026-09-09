@@ -83,14 +83,19 @@ Views.budget = (function () {
 
     html += items.map(function (b) {
       var cat = Store.category(b.categoryId);
-      var share = total > 0 ? (Calc.num(b.amount) / total) * 100 : 0;
+      var amount = Calc.itemAmount(st, b);
+      var share = total > 0 ? (amount / total) * 100 : 0;
+      var per = b.audience
+        ? UI.money(b.perPerson) + ' × ' + Calc.audienceLabel(b.audience, Calc.audienceCount(st, b.audience))
+        : '';
       return '<div class="row" data-action="budget-edit" data-id="' + b.id + '" style="background:' + UI.toneVar(cat.tone) + '55">' +
         '<div class="r-ico" style="background:#fff">' + cat.icon + '</div>' +
         '<div class="r-body">' +
           '<div class="r-name">' + UI.esc(b.title || cat.name) + '</div>' +
-          '<div class="r-sub">' + UI.esc(cat.name) + (b.date ? ' · 🗓 ' + UI.dateShort(b.date) : ' · ללא תאריך') + '</div>' +
+          '<div class="r-sub">' + (per ? per + ' · ' : '') + UI.esc(cat.name) +
+            (b.date ? ' · 🗓 ' + UI.dateShort(b.date) : '') + '</div>' +
         '</div>' +
-        '<div class="r-end"><div class="r-amount">' + UI.money(b.amount) + '</div>' +
+        '<div class="r-end"><div class="r-amount">' + UI.money(amount) + '</div>' +
         '<div class="r-pct">' + share.toFixed(1) + '%</div></div>' +
         '</div>';
     }).join('');
@@ -191,23 +196,86 @@ Views.budget = (function () {
   }
 
   /* ---------- טופס סעיף תקציב ---------- */
+
+  var AUDIENCES = [
+    { value: '',          label: 'סכום כולל', icon: '💰' },
+    { value: 'children',  label: 'ילדים',     icon: '🧒' },
+    { value: 'staff_edu', label: 'צוות חינוכי', icon: '👩‍🏫' }
+  ];
+
+  /* שורת החישוב שמתחת לסכום: לאדם × כמות = סה״כ */
+  function calcLine(audience, perPerson) {
+    if (!audience) return '';
+    var st = Store.state;
+    var count = Calc.audienceCount(st, audience);
+    var per = Calc.num(perPerson);
+
+    if (count === 0) {
+      return '<div class="note" style="background:#FDF0F2;margin:0"><div class="n-ico">⚠️</div><div>' +
+        (audience === 'children'
+          ? 'אין ילדים ברשימה — הוסיפו ילדים כדי שהסכום יחושב'
+          : 'אין אנשי צוות חינוכי ברשימה — הוסיפו צוות כדי שהסכום יחושב') +
+        '</div></div>';
+    }
+
+    return '<div class="row" style="box-shadow:none;background:var(--primary-soft);margin:0">' +
+      '<div class="r-body"><div class="small muted">' +
+        UI.money(per) + ' לאדם  ×  ' + Calc.audienceLabel(audience, count) +
+      '</div>' +
+      '<div class="r-name" style="font-size:18px">= ' + UI.money(per * count) + '</div></div>' +
+      '</div>';
+  }
+
   function itemForm(item) {
     var isNew = !item;
-    item = item || { categoryId: Store.state.categories[0].id, title: '', amount: '', date: '', note: '' };
+    item = item || { categoryId: Store.state.categories[0].id, title: '', amount: '',
+                     audience: '', perPerson: '', date: '', note: '' };
+
+    var startAudience = item.audience || '';
+    var startAmount = startAudience ? item.perPerson : item.amount;
+
+    function amountLabel(audience) {
+      return audience ? 'סכום לאדם (₪)' : 'סכום מתוכנן (₪)';
+    }
+
     UI.formModal({
       title: isNew ? 'סעיף תקציב חדש' : 'עריכת סעיף',
-      subtitle: 'בחרו קטגוריה, סכום מתוכנן ותאריך יעד',
+      subtitle: 'בחרו קטגוריה, קהל יעד, סכום ותאריך יעד',
       submitLabel: 'שמירה',
       fields: [
-        { name: 'categoryId', label: 'קטגוריה', type: 'select', value: item.categoryId, options: catOptions(), required: true },
-        { name: 'title', label: 'שם הסעיף', value: item.title, placeholder: 'למשל: מתנה לחג לילדים' },
-        { name: 'amount', label: 'סכום מתוכנן (₪)', type: 'number', value: item.amount, placeholder: '0', step: '1', min: 0 },
-        { name: 'date', label: 'תאריך יעד', type: 'date', value: item.date, hint: 'למתי צריך להביא את המתנה / לבצע את ההוצאה' },
+        { name: 'categoryId', label: 'קטגוריה', type: 'select', value: item.categoryId,
+          options: catOptions(), required: true },
+        { name: 'title', label: 'שם הסעיף', value: item.title, placeholder: 'למשל: מתנה לחג' },
+        { name: 'audience', label: 'קהל יעד', type: 'chips', value: startAudience, options: AUDIENCES,
+          hint: 'בבחירת ילדים או צוות — מקלידים סכום לאדם והמערכת מכפילה בכמות' },
+        { name: 'amount', label: amountLabel(startAudience), type: 'number', value: startAmount,
+          placeholder: '0', step: '1', min: 0 },
+        { name: 'calc', type: 'html', html: calcLine(startAudience, startAmount) },
+        { name: 'date', label: 'תאריך יעד', type: 'date', value: item.date,
+          hint: 'למתי צריך להביא את המתנה / לבצע את ההוצאה' },
         { name: 'note', label: 'הערות', type: 'textarea', value: item.note, placeholder: 'אופציונלי' }
       ],
+
+      /* מעדכן את תווית הסכום ואת שורת החישוב תוך כדי הקלדה */
+      onFieldChange: function (name, value, root) {
+        var audience = root.querySelector('#f-audience').value;
+        var per = root.querySelector('#f-amount').value;
+        root.querySelector('label[for="f-amount"]').textContent = amountLabel(audience);
+        root.querySelector('#f-calc').innerHTML = calcLine(audience, per);
+      },
+
       onSubmit: function (v) {
-        if (isNew) Store.add('budgetItems', v);
-        else Store.update('budgetItems', item.id, v);
+        var audience = v.audience || '';
+        var entered = Calc.num(v.amount);
+        var data = {
+          categoryId: v.categoryId, title: v.title, date: v.date, note: v.note,
+          audience: audience,
+          perPerson: audience ? entered : '',
+          // הסכום הכולל נשמר גם הוא, ומחושב מחדש בתצוגה לפי הכמות העדכנית
+          amount: audience ? entered * Calc.audienceCount(Store.state, audience) : entered
+        };
+        if (isNew) Store.add('budgetItems', data);
+        else Store.update('budgetItems', item.id, data);
         App.render();
         UI.toast(isNew ? 'הסעיף נוסף ✓' : 'הסעיף עודכן ✓');
       },

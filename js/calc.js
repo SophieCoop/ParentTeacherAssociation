@@ -48,14 +48,46 @@ var Calc = (function () {
     return autoSharePercent(child, settings);
   }
 
+  /* ---------- קהל יעד של סעיף תקציב ---------- */
+  /* סעיף יכול להיות סכום כולל, או סכום לאדם שמוכפל במספר הילדים
+     או אנשי הצוות החינוכי. כשמתווסף ילד לרשימה, הסעיף מתעדכן מאליו. */
+  var AUDIENCE_COUNTS = {
+    children: function (state) { return (state.children || []).length; },
+    staff_edu: function (state) {
+      return (state.staff || []).filter(function (t) {
+        return Store.staffLevel(t.level).edu === true;
+      }).length;
+    }
+  };
+
+  function audienceCount(state, audience) {
+    var fn = AUDIENCE_COUNTS[audience];
+    return fn ? fn(state) : 0;
+  }
+
+  function audienceLabel(audience, count) {
+    if (audience === 'children')  return count + (count === 1 ? ' ילד/ה' : ' ילדים');
+    if (audience === 'staff_edu') return count + (count === 1 ? ' איש/ת צוות' : ' אנשי צוות חינוכי');
+    return '';
+  }
+
+  /* הסכום האפקטיבי של סעיף — מחושב מחדש בכל פעם, כדי שלא ייווצר
+     פער בין הסכום השמור למספר הילדים בפועל */
+  function itemAmount(state, item) {
+    if (item && item.audience && item.perPerson !== '' && item.perPerson !== null && item.perPerson !== undefined) {
+      return num(item.perPerson) * audienceCount(state, item.audience);
+    }
+    return num(item && item.amount);
+  }
+
   /* ---------- תקציב מתוכנן ---------- */
   function budgetTotal(state) {
-    return (state.budgetItems || []).reduce(function (s, b) { return s + num(b.amount); }, 0);
+    return (state.budgetItems || []).reduce(function (s, b) { return s + itemAmount(state, b); }, 0);
   }
   function budgetByCategory(state) {
     var map = {};
     (state.budgetItems || []).forEach(function (b) {
-      map[b.categoryId] = (map[b.categoryId] || 0) + num(b.amount);
+      map[b.categoryId] = (map[b.categoryId] || 0) + itemAmount(state, b);
     });
     return map;
   }
@@ -325,6 +357,7 @@ var Calc = (function () {
     num: num, round2: round2, toDate: toDate,
     autoSharePercent: autoSharePercent, sharePercent: sharePercent,
     budgetTotal: budgetTotal, budgetByCategory: budgetByCategory,
+    audienceCount: audienceCount, audienceLabel: audienceLabel, itemAmount: itemAmount,
     expensesTotal: expensesTotal, expensesByCategory: expensesByCategory,
     paymentsOf: paymentsOf, paidBy: paidBy, collectedTotal: collectedTotal,
     totalShareUnits: totalShareUnits, fullChildShare: fullChildShare,

@@ -133,7 +133,7 @@ Views.onboarding = (function () {
         return '<div class="row"><div class="r-ico" style="background:' + UI.toneVar(cat.tone) + '">' + cat.icon + '</div>' +
           '<div class="r-body"><div class="r-name">' + UI.esc(b.title || cat.name) + '</div>' +
           '<div class="r-sub">' + UI.esc(cat.name) + (b.date ? ' · ' + UI.dateShort(b.date) : '') + '</div></div>' +
-          '<div class="r-end"><div class="r-amount">' + UI.money(b.amount) + '</div></div></div>';
+          '<div class="r-end"><div class="r-amount">' + UI.money(Calc.itemAmount(Store.state, b)) + '</div></div></div>';
       }).join('') : UI.empty({ icon: '🧮', title: 'עוד אין סעיפי תקציב', text: 'כמו מתנות ליום הולדת, כיבוד, חוגים ועוד.', action: { act: 'budget-add', label: '+ הוספת סעיף תקציב' } })) +
       footer(4, 'סיימנו — כניסה לאפליקציה');
   }
