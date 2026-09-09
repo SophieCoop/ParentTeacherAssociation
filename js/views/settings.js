@@ -9,6 +9,8 @@ Views.settings = (function () {
     var st = Store.state;
     var html = UI.pageHead({ title: 'הגדרות', subtitle: 'פרטי הגן וגיבוי נתונים', icon: '⚙️', tone: 'mint', back: 'home' });
 
+    html += Views.account.panel();
+
     html += '<div class="card">' +
       '<div class="card-title"><h2>פרטי הגן</h2></div>' +
       '<div class="field"><label>שם הגן</label>' +
@@ -44,8 +46,11 @@ Views.settings = (function () {
 
     html += '<div class="card">' +
       '<div class="card-title"><h2>הנתונים שלי</h2></div>' +
-      '<p class="small muted">כל הנתונים נשמרים במכשיר שלכם בלבד (localStorage) ולא נשלחים לשום שרת. ' +
-      'מומלץ לייצא גיבוי מדי פעם ולשמור את הקובץ.</p>' +
+      '<p class="small muted">' +
+      (Cloud.info().signedIn
+        ? 'הנתונים נשמרים במכשיר וגם מסונכרנים לחשבון שלכם בענן. '
+        : 'הנתונים נשמרים במכשיר הזה בלבד. ') +
+      'בכל מקרה מומלץ לייצא גיבוי מדי פעם ולשמור את הקובץ.</p>' +
       '<div class="btn-row mt">' +
         '<button class="btn ghost" data-action="set-export">⬇️ ייצוא גיבוי</button>' +
         '<button class="btn ghost" data-action="set-import">⬆️ טעינת גיבוי</button>' +

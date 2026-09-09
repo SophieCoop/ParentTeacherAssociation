@@ -101,12 +101,25 @@ var Store = (function () {
   function save() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(function () {
-      try {
-        localStorage.setItem(KEY, JSON.stringify(state));
-      } catch (e) {
-        console.warn('שמירה נכשלה', e);
-      }
+      writeLocal();
+      // מודיעים לשכבת הסנכרון שיש שינוי מקומי להעלות
+      if (window.Cloud && Cloud.onLocalChange) Cloud.onLocalChange();
     }, 60);
+  }
+
+  function writeLocal() {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(state));
+    } catch (e) {
+      console.warn('שמירה נכשלה', e);
+    }
+  }
+
+  /* החלפת המצב בגרסה שהגיעה מהענן — נכתב ישירות, בלי לסמן שינוי מקומי */
+  function replaceState(data) {
+    state = migrate(data || {});
+    writeLocal();
+    return state;
   }
 
   /* ---------- עזרים ---------- */
@@ -264,6 +277,7 @@ var Store = (function () {
     get state() { return state; },
     load: load, save: save, reset: reset,
     uid: uid, list: list, find: find, add: add, update: update, remove: remove,
+    replaceState: replaceState,
     exportJSON: exportJSON, importJSON: importJSON, loadDemo: loadDemo,
     methodName: function (id) {
       var m = PAY_METHODS.filter(function (x) { return x.id === id; })[0];

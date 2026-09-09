@@ -20,6 +20,7 @@ Views.home = (function () {
       '<div class="ph-icon">🌈</div>' +
       '<h1>ועד הורים ' + UI.esc(name) + '</h1>' +
       '<p>יחד עושים טוב לילדים ❤️ · שנת ' + UI.esc(st.gan.yearLabel || '') + '</p>' +
+      (Views.account.chipHTML() ? '<div style="margin-top:8px">' + Views.account.chipHTML() + '</div>' : '') +
       '</header>';
 
     /* סיכום כספי */

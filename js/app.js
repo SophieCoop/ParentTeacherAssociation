@@ -95,6 +95,13 @@ var App = (function () {
   function init() {
     Store.load();
     bind();
+    if (window.Cloud) {
+      Cloud.init();
+      // עדכון שבב המצב במקום, בלי ציור מחדש שיגזול מיקוד משדות פתוחים
+      Cloud.onChange(function () {
+        if (Views.account) Views.account.refreshChip();
+      });
+    }
     var hash = (location.hash || '').replace('#', '');
     if (hash && Views[hash] && Store.state.setupDone) current = hash;
     render();

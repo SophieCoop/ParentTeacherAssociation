@@ -15,6 +15,12 @@ Views.onboarding = (function () {
       '<p>יחד למען הילדים ❤️<br>ניהול תקציב, גבייה והוצאות במקום אחד</p>' +
       '<button class="btn" data-action="wiz-start">בואו נתחיל</button>' +
       '<button class="btn ghost" style="max-width:320px;margin-top:10px" data-action="wiz-demo">הצגת נתוני דוגמה</button>' +
+      (Cloud.enabled() && !Cloud.signedIn()
+        ? '<button class="btn soft" style="max-width:320px;margin-top:10px" data-action="acc-signin">' +
+          'כבר יש לי חשבון — התחברות</button>' +
+          '<p class="small muted" style="max-width:320px;margin-top:14px">' +
+          'מתחברים כאן כדי למשוך למכשיר הזה נתונים שכבר הזנתם במכשיר אחר.</p>'
+        : '') +
       '</div>';
   }
 
