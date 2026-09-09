@@ -210,8 +210,8 @@ var Store = (function () {
     ];
     kids.forEach(function (k) {
       s.children.push({
-        id: uid('chi'), name: k[0], birthDate: k[1], group: 'גן ב׳',
-        joinDate: k[6] || '', sharePercentOverride: null, note: '',
+        id: uid('chi'), name: k[0], birthDate: k[1],
+        joinDate: k[6] || s.settings.yearStart, sharePercentOverride: null, note: '',
         parents: [
           { name: k[2], phone: k[3] },
           k[4] ? { name: k[4], phone: k[5] } : null

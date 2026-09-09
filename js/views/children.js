@@ -23,7 +23,7 @@ Views.children = (function () {
         '<div class="r-body"><div class="r-name">' + UI.esc(c.name) + '</div>' +
         '<div class="r-sub">' + (c.birthDate ? '🎂 ' + UI.dateShort(c.birthDate) : 'ללא תאריך לידה') +
         (parents ? ' · ' + UI.esc(parents) : '') + '</div></div>' +
-        '<div class="r-end">' + (pct < 100 ? '<span class="badge warn">' + pct + '%</span>' : '<span class="badge neutral">' + UI.esc(c.group || 'הגן') + '</span>') + '</div>' +
+        '<div class="r-end">' + (pct < 100 ? '<span class="badge warn">' + pct + '%</span>' : '') + '</div>' +
         '</div>';
     }).join('');
 
@@ -99,10 +99,20 @@ Views.children = (function () {
     UI.modal({ title: 'פרטי הילד/ה', body: body });
   }
 
+  /* תחילת שנת הלימודים — ברירת המחדל לתאריך ההצטרפות,
+     כך שילד חדש נחשב משתתף מלא אלא אם מעדכנים אחרת */
+  function yearStart() {
+    var s = Store.state.settings.yearStart;
+    if (s) return s;
+    var now = new Date();
+    var y = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
+    return y + '-09-01';
+  }
+
   /* ---------- טופס ילד ---------- */
   function childForm(child) {
     var isNew = !child;
-    child = child || { name: '', birthDate: '', group: '', joinDate: '', sharePercentOverride: '', parents: [] };
+    child = child || { name: '', birthDate: '', joinDate: yearStart(), sharePercentOverride: '', parents: [] };
     var p1 = child.parents && child.parents[0] ? child.parents[0] : { name: '', phone: '' };
     var p2 = child.parents && child.parents[1] ? child.parents[1] : { name: '', phone: '' };
 
@@ -111,14 +121,14 @@ Views.children = (function () {
       subtitle: 'שם, יום הולדת ופרטי ההורים',
       fields: [
         { name: 'name', label: 'שם הילד/ה', value: child.name, required: true, placeholder: 'נועה כהן' },
-        { name: 'birthDate', label: 'תאריך לידה', type: 'date', value: child.birthDate, half: true },
-        { name: 'group', label: 'קבוצה', value: child.group, placeholder: 'גן ב׳', half: true },
+        { name: 'birthDate', label: 'תאריך לידה', type: 'date', value: child.birthDate },
         { name: 'p1name', label: 'שם הורה 1', value: p1.name, placeholder: 'שרה כהן', half: true },
         { name: 'p1phone', label: 'טלפון הורה 1', type: 'tel', value: p1.phone, placeholder: '052-1234567', half: true },
         { name: 'p2name', label: 'שם הורה 2', value: p2.name, placeholder: 'אופציונלי', half: true },
         { name: 'p2phone', label: 'טלפון הורה 2', type: 'tel', value: p2.phone, placeholder: 'אופציונלי', half: true },
-        { name: 'joinDate', label: 'תאריך הצטרפות לגן', type: 'date', value: child.joinDate,
-          hint: 'למלא רק אם הילד/ה הצטרף/ה באמצע השנה — הסכום יחושב יחסית' },
+        { name: 'joinDate', label: 'תאריך הצטרפות לגן', type: 'date',
+          value: child.joinDate || yearStart(),
+          hint: 'ברירת המחדל היא תחילת שנת הלימודים. משנים רק אם הילד/ה הצטרף/ה מאוחר יותר — ואז הסכום מחושב יחסית' },
         { name: 'sharePercentOverride', label: 'אחוז השתתפות ידני (%)', type: 'number',
           value: child.sharePercentOverride === null ? '' : child.sharePercentOverride,
           min: 0, max: 100, placeholder: 'ריק = חישוב אוטומטי',
@@ -129,7 +139,7 @@ Views.children = (function () {
         if (v.p1name || v.p1phone) parents.push({ name: v.p1name, phone: v.p1phone });
         if (v.p2name || v.p2phone) parents.push({ name: v.p2name, phone: v.p2phone });
         var data = {
-          name: v.name, birthDate: v.birthDate, group: v.group, joinDate: v.joinDate,
+          name: v.name, birthDate: v.birthDate, joinDate: v.joinDate,
           sharePercentOverride: v.sharePercentOverride === '' ? null : Calc.num(v.sharePercentOverride),
           parents: parents
         };
