@@ -205,9 +205,12 @@ Views.collection = (function () {
   }
 
   /* ---------- כרטיס הורה ---------- */
-  function openChild(childId) {
+
+  var openCard = null;   // הכרטיס הפתוח, כדי לרענן אותו אחרי שינוי
+
+  function childCardBody(childId) {
     var c = Store.find('children', childId);
-    if (!c) return;
+    if (!c) return '';
     var r = Calc.childCollection(Store.state, c);
     var parent = c.parents && c.parents[0] ? c.parents[0] : { name: c.name, phone: '' };
 
@@ -242,7 +245,21 @@ Views.collection = (function () {
       '</div>' +
       '<button class="btn soft" style="margin-top:9px" data-action="col-plan" data-id="' + c.id + '">הגדרת פריסה לתשלומים</button>';
 
-    UI.modal({ title: 'פרטי תשלום', subtitle: c.name, body: body });
+    return body;
+  }
+
+  function openChild(childId) {
+    var c = Store.find('children', childId);
+    if (!c) return;
+    var m = UI.modal({ title: 'פרטי תשלום', subtitle: c.name, body: childCardBody(childId) });
+    openCard = { childId: childId, api: m };
+  }
+
+  /* אחרי הוספה, עריכה או מחיקה של תשלום — הכרטיס הפתוח מתרענן במקום */
+  function refreshCard() {
+    if (!openCard) return;
+    if (!openCard.api.isOpen()) { openCard = null; return; }
+    openCard.api.setBody(childCardBody(openCard.childId));
   }
 
   /* ---------- טופס תשלום ---------- */
@@ -291,11 +308,13 @@ Views.collection = (function () {
         if (isNew) Store.add('payments', v);
         else Store.update('payments', pay.id, v);
         App.render();
+        refreshCard();
         UI.toast('התשלום נשמר ✓');
       },
       onDelete: isNew ? null : function () {
         Store.remove('payments', pay.id);
         App.render();
+        refreshCard();
         UI.toast('התשלום נמחק');
       }
     });
@@ -362,6 +381,7 @@ Views.collection = (function () {
           onSubmit: function (v) {
             Store.update('children', c.id, { installmentsPlan: Math.max(1, Calc.num(v.installmentsPlan) || 1) });
             App.render();
+            refreshCard();
             UI.toast('הפריסה נשמרה ✓');
           }
         });

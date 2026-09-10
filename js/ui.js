@@ -131,10 +131,18 @@ var UI = (function () {
     document.addEventListener('keydown', function onKey(e) {
       if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); }
     });
+    /* רענון תוכן החלון בלי לסגור ולפתוח — חלון פתוח אינו מושפע
+       מציור מחדש של העמוד, כי הוא יושב מחוץ לאזור האפליקציה */
+    function setBody(html) {
+      var body = back.querySelector('.m-body');
+      if (body) body.innerHTML = html;
+    }
+    function isOpen() { return document.body.contains(back); }
+
     if (opts.onMount) opts.onMount(back.querySelector('.m-body'), close);
     var firstInput = back.querySelector('input,select,textarea');
     if (firstInput && !('ontouchstart' in window)) setTimeout(function () { firstInput.focus(); }, 60);
-    return { el: back, close: close };
+    return { el: back, close: close, setBody: setBody, isOpen: isOpen };
   }
 
   /* ---------- מודאל טופס גנרי ---------- */

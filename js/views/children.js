@@ -56,10 +56,13 @@ Views.children = (function () {
   }
 
   /* ---------- כרטיס ילד ---------- */
-  function openChild(id) {
+
+  var openCard = null;
+
+  function childCardBody(id) {
     var st = Store.state;
     var c = Store.find('children', id);
-    if (!c) return;
+    if (!c) return '';
     var pct = Calc.sharePercent(c, st.settings);
     var auto = Calc.autoSharePercent(c, st.settings);
     var r = Calc.childCollection(st, c);
@@ -76,7 +79,7 @@ Views.children = (function () {
       '</div>';
 
     if (c.joinDate) {
-      body += '<div class="note"><div class="n-ico">📆</div><div><b>הצטרפות באמצע השנה</b>' +
+      body += '<div class="note"><div class="n-ico">📆</div><div><b>תאריך הצטרפות</b>' +
         'הצטרף/ה ב-' + UI.dateShort(c.joinDate) + '. החישוב האוטומטי: ' + auto + '% מהסכום המלא' +
         (c.sharePercentOverride ? ' (נקבע ידנית ' + pct + '%)' : '') + '.</div></div>';
     }
@@ -96,17 +99,21 @@ Views.children = (function () {
       '<button class="btn" data-action="pay-add" data-child="' + c.id + '">+ תשלום</button>' +
       '</div>';
 
-    UI.modal({ title: 'פרטי הילד/ה', body: body });
+    return body;
   }
 
-  /* תחילת שנת הלימודים — ברירת המחדל לתאריך ההצטרפות,
-     כך שילד חדש נחשב משתתף מלא אלא אם מעדכנים אחרת */
-  function yearStart() {
-    var s = Store.state.settings.yearStart;
-    if (s) return s;
-    var now = new Date();
-    var y = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
-    return y + '-09-01';
+  function openChild(id) {
+    if (!Store.find('children', id)) return;
+    var m = UI.modal({ title: 'פרטי הילד/ה', body: childCardBody(id) });
+    openCard = { id: id, api: m };
+  }
+
+  /* הכרטיס הפתוח מתרענן אחרי עריכה, במקום להישאר עם נתונים ישנים */
+  function refreshCard() {
+    if (!openCard) return;
+    if (!openCard.api.isOpen()) { openCard = null; return; }
+    if (!Store.find('children', openCard.id)) { openCard.api.close(); openCard = null; return; }
+    openCard.api.setBody(childCardBody(openCard.id));
   }
 
   /* ---------- טופס ילד ---------- */
@@ -146,12 +153,14 @@ Views.children = (function () {
         if (isNew) Store.add('children', data);
         else Store.update('children', child.id, data);
         App.render();
+        refreshCard();
         UI.toast(isNew ? 'הילד/ה נוסף/ה ✓' : 'הפרטים עודכנו ✓');
       },
       onDelete: isNew ? null : function () {
         Store.state.payments = Store.state.payments.filter(function (p) { return p.childId !== child.id; });
         Store.remove('children', child.id);
         App.render();
+        refreshCard();
         UI.toast('נמחק');
       }
     });
