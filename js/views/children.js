@@ -130,6 +130,16 @@ Views.children = (function () {
     openCard.api.setBody(childCardBody(openCard.id));
   }
 
+  /* תחילת שנת הלימודים — ברירת המחדל לתאריך ההצטרפות,
+     כך שילד חדש נחשב משתתף מלא אלא אם מעדכנים אחרת */
+  function yearStart() {
+    var s = Store.state.settings.yearStart;
+    if (s) return s;
+    var now = new Date();
+    var y = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
+    return y + '-09-01';
+  }
+
   /* ---------- טופס ילד ---------- */
   function childForm(child) {
     var isNew = !child;
