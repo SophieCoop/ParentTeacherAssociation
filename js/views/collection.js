@@ -249,7 +249,22 @@ Views.collection = (function () {
   function payForm(pay, presetChild) {
     var isNew = !pay;
     var kids = Store.state.children;
-    if (!kids.length) { UI.toast('קודם צריך להוסיף ילדים'); return; }
+    if (!kids.length) {
+      UI.modal({
+        title: 'עוד אין ילדים ברשימה',
+        subtitle: 'כל תשלום משויך להורה של ילד/ה',
+        body: '<p class="small">הגבייה מחושבת לפי ילדי הגן, ולכן צריך קודם להוסיף אותם ואת פרטי ההורים. ' +
+              'אחרי זה כל תשלום שתרשמו יתעדכן מיד במצב הגבייה.</p>' +
+              '<button class="btn mt js-go">להוספת ילדים</button>',
+        onMount: function (root, close) {
+          root.querySelector('.js-go').addEventListener('click', function () {
+            close();
+            App.setView('children');
+          });
+        }
+      });
+      return;
+    }
 
     pay = pay || {
       childId: presetChild || kids[0].id, amount: '', method: 'paybox',
@@ -297,7 +312,9 @@ Views.collection = (function () {
     if (tab === 'calc') html += tabCalc();
     else if (tab === 'payments') html += tabPayments();
     else html += tabList();
-    html += '<button class="btn" style="margin-top:14px" data-action="pay-add">+ רישום תשלום</button>';
+    html += Store.state.children.length
+      ? '<button class="btn" style="margin-top:14px" data-action="pay-add">+ רישום תשלום</button>'
+      : '<button class="btn" style="margin-top:14px" data-action="nav" data-view="children">+ הוספת ילדים</button>';
     return html;
   }
 
