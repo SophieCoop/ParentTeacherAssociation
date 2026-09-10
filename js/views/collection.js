@@ -246,8 +246,19 @@ Views.collection = (function () {
     }
 
     if (r.installments > 1) {
-      body += '<div class="note"><div class="n-ico">📅</div><div><b>פריסה ל-' + r.installments + ' תשלומים</b>' +
-        UI.money(r.perInstallment) + ' לתשלום · שולמו ' + r.payments.length + ' תשלומים</div></div>';
+      var line;
+      if (r.remaining <= 0.5) {
+        line = 'הפריסה הושלמה — שולמו ' + r.paidCount + ' תשלומים, אין יתרה.';
+      } else if (r.installmentsLeft > 0) {
+        line = 'שולמו ' + r.paidCount + ' מתוך ' + r.installments + ' · נותרו ' +
+          UI.money(r.remaining) + ', כלומר <b>' + UI.money(r.nextInstallment) + '</b> בכל אחד מ-' +
+          r.installmentsLeft + ' התשלומים הבאים.';
+      } else {
+        line = 'כל ' + r.installments + ' התשלומים בוצעו, ועדיין נותרו <b>' +
+          UI.money(r.remaining) + '</b> להשלמה.';
+      }
+      body += '<div class="note"><div class="n-ico">📅</div><div>' +
+        '<b>פריסה ל-' + r.installments + ' תשלומים</b>' + line + '</div></div>';
     }
 
     body += '<div class="section-title" style="margin-top:6px"><span>היסטוריית תשלומים</span></div>';
@@ -424,7 +435,8 @@ Views.collection = (function () {
           subtitle: c.name,
           fields: [{ name: 'installmentsPlan', label: 'מספר תשלומים', type: 'number',
                      value: c.installmentsPlan || 1, min: 1, max: 12,
-                     hint: 'הסכום לתשלום יחושב אוטומטית מתוך החוב' }],
+                     hint: 'גובה התשלומים הבאים מחושב מהיתרה שנותרה — אם יועבר סכום שונה מהמתוכנן, ' +
+                           'שאר התשלומים יתעדכנו בהתאם' }],
           onSubmit: function (v) {
             Store.update('children', c.id, { installmentsPlan: Math.max(1, Calc.num(v.installmentsPlan) || 1) });
             App.render();

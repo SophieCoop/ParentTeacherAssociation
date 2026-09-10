@@ -185,6 +185,16 @@ var Calc = (function () {
     return budgetTotal(state) / units;
   }
 
+  /* גובה כל אחד מהתשלומים שנותרו: היתרה מחולקת במספר התשלומים שנותרו.
+     אם כל התשלומים שתוכננו כבר בוצעו ועדיין יש יתרה, היא מוצגת כתשלום אחד. */
+  function nextInstallmentOf(plan, paidCount, remaining) {
+    if (plan <= 1) return 0;
+    var left = Math.max(0, plan - paidCount);
+    var owed = Math.max(0, remaining);
+    if (owed <= 0.5) return 0;
+    return left > 0 ? round2(owed / left) : round2(owed);
+  }
+
   /* פירוט הגבייה לכל ילד */
   function childCollection(state, child) {
     var pct = sharePercent(child, state.settings);
@@ -205,8 +215,13 @@ var Calc = (function () {
       status: over > 0.5 ? 'over' : (remaining <= 0.5 ? 'full' : (paid > 0 ? 'partial' : 'none')),
       payments: pays,
       installments: plan,
+      // החלוקה המקורית, לצורך השוואה בלבד
       perInstallment: plan > 1 ? round2(due / plan) : 0,
-      nextInstallment: plan > 1 ? round2(Math.max(0, remaining) / Math.max(1, plan - pays.length)) : 0
+      // התשלומים שנותרו מחושבים מחדש מהיתרה בפועל, כך שהעברה בסכום
+      // שונה מהמתוכנן מעדכנת מיד את גובה התשלומים הבאים
+      paidCount: pays.length,
+      installmentsLeft: Math.max(0, plan - pays.length),
+      nextInstallment: nextInstallmentOf(plan, pays.length, remaining)
     };
   }
 
