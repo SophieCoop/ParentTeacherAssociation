@@ -6,6 +6,21 @@ var Views = (typeof Views === 'undefined') ? {} : Views;
 
 Views.ideas = (function () {
 
+  /* כמה נפשות יש בכל קהל יעד — מוצג בסוגריים כדי שהחישוב יהיה גלוי.
+     "כיבוד" אינו נספר לפי נפש ולכן אינו מקבל מספר. */
+  function audienceSize(id) {
+    if (id === 'children') return (Store.state.children || []).length;
+    if (id === 'staff')    return (Store.state.staff || []).length;
+    return null;
+  }
+
+  function audienceLabel(id) {
+    var au = Store.audience(id);
+    var n = audienceSize(id);
+    return au.name + (n === null ? '' : ' (' + n + ')');
+  }
+
+
   /* ---------- כרטיס רעיון ---------- */
   function ideaCard(idea) {
     var st = Store.state;
@@ -30,7 +45,7 @@ Views.ideas = (function () {
       (idea.audiences || []).map(function (a) {
         var au = Store.audience(a);
         return '<span class="badge" style="background:' + UI.toneVar(au.tone) + ';color:' + UI.toneInk(au.tone) + '">' +
-          au.icon + ' ' + au.name + '</span>';
+          au.icon + ' ' + UI.esc(audienceLabel(a)) + '</span>';
       }).join('') +
       '</div>';
 
@@ -196,8 +211,10 @@ Views.ideas = (function () {
         { name: 'categoryId', label: 'קטגוריית תקציב', type: 'select', value: idea.categoryId,
           options: Views.budget.catOptions() },
         { name: 'audiences', label: 'קהל יעד', type: 'chips', multi: true, value: idea.audiences,
-          options: Store.AUDIENCES.map(function (a) { return { value: a.id, label: a.name, icon: a.icon }; }),
-          hint: 'אפשר לבחור יותר מאחד — החלוקה לנפש מתעדכנת בהתאם' },
+          options: Store.AUDIENCES.map(function (a) {
+            return { value: a.id, label: audienceLabel(a.id), icon: a.icon };
+          }),
+          hint: 'המספר בסוגריים הוא הכמות שלפיה מחושבת החלוקה לנפש' },
         { name: 'lines', type: 'html', html: '' },
         { name: 'note', label: 'הערות', type: 'textarea', value: idea.note,
           placeholder: 'קישורים, ספקים, רעיונות…' }
