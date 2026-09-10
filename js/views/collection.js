@@ -6,6 +6,7 @@ var Views = (typeof Views === 'undefined') ? {} : Views;
 Views.collection = (function () {
 
   function statusBadge(r) {
+    if (r.over) return '<span class="badge over">שולם ביתר</span>';
     if (r.due <= 0) return '<span class="badge neutral">אין חיוב</span>';
     if (r.status === 'full') return '<span class="badge ok">שולם במלואו</span>';
     if (r.status === 'partial') return '<span class="badge warn">חלקי</span>';
@@ -36,7 +37,13 @@ Views.collection = (function () {
         '<div class="stat"><div class="s-val pos">' + sum.fullCount + '</div><div class="s-lab">שילמו מלא</div></div>' +
         '<div class="stat"><div class="s-val" style="color:var(--warn)">' + sum.partialCount + '</div><div class="s-lab">חלקי</div></div>' +
         '<div class="stat"><div class="s-val neg">' + sum.noneCount + '</div><div class="s-lab">טרם שילמו</div></div>' +
-      '</div></div>';
+      '</div>' +
+      (sum.overCount
+        ? '<div class="flex-between small mt"><span class="over-paid">⚠️ ' + sum.overCount +
+          (sum.overCount === 1 ? ' הורה שילם' : ' הורים שילמו') + ' מעבר למכסה</span>' +
+          '<b class="over-paid">עודף ' + UI.money(sum.overTotal) + '</b></div>'
+        : '') +
+      '</div>';
 
     html += '<div class="field"><input class="input" placeholder="🔍 חיפוש הורה או ילד…" ' +
       'data-input="col-search" value="' + UI.esc(q) + '"></div>';
@@ -52,12 +59,16 @@ Views.collection = (function () {
         '<div class="avatar" style="background:' + UI.toneVar(UI.toneFor(c.name)) + '">' + UI.faceFor(c.name) + '</div>' +
         '<div class="r-body">' +
           '<div class="r-name">' + UI.esc(parent) + '</div>' +
-          '<div class="r-sub">' + UI.esc(c.name) + ' · ' + UI.money(r.paid) + ' מתוך ' + UI.money(r.due) +
+          '<div class="r-sub">' + UI.esc(c.name) + ' · ' +
+            (r.over ? '<b class="over-paid">' + UI.money(r.paid) + '</b>' : UI.money(r.paid)) +
+            ' מתוך ' + UI.money(r.due) +
             (r.percent < 100 ? ' · ' + r.percent + '%' : '') + '</div>' +
           UI.bar(r.paid, r.due, r.status === 'full' ? 'ok' : 'thin') +
         '</div>' +
         '<div class="r-end">' + statusBadge(r) +
-        '<div class="r-pct" style="margin-top:4px">' + (r.remaining > 0 ? 'נותר ' + UI.money(r.remaining) : '✓') + '</div></div>' +
+        '<div class="r-pct" style="margin-top:4px">' +
+          (r.over ? '<span class="over-paid">עודף ' + UI.money(r.overAmount) + '</span>'
+                  : (r.remaining > 0 ? 'נותר ' + UI.money(r.remaining) : '✓')) + '</div></div>' +
         '</div>';
     }).join('');
 
@@ -221,9 +232,17 @@ Views.collection = (function () {
       '</div>' +
       '<div class="stat-grid" style="margin-bottom:14px">' +
         '<div class="stat"><div class="s-val">' + UI.money(r.due) + '</div><div class="s-lab">לתשלום</div></div>' +
-        '<div class="stat"><div class="s-val pos">' + UI.money(r.paid) + '</div><div class="s-lab">שולם</div></div>' +
+        '<div class="stat"><div class="s-val ' + (r.over ? 'over-paid' : 'pos') + '">' + UI.money(r.paid) + '</div><div class="s-lab">שולם</div></div>' +
         '<div class="stat"><div class="s-val ' + (r.remaining > 0 ? 'neg' : 'pos') + '">' + UI.money(Math.max(0, r.remaining)) + '</div><div class="s-lab">נותר</div></div>' +
       '</div>';
+
+    if (r.over) {
+      body += '<div class="note" style="background:var(--orange)"><div class="n-ico">⚠️</div><div>' +
+        '<b>הסכום ששולם עבר את המכסה</b>' +
+        'המכסה היא ' + UI.money(r.due) + ' ושולמו ' + UI.money(r.paid) +
+        ' — עודף של ' + UI.money(r.overAmount) + '. העודף יוחזר בחישוב סוף השנה.' +
+        '</div></div>';
+    }
 
     if (r.installments > 1) {
       body += '<div class="note"><div class="n-ico">📅</div><div><b>פריסה ל-' + r.installments + ' תשלומים</b>' +

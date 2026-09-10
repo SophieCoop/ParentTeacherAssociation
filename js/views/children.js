@@ -75,8 +75,13 @@ Views.children = (function () {
       '<div class="stat-grid" style="margin-bottom:14px">' +
         '<div class="stat"><div class="s-val">' + pct + '%</div><div class="s-lab">אחוז השתתפות</div></div>' +
         '<div class="stat"><div class="s-val">' + UI.money(r.due) + '</div><div class="s-lab">לתשלום</div></div>' +
-        '<div class="stat"><div class="s-val pos">' + UI.money(r.paid) + '</div><div class="s-lab">שולם</div></div>' +
-      '</div>';
+        '<div class="stat"><div class="s-val ' + (r.over ? 'over-paid' : 'pos') + '">' + UI.money(r.paid) + '</div><div class="s-lab">שולם</div></div>' +
+      '</div>' +
+      (r.over
+        ? '<div class="note" style="background:var(--orange)"><div class="n-ico">⚠️</div><div>' +
+          '<b>הסכום ששולם עבר את המכסה</b>שולמו ' + UI.money(r.paid) + ' מתוך מכסה של ' +
+          UI.money(r.due) + ' — עודף של ' + UI.money(r.overAmount) + '.</div></div>'
+        : '');
 
     if (c.joinDate) {
       body += '<div class="note"><div class="n-ico">📆</div><div><b>תאריך הצטרפות</b>' +

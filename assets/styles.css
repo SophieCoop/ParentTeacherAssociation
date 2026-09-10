@@ -23,6 +23,7 @@
   --purple:#E6DDF9;    --purple-ink:#8B79CE;
   --peach:#FCE1D2;     --peach-ink:#CE7F55;
   --mint:#D5EFEC;      --mint-ink:#4E9E97;
+  --orange:#FBE1CB;    --orange-ink:#D97F2E;
 
   --ok:#5D9E72;
   --warn:#D9A441;
@@ -251,6 +252,7 @@ textarea.input{min-height:78px;resize:vertical}
 .badge.no{background:var(--pink);color:var(--pink-ink)}
 .badge.info{background:var(--blue);color:var(--blue-ink)}
 .badge.neutral{background:#F2EFF7;color:var(--muted)}
+.badge.over{background:var(--orange);color:var(--orange-ink)}
 
 /* ===================== סיכומים ומדדים ===================== */
 .summary{
@@ -410,6 +412,7 @@ table.tbl tr td:first-child{font-weight:600}
 .flex-between{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .wrap{flex-wrap:wrap}
 .pos{color:var(--ok)} .neg{color:var(--danger)}
+.over-paid{color:var(--orange-ink)}
 
 /* ===================== מסך רחב ===================== */
 @media (min-width:900px){

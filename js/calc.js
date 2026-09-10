@@ -178,13 +178,16 @@ var Calc = (function () {
     var paid = pays.reduce(function (s, p) { return s + num(p.amount); }, 0);
     var remaining = round2(due - paid);
     var plan = num(child.installmentsPlan) || 0;
+    var over = round2(paid - due);
     return {
       child: child,
       percent: pct,
       due: due,
       paid: round2(paid),
       remaining: remaining,
-      status: remaining <= 0.5 ? 'full' : (paid > 0 ? 'partial' : 'none'),
+      over: over > 0.5,              // שולם יותר מהמכסה
+      overAmount: over > 0.5 ? over : 0,
+      status: over > 0.5 ? 'over' : (remaining <= 0.5 ? 'full' : (paid > 0 ? 'partial' : 'none')),
       payments: pays,
       installments: plan,
       perInstallment: plan > 1 ? round2(due / plan) : 0,
@@ -205,7 +208,9 @@ var Calc = (function () {
       due: round2(due),
       paid: round2(paid),
       remaining: round2(due - paid),
-      fullCount: rows.filter(function (r) { return r.status === 'full'; }).length,
+      fullCount: rows.filter(function (r) { return r.status === 'full' || r.status === 'over'; }).length,
+      overCount: rows.filter(function (r) { return r.status === 'over'; }).length,
+      overTotal: round2(rows.reduce(function (s, r) { return s + r.overAmount; }, 0)),
       partialCount: rows.filter(function (r) { return r.status === 'partial'; }).length,
       noneCount: rows.filter(function (r) { return r.status === 'none'; }).length,
       pct: due > 0 ? Math.min(100, Math.round((paid / due) * 100)) : 0

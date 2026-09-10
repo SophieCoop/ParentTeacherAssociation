@@ -58,7 +58,7 @@ Views.yearend = (function () {
         return '<tr><td>' + UI.esc(r.child.name) + '</td>' +
           '<td class="end ' + (r.balance >= 0 ? 'pos' : 'neg') + '"><b>' +
             (r.balance >= 0 ? 'החזר ' : 'להשלים ') + UI.money(Math.abs(r.balance)) + '</b></td>' +
-          '<td class="end">' + UI.money(r.paid) + '</td>' +
+          '<td class="end' + (r.paid > r.due + 0.5 ? ' over-paid' : '') + '">' + UI.money(r.paid) + '</td>' +
           '<td class="end">' + UI.money(r.fairCost) + '</td>' +
           '<td class="end">' + r.percent + '%</td></tr>';
       }).join('') +
