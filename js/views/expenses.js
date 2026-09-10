@@ -63,12 +63,21 @@ Views.expenses = (function () {
     html += '<div class="section-title"><span>כל ההוצאות</span><span class="sub">' + exps.length + ' רשומות</span></div>';
     html += exps.map(function (e) {
       var cat = Store.category(e.categoryId);
-      return '<div class="row" data-action="exp-edit" data-id="' + e.id + '">' +
+      var per = (e.basis === 'per_person' && e.audience && e.count > 1)
+        ? UI.money(e.rate) + ' × ' + Calc.audienceLabel(e.audience, e.count) + ' · '
+        : '';
+      return '<div class="row">' +
         '<div class="r-ico" style="background:' + UI.toneVar(cat.tone) + '">' + cat.icon + '</div>' +
-        '<div class="r-body"><div class="r-name">' + UI.esc(e.title || cat.name) + '</div>' +
-        '<div class="r-sub">' + UI.esc(cat.name) + (e.date ? ' · ' + UI.dateShort(e.date) : '') +
-        (e.ideaId ? ' · 💡 מרעיון' : '') + '</div></div>' +
-        '<div class="r-end"><div class="r-amount">' + UI.money(e.amount) + '</div></div></div>';
+        '<div class="r-body" data-action="exp-edit" data-id="' + e.id + '" style="cursor:pointer">' +
+          '<div class="r-name">' + UI.esc(e.title || cat.name) + '</div>' +
+          '<div class="r-sub" style="white-space:normal">' + per + UI.esc(cat.name) +
+          (e.date ? ' · ' + UI.dateShort(e.date) : '') +
+          (e.ideaId ? ' · 💡 מרעיון' : '') + '</div>' +
+        '</div>' +
+        '<div class="r-end"><div class="r-amount">' + UI.money(e.amount) + '</div></div>' +
+        '<button class="iconbtn plain" data-action="exp-edit" data-id="' + e.id + '" ' +
+          'aria-label="עריכת הוצאה">✏️</button>' +
+        '</div>';
     }).join('');
 
     return html;
@@ -106,22 +115,107 @@ Views.expenses = (function () {
   }
 
   /* ---------- טופס הוצאה ---------- */
+
+  var EXP_AUDIENCES = [
+    { value: '',          label: 'כללי',        icon: '💰' },
+    { value: 'children',  label: 'ילדים',       icon: '🧒' },
+    { value: 'staff_edu', label: 'צוות חינוכי', icon: '👩‍🏫' }
+  ];
+  var EXP_BASES = [
+    { value: 'total',      label: 'לכולם' },
+    { value: 'per_person', label: 'לאדם' }
+  ];
+
+  function expAmountLabel(basis) {
+    return 'סכום ' + (basis === 'per_person' ? 'לאדם' : 'כולל') + ' (₪)';
+  }
+
+  function expCount(audience, basis) {
+    return (basis === 'per_person' && audience) ? Calc.audienceCount(Store.state, audience) : 1;
+  }
+
+  function expCalcLine(audience, basis, rate) {
+    var count = expCount(audience, basis);
+    var per = Calc.num(rate);
+
+    if (basis === 'per_person' && audience && count === 0) {
+      return '<div class="note" style="background:#FDF0F2;margin:0"><div class="n-ico">⚠️</div><div>' +
+        (audience === 'children' ? 'אין ילדים ברשימה' : 'אין אנשי צוות ברשימה') +
+        ' — לא ניתן לחשב סכום לאדם.</div></div>';
+    }
+    if (count <= 1) return '';
+
+    return '<div class="row" style="box-shadow:none;background:var(--primary-soft);margin:0">' +
+      '<div class="r-body">' +
+        '<div class="small muted">' + UI.money(per) + ' לאדם  ×  ' +
+          Calc.audienceLabel(audience, count) + '</div>' +
+        '<div class="r-name" style="font-size:18px">= ' + UI.money(per * count) + '</div>' +
+      '</div></div>';
+  }
+
   function expForm(exp) {
     var isNew = !exp;
-    exp = exp || { categoryId: Store.state.categories[0].id, title: '', amount: '', date: UI.todayISO(), note: '' };
+    exp = exp || { categoryId: Store.state.categories[0].id, title: '', amount: '',
+                   audience: '', basis: 'total', rate: '', count: 1,
+                   date: UI.todayISO(), note: '' };
+
+    var startAudience = exp.audience || '';
+    var startBasis = exp.basis || 'total';
+    var startRate = (exp.rate !== undefined && exp.rate !== '') ? exp.rate : exp.amount;
+
     UI.formModal({
       title: isNew ? 'הוצאה חדשה' : 'עריכת הוצאה',
       subtitle: 'ההוצאה תרד מהתקציב של הקטגוריה',
       fields: [
-        { name: 'categoryId', label: 'קטגוריה', type: 'select', value: exp.categoryId, required: true, options: Views.budget.catOptions() },
-        { name: 'title', label: 'תיאור ההוצאה', value: exp.title, placeholder: 'למשל: מתנה ליומולדת של נועה' },
-        { name: 'amount', label: 'סכום (₪)', type: 'number', value: exp.amount, required: true, placeholder: '0.00', min: 0 },
+        { name: 'categoryId', label: 'קטגוריה', type: 'select', value: exp.categoryId,
+          required: true, options: Views.budget.catOptions() },
+        { name: 'title', label: 'תיאור ההוצאה', value: exp.title,
+          placeholder: 'למשל: מתנה ליומולדת של נועה' },
+        { name: 'audience', label: 'עבור', type: 'chips', value: startAudience, options: EXP_AUDIENCES },
+        { name: 'basis', label: 'הסכום הוא', type: 'chips', value: startBasis, options: EXP_BASES,
+          hint: '"לאדם" מוכפל במספר הילדים או אנשי הצוות · "לכולם" הוא הסכום ששולם בסך הכל' },
+        { name: 'amount', label: expAmountLabel(startBasis), type: 'number', value: startRate,
+          required: true, placeholder: '0', min: 0 },
+        { name: 'calc', type: 'html', html: expCalcLine(startAudience, startBasis, startRate) },
         { name: 'date', label: 'תאריך', type: 'date', value: exp.date || UI.todayISO() },
-        { name: 'note', label: 'הערות (אופציונלי)', type: 'textarea', value: exp.note, placeholder: 'הוסיפו הערות…' }
+        { name: 'note', label: 'הערות (אופציונלי)', type: 'textarea', value: exp.note,
+          placeholder: 'הוסיפו הערות…' }
       ],
+
+      onFieldChange: function (name, value, root) {
+        var audience = root.querySelector('#f-audience').value;
+        var basisEl = root.querySelector('#f-basis');
+        var basis = basisEl.value;
+
+        // "לאדם" חסר משמעות בלי קהל יעד
+        if (!audience && basis === 'per_person') {
+          basis = 'total';
+          basisEl.value = 'total';
+          var box = root.querySelector('[data-chips="basis"]');
+          if (box) Array.prototype.forEach.call(box.querySelectorAll('.chip'), function (c) {
+            c.classList.toggle('on', c.getAttribute('data-chip') === 'total');
+          });
+        }
+
+        var rate = root.querySelector('#f-amount').value;
+        root.querySelector('label[for="f-amount"]').textContent = expAmountLabel(basis);
+        root.querySelector('#f-calc').innerHTML = expCalcLine(audience, basis, rate);
+      },
+
       onSubmit: function (v) {
-        if (isNew) Store.add('expenses', v);
-        else Store.update('expenses', exp.id, v);
+        var audience = v.audience || '';
+        var basis = (!audience && v.basis === 'per_person') ? 'total' : (v.basis || 'total');
+        var rate = Calc.num(v.amount);
+        var count = expCount(audience, basis);
+        var data = {
+          categoryId: v.categoryId, title: v.title, date: v.date, note: v.note,
+          audience: audience, basis: basis, rate: rate, count: count,
+          // הוצאה בפועל היא עובדה היסטורית — הסכום נקבע ברגע הרישום
+          // ואינו משתנה אם מספר הילדים ישתנה בהמשך
+          amount: rate * count
+        };
+        if (isNew) Store.add('expenses', data);
+        else Store.update('expenses', exp.id, data);
         App.render();
         UI.toast(isNew ? 'ההוצאה נרשמה ✓' : 'ההוצאה עודכנה ✓');
       },
