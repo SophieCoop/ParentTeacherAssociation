@@ -44,7 +44,10 @@ var App = (function () {
     var root = document.getElementById('app');
     var st = state();
 
-    if (!st.setupDone) {
+    // אשף ההקמה מיועד למי שמתחיל מאפס. מי שכבר מחובר לחשבון נכנס
+    // ישר לאפליקציה — גם אם עוד אין נתונים — כדי שיוכל להגיע לסנכרון.
+    var signedIn = !!(window.Cloud && Cloud.signedIn());
+    if (!st.setupDone && (!signedIn || viewState.forceWizard)) {
       root.className = 'shell shell-plain';
       root.innerHTML = '<div class="page">' + Views.onboarding.render(vs, setVs) + '</div>';
       return;

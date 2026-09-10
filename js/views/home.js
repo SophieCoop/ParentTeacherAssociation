@@ -23,6 +23,18 @@ Views.home = (function () {
       (Views.account.chipHTML() ? '<div style="margin-top:8px">' + Views.account.chipHTML() + '</div>' : '') +
       '</header>';
 
+    /* עדיין לא הוקם הגן — מציעים את אשף ההקמה במקום להסתיר אותו */
+    if (!st.setupDone) {
+      html += '<div class="note"><div class="n-ico">🌱</div><div>' +
+        '<b>הגן עדיין לא הוקם</b>' +
+        'אפשר להריץ את אשף ההקמה — פרטי הגן, ילדים, צוות ותקציב. ' +
+        'אם הנתונים כבר קיימים במכשיר אחר, ודאו שהוא מחובר ומסונכרן.' +
+        '<div class="btn-row mt">' +
+          '<button class="btn ghost" data-action="acc-sync">🔄 סנכרון עכשיו</button>' +
+          '<button class="btn" data-action="run-wizard">אשף ההקמה</button>' +
+        '</div></div></div>';
+    }
+
     /* סיכום כספי */
     html += '<div class="summary">' +
       '<div class="sum-top">' +
@@ -84,8 +96,12 @@ Views.home = (function () {
       }).join('');
     }
 
+    var synced = window.Cloud && Cloud.signedIn();
     html += '<div class="note mt"><div class="n-ico">💡</div><div>' +
-      '<b>טיפ</b>כל הנתונים נשמרים במכשיר שלכם בלבד. אפשר לגבות אותם לקובץ דרך ההגדרות ⚙️' +
+      '<b>טיפ</b>' +
+      (synced
+        ? 'הנתונים נשמרים במכשיר וגם מסונכרנים לחשבון שלכם — אפשר להמשיך לערוך מכל מכשיר.'
+        : 'כל הנתונים נשמרים במכשיר שלכם בלבד. אפשר לגבות אותם לקובץ דרך ההגדרות ⚙️') +
       '</div></div>';
 
     return html;

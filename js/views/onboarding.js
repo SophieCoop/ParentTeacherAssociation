@@ -15,12 +15,34 @@ Views.onboarding = (function () {
       '<p>יחד למען הילדים ❤️<br>ניהול תקציב, גבייה והוצאות במקום אחד</p>' +
       '<button class="btn" data-action="wiz-start">בואו נתחיל</button>' +
       '<button class="btn ghost" style="max-width:320px;margin-top:10px" data-action="wiz-demo">הצגת נתוני דוגמה</button>' +
-      (Cloud.enabled() && !Cloud.signedIn()
-        ? '<button class="btn soft" style="max-width:320px;margin-top:10px" data-action="acc-signin">' +
-          'כבר יש לי חשבון — התחברות</button>' +
-          '<p class="small muted" style="max-width:320px;margin-top:14px">' +
-          'מתחברים כאן כדי למשוך למכשיר הזה נתונים שכבר הזנתם במכשיר אחר.</p>'
-        : '') +
+      cloudBlock() +
+      '</div>';
+  }
+
+  /* אזור החשבון במסך הפתיחה.
+     בלי זה, מכשיר שכבר מחובר אך עדיין ריק נותר תקוע כאן: כפתור
+     ההתחברות מוסתר כי יש חשבון, ומסך ההגדרות נגיש רק אחרי סיום ההקמה. */
+  function cloudBlock() {
+    if (!Cloud.enabled()) return '';
+    var i = Cloud.info();
+
+    if (!i.signedIn) {
+      return '<button class="btn soft" style="max-width:320px;margin-top:10px" data-action="acc-signin">' +
+        'כבר יש לי חשבון — התחברות</button>' +
+        '<p class="small muted" style="max-width:320px;margin-top:14px">' +
+        'מתחברים כאן כדי למשוך למכשיר הזה נתונים שכבר הזנתם במכשיר אחר.</p>';
+    }
+
+    return '<div class="card" style="max-width:320px;margin-top:20px;text-align:start">' +
+      '<div class="flex-between" style="margin-bottom:10px">' +
+        '<span class="badge ' + i.tone + '">' + i.icon + ' ' + UI.esc(i.text) + '</span>' +
+        '<span class="small muted">' + UI.esc(i.email || '') + '</span>' +
+      '</div>' +
+      '<p class="small muted" style="margin:0 0 10px">המכשיר הזה מחובר לחשבון, אבל עדיין אין בו נתונים. ' +
+      'אם כבר הזנתם נתונים במכשיר אחר — ודאו שהוא מחובר, ואז משכו אותם לכאן.</p>' +
+      '<button class="btn" data-action="acc-sync">משיכת הנתונים מהענן</button>' +
+      '<button class="btn soft" style="margin-top:8px" data-action="acc-signout">התנתקות</button>' +
+      (i.error ? '<div class="hint">' + UI.esc(i.error) + '</div>' : '') +
       '</div>';
   }
 
@@ -150,6 +172,7 @@ Views.onboarding = (function () {
   function finish() {
     Store.state.setupDone = true;
     Store.save();
+    App.setVs('forceWizard', false);
     App.setVs('wizStep', 0);
     App.setView('home');
     UI.toast('ההרשמה הושלמה בהצלחה 🎉');
@@ -159,6 +182,11 @@ Views.onboarding = (function () {
     render: render,
     actions: {
       'wiz-start': function () { App.setVs('wizStep', 1); App.render(); },
+      'run-wizard': function () {
+        App.setVs('forceWizard', true);
+        App.setVs('wizStep', 1);
+        App.render();
+      },
       'wiz-demo': function () {
         Store.loadDemo();
         App.setVs('wizStep', 0);

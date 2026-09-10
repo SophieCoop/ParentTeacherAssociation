@@ -160,7 +160,11 @@ var Cloud = (function () {
       meta.lastServerAt = null;          // מכשיר חדש — משווים מול הענן מאפס
       meta.dirty = hasLocalContent();    // יש נתונים מקומיים? הם לא ייעלמו בשקט
       saveMeta();
-      return sync(true);
+      return sync(true).then(function (r) {
+        // ההתחברות משנה את המסך שצריך להיות מוצג, לא רק את הנתונים
+        if (window.App && App.render) App.render();
+        return r;
+      });
     });
   }
 
@@ -239,7 +243,18 @@ var Cloud = (function () {
 
     setStatus('syncing');
     return pull().then(function (row) {
-      if (!row) return push().then(function () { setStatus('synced'); });
+      if (!row) {
+        // אין עדיין דבר בענן. אם גם במכשיר אין נתונים, אין מה להעלות —
+        // דחיפת מצב ריק רק הייתה תופסת את המקום לפני המכשיר שיש בו נתונים.
+        if (!hasLocalContent()) {
+          meta.dirty = false;
+          meta.lastServerAt = null;
+          saveMeta();
+          setStatus('synced');
+          return;
+        }
+        return push().then(function () { setStatus('synced'); });
+      }
 
       var serverChanged = row.updated_at !== meta.lastServerAt;
 
