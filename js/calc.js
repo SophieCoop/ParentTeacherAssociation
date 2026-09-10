@@ -332,8 +332,16 @@ var Calc = (function () {
   }
 
   /* ---------- רעיונות (סיעור מוחות) ---------- */
+  /* שורת רעיון: כמות × סכום. שורות ישנות ללא כמות נחשבות כיחידה אחת. */
+  function lineQty(l) {
+    if (!l || l.qty === undefined || l.qty === null || l.qty === '') return 1;
+    return num(l.qty);
+  }
+  function lineTotal(l) {
+    return round2(lineQty(l) * num(l && l.amount));
+  }
   function ideaTotal(idea) {
-    return (idea.lines || []).reduce(function (s, l) { return s + num(l.amount); }, 0);
+    return round2((idea.lines || []).reduce(function (s, l) { return s + lineTotal(l); }, 0));
   }
 
   /* חלוקת עלות הרעיון לפי קהל היעד — כמה יוצא לכל ילד / איש צוות */
@@ -461,7 +469,8 @@ var Calc = (function () {
     childCollection: childCollection, collectionRows: collectionRows,
     collectionSummary: collectionSummary, byMethod: byMethod,
     overview: overview, refunds: refunds,
-    ideaTotal: ideaTotal, ideaSplit: ideaSplit, ideaVsBudget: ideaVsBudget,
+    ideaTotal: ideaTotal, lineTotal: lineTotal, lineQty: lineQty,
+    ideaSplit: ideaSplit, ideaVsBudget: ideaVsBudget,
     allDates: allDates, nextOccurrence: nextOccurrence, upcoming: upcoming
   };
 })();

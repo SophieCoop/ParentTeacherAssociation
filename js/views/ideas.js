@@ -40,12 +40,17 @@ Views.ideas = (function () {
       html += '<p class="muted small" style="margin:0 0 8px">עוד אין שורות הוצאה ברעיון הזה.</p>';
     } else {
       html += idea.lines.map(function (l) {
-        return '<div class="line">' +
-          '<input class="l-name input" style="border:none;background:transparent;padding:2px 0;flex:1" ' +
+        var q = Calc.lineQty(l);
+        return '<div class="line" style="flex-wrap:wrap">' +
+          '<input class="l-name input" style="border:none;background:transparent;padding:2px 0;flex:1;min-width:90px" ' +
             'value="' + UI.esc(l.label) + '" data-change="idea-line-name" data-id="' + idea.id + '" data-line="' + l.id + '" placeholder="שם הסעיף">' +
-          '<input class="l-amt input" style="border:none;background:transparent;padding:2px 0;width:86px;text-align:end;font-weight:700" ' +
-            'type="number" inputmode="decimal" value="' + UI.esc(l.amount) + '" data-change="idea-line-amt" data-id="' + idea.id + '" data-line="' + l.id + '" placeholder="0">' +
+          '<input class="input" style="border:none;background:transparent;padding:2px 0;width:44px;text-align:center" ' +
+            'type="number" inputmode="numeric" min="0" value="' + UI.esc(q) + '" data-change="idea-line-qty" data-id="' + idea.id + '" data-line="' + l.id + '" aria-label="כמות">' +
+          '<span class="small muted">×</span>' +
+          '<input class="l-amt input" style="border:none;background:transparent;padding:2px 0;width:72px;text-align:end;font-weight:700" ' +
+            'type="number" inputmode="decimal" value="' + UI.esc(l.amount) + '" data-change="idea-line-amt" data-id="' + idea.id + '" data-line="' + l.id + '" placeholder="0" aria-label="סכום ליחידה">' +
           '<span class="small muted">₪</span>' +
+          (q !== 1 ? '<span class="small" style="font-weight:700">= ' + UI.money(Calc.lineTotal(l)) + '</span>' : '') +
           '<button class="iconbtn del" style="width:26px;height:26px;font-size:13px" data-action="idea-line-del" data-id="' + idea.id + '" data-line="' + l.id + '" aria-label="מחיקת שורה">✕</button>' +
           '</div>';
       }).join('');
@@ -106,11 +111,13 @@ Views.ideas = (function () {
 
     /* שורות ההוצאה נערכות בתוך הטופס, כדי שאפשר יהיה להזין רעיון שלם בבת אחת */
     var lines = (idea.lines || []).map(function (l) {
-      return { id: l.id || Store.uid('ln'), label: l.label, amount: l.amount };
+      return { id: l.id || Store.uid('ln'), label: l.label,
+               qty: (l.qty === undefined || l.qty === null || l.qty === '') ? 1 : l.qty,
+               amount: l.amount };
     });
 
     function linesTotal() {
-      return lines.reduce(function (s, l) { return s + Calc.num(l.amount); }, 0);
+      return lines.reduce(function (s, l) { return s + Calc.lineTotal(l); }, 0);
     }
 
     function refreshTotal(root) {
@@ -125,15 +132,24 @@ Views.ideas = (function () {
       box.innerHTML =
         '<label>שורות ההוצאה</label>' +
         (lines.length ? lines.map(function (l, i) {
-          return '<div class="edit-line">' +
-            '<input class="input" data-ln="label" data-i="' + i + '" placeholder="שם המתנה" ' +
-              'value="' + UI.esc(l.label || '') + '" style="flex:1;min-width:0;padding:8px 10px;font-size:13px">' +
-            '<input class="input" data-ln="amount" data-i="' + i + '" type="number" inputmode="decimal" ' +
-              'placeholder="0" value="' + UI.esc(l.amount === '' || l.amount === undefined ? '' : l.amount) + '" ' +
-              'style="width:82px;flex:none;padding:8px 10px;font-size:13px;text-align:end;font-weight:700">' +
-            '<span class="small muted">₪</span>' +
-            '<button type="button" class="iconbtn del" data-ln-del="' + i + '" ' +
-              'style="width:26px;height:26px;font-size:12px" aria-label="מחיקת שורה">✕</button>' +
+          return '<div class="line-card">' +
+            '<div class="lc-top">' +
+              '<input class="input" data-ln="label" data-i="' + i + '" placeholder="שם המתנה" ' +
+                'value="' + UI.esc(l.label || '') + '">' +
+              '<button type="button" class="iconbtn del" data-ln-del="' + i + '" ' +
+                'aria-label="מחיקת שורה">✕</button>' +
+            '</div>' +
+            '<div class="lc-calc">' +
+              '<input class="input" data-ln="qty" data-i="' + i + '" type="number" inputmode="numeric" min="0" ' +
+                'placeholder="1" value="' + UI.esc(l.qty === '' || l.qty === undefined ? '' : l.qty) + '" ' +
+                'aria-label="כמות">' +
+              '<span>×</span>' +
+              '<input class="input" data-ln="amount" data-i="' + i + '" type="number" inputmode="decimal" min="0" ' +
+                'placeholder="0" value="' + UI.esc(l.amount === '' || l.amount === undefined ? '' : l.amount) + '" ' +
+                'aria-label="סכום ליחידה">' +
+              '<span>₪ =</span>' +
+              '<b data-ln-sum="' + i + '">' + UI.money(Calc.lineTotal(l)) + '</b>' +
+            '</div>' +
             '</div>';
         }).join('') : '<p class="small muted" style="margin:0 0 8px">עוד לא נוספו שורות הוצאה.</p>') +
         '<button type="button" class="btn soft sm" data-ln-add="1" style="width:100%">+ הוספת שורה</button>' +
@@ -147,7 +163,10 @@ Views.ideas = (function () {
           var i = parseInt(inp.getAttribute('data-i'), 10);
           if (!lines[i]) return;
           var key = inp.getAttribute('data-ln');
-          lines[i][key] = key === 'amount' ? (inp.value === '' ? '' : Calc.num(inp.value)) : inp.value;
+          lines[i][key] = (key === 'label') ? inp.value
+                        : (inp.value === '' ? '' : Calc.num(inp.value));
+          var sum = box.querySelector('[data-ln-sum="' + i + '"]');
+          if (sum) sum.textContent = UI.money(Calc.lineTotal(lines[i]));
           refreshTotal(root);
         };
         inp.addEventListener('input', handler);
@@ -161,7 +180,7 @@ Views.ideas = (function () {
       });
       var add = box.querySelector('[data-ln-add]');
       if (add) add.addEventListener('click', function () {
-        lines.push({ id: Store.uid('ln'), label: '', amount: '' });
+        lines.push({ id: Store.uid('ln'), label: '', qty: 1, amount: '' });
         drawLines(root);
         var inputs = box.querySelectorAll('[data-ln="label"]');
         if (inputs.length) inputs[inputs.length - 1].focus();
@@ -190,6 +209,10 @@ Views.ideas = (function () {
         // שורה ריקה לגמרי אינה נשמרת
         var clean = lines.filter(function (l) {
           return (l.label && l.label.trim()) || Calc.num(l.amount) > 0;
+        }).map(function (l) {
+          return { id: l.id, label: l.label,
+                   qty: (l.qty === '' || l.qty === undefined) ? 1 : Calc.num(l.qty),
+                   amount: l.amount };
         });
         var data = {
           title: v.title, categoryId: v.categoryId, audiences: v.audiences,
@@ -218,7 +241,10 @@ Views.ideas = (function () {
     var cat = idea.categoryId ? Store.category(idea.categoryId) : null;
     var split = Calc.ideaSplit(st, idea);
     var lines = (idea.lines || []).map(function (l) {
-      return '• ' + (l.label || 'סעיף') + ' — ' + UI.money(l.amount);
+      var q = Calc.lineQty(l);
+      return '• ' + (l.label || 'סעיף') + ' — ' +
+        (q !== 1 ? q + ' × ' + UI.money(l.amount) + ' = ' + UI.money(Calc.lineTotal(l))
+                 : UI.money(Calc.lineTotal(l)));
     }).join('\n');
 
     var aud = (idea.audiences || []).map(function (a) { return Store.audience(a).name; }).join(' + ');
@@ -294,7 +320,7 @@ Views.ideas = (function () {
         var idea = Store.find('ideas', el.getAttribute('data-id'));
         if (!idea) return;
         if (!idea.lines) idea.lines = [];
-        idea.lines.push({ id: Store.uid('ln'), label: '', amount: '' });
+        idea.lines.push({ id: Store.uid('ln'), label: '', qty: 1, amount: '' });
         Store.save();
         App.render();
         // מיקוד אוטומטי בשורה החדשה
@@ -307,6 +333,14 @@ Views.ideas = (function () {
         if (!line) return;
         line.label = el.value;
         Store.save();
+      },
+      'idea-line-qty': function (el) {
+        var idea = Store.find('ideas', el.getAttribute('data-id'));
+        var line = idea && findLine(idea, el.getAttribute('data-line'));
+        if (!line) return;
+        line.qty = el.value === '' ? 1 : Calc.num(el.value);
+        Store.save();
+        App.render();
       },
       'idea-line-amt': function (el) {
         var idea = Store.find('ideas', el.getAttribute('data-id'));
