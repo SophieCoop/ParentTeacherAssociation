@@ -66,9 +66,9 @@ Views.expenses = (function () {
       var per = (e.basis === 'per_person' && e.audience && e.count > 1)
         ? UI.money(e.rate) + ' × ' + Calc.audienceLabel(e.audience, e.count) + ' · '
         : '';
-      return '<div class="row">' +
+      return '<div class="row" data-action="exp-edit" data-id="' + e.id + '" style="cursor:pointer">' +
         '<div class="r-ico" style="background:' + UI.toneVar(cat.tone) + '">' + cat.icon + '</div>' +
-        '<div class="r-body" data-action="exp-edit" data-id="' + e.id + '" style="cursor:pointer">' +
+        '<div class="r-body">' +
           '<div class="r-name">' + UI.esc(e.title || cat.name) + '</div>' +
           '<div class="r-sub" style="white-space:normal">' + per + UI.esc(cat.name) +
           (e.date ? ' · ' + UI.dateShort(e.date) : '') +
@@ -217,14 +217,58 @@ Views.expenses = (function () {
         if (isNew) Store.add('expenses', data);
         else Store.update('expenses', exp.id, data);
         App.render();
+        refreshCategory();
         UI.toast(isNew ? 'ההוצאה נרשמה ✓' : 'ההוצאה עודכנה ✓');
       },
       onDelete: isNew ? null : function () {
         Store.remove('expenses', exp.id);
         App.render();
+        refreshCategory();
         UI.toast('ההוצאה נמחקה');
       }
     });
+  }
+
+  /* ---------- חלון הוצאות לפי קטגוריה ---------- */
+
+  var openCat = null;
+
+  function categoryBody(catId) {
+    var st = Store.state;
+    var cat = Store.category(catId);
+    var list = st.expenses.filter(function (e) { return e.categoryId === cat.id; });
+    var planned = Calc.budgetByCategory(st)[cat.id] || 0;
+    var spent = list.reduce(function (s, e) { return s + Calc.num(e.amount); }, 0);
+
+    return '<div class="stat-grid" style="margin-bottom:14px">' +
+        '<div class="stat"><div class="s-val">' + UI.money(planned) + '</div><div class="s-lab">מתוכנן</div></div>' +
+        '<div class="stat"><div class="s-val">' + UI.money(spent) + '</div><div class="s-lab">בפועל</div></div>' +
+        '<div class="stat"><div class="s-val ' + (planned - spent >= 0 ? 'pos' : 'neg') + '">' +
+          UI.money(planned - spent) + '</div><div class="s-lab">יתרה</div></div>' +
+      '</div>' +
+      (list.length ? list.map(function (e) {
+        return '<div class="row" data-action="exp-edit" data-id="' + e.id + '" ' +
+          'style="box-shadow:none;background:#FAF8FD;cursor:pointer">' +
+          '<div class="r-body"><div class="r-name">' + UI.esc(e.title || cat.name) + '</div>' +
+          '<div class="r-sub">' + UI.dateShort(e.date) + '</div></div>' +
+          '<div class="r-end"><b>' + UI.money(e.amount) + '</b></div>' +
+          '<button class="iconbtn plain" data-action="exp-edit" data-id="' + e.id + '" ' +
+            'aria-label="עריכת הוצאה">✏️</button></div>';
+      }).join('') : '<p class="muted small">אין עדיין הוצאות בקטגוריה הזו.</p>') +
+      '<button class="btn soft mt" data-action="exp-add">+ הוספת הוצאה</button>';
+  }
+
+  function openCategory(catId) {
+    var cat = Store.category(catId);
+    var m = UI.modal({ title: cat.icon + ' ' + cat.name, body: categoryBody(catId) });
+    openCat = { id: catId, api: m };
+  }
+
+  /* החלון הפתוח מתרענן אחרי עריכה או מחיקה, במקום להציג נתונים ישנים */
+  function refreshCategory() {
+    if (!openCat) return;
+    if (!openCat.api.isOpen()) { openCat = null; return; }
+    openCat.api.setBody(categoryBody(openCat.id));
   }
 
   function render() {
@@ -246,22 +290,7 @@ Views.expenses = (function () {
       'exp-add': function () { expForm(null); },
       'exp-edit': function (el) { expForm(Store.find('expenses', el.getAttribute('data-id'))); },
       'exp-cat': function (el) {
-        var cat = Store.category(el.getAttribute('data-id'));
-        var list = Store.state.expenses.filter(function (e) { return e.categoryId === cat.id; });
-        var planned = Calc.budgetByCategory(Store.state)[cat.id] || 0;
-        var spent = list.reduce(function (s, e) { return s + Calc.num(e.amount); }, 0);
-        var body = '<div class="stat-grid" style="margin-bottom:14px">' +
-          '<div class="stat"><div class="s-val">' + UI.money(planned) + '</div><div class="s-lab">מתוכנן</div></div>' +
-          '<div class="stat"><div class="s-val">' + UI.money(spent) + '</div><div class="s-lab">בפועל</div></div>' +
-          '<div class="stat"><div class="s-val ' + (planned - spent >= 0 ? 'pos' : 'neg') + '">' + UI.money(planned - spent) + '</div><div class="s-lab">יתרה</div></div>' +
-          '</div>' +
-          (list.length ? list.map(function (e) {
-            return '<div class="row" style="box-shadow:none;background:#FAF8FD">' +
-              '<div class="r-body"><div class="r-name">' + UI.esc(e.title || cat.name) + '</div>' +
-              '<div class="r-sub">' + UI.dateShort(e.date) + '</div></div>' +
-              '<div class="r-end"><b>' + UI.money(e.amount) + '</b></div></div>';
-          }).join('') : '<p class="muted small">אין עדיין הוצאות בקטגוריה הזו.</p>');
-        UI.modal({ title: cat.icon + ' ' + cat.name, body: body });
+        openCategory(el.getAttribute('data-id'));
       }
     }
   };
