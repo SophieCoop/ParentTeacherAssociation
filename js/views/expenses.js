@@ -153,9 +153,13 @@ Views.expenses = (function () {
       '</div></div>';
   }
 
-  function expForm(exp) {
+  function expForm(exp, presetCategory) {
     var isNew = !exp;
-    exp = exp || { categoryId: Store.state.categories[0].id, title: '', amount: '',
+    // הוצאה שנפתחת מתוך קטגוריה מגיעה איתה מסומנת מראש
+    var startCategory = presetCategory && Store.find('categories', presetCategory)
+      ? presetCategory
+      : Store.state.categories[0].id;
+    exp = exp || { categoryId: startCategory, title: '', amount: '',
                    audience: '', basis: 'total', rate: '', count: 1,
                    date: UI.todayISO(), note: '' };
 
@@ -255,7 +259,8 @@ Views.expenses = (function () {
           '<button class="iconbtn plain" data-action="exp-edit" data-id="' + e.id + '" ' +
             'aria-label="עריכת הוצאה">✏️</button></div>';
       }).join('') : '<p class="muted small">אין עדיין הוצאות בקטגוריה הזו.</p>') +
-      '<button class="btn soft mt" data-action="exp-add">+ הוספת הוצאה</button>';
+      '<button class="btn soft mt" data-action="exp-add" data-category="' + cat.id + '">' +
+        '+ הוספת הוצאה ל' + UI.esc(cat.name) + '</button>';
   }
 
   function openCategory(catId) {
@@ -287,7 +292,9 @@ Views.expenses = (function () {
     expForm: expForm,
     actions: {
       'exp-tab': function (el) { App.setVs('expTab', el.getAttribute('data-tab')); App.render(); },
-      'exp-add': function () { expForm(null); },
+      'exp-add': function (el) {
+        expForm(null, el && el.getAttribute ? el.getAttribute('data-category') : null);
+      },
       'exp-edit': function (el) { expForm(Store.find('expenses', el.getAttribute('data-id'))); },
       'exp-cat': function (el) {
         openCategory(el.getAttribute('data-id'));
