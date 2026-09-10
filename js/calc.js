@@ -41,6 +41,21 @@ var Calc = (function () {
     return Math.max(0, Math.min(100, Math.round(pct)));
   }
 
+  /* ילד שתאריך ההצטרפות שלו נופל אחרי סוף שנת הלימודים המוגדרת מקבל 0%,
+     וכל הסכומים שלו מתאפסים. זו כמעט תמיד טעות בהגדרת תאריכי השנה
+     ולא כוונה, ולכן יש לזהות זאת ולהתריע במקום להציג אפסים. */
+  function childOutOfYear(child, settings) {
+    var end = toDate(settings && settings.yearEnd);
+    var join = toDate(child && child.joinDate);
+    return !!(end && join && join >= end);
+  }
+
+  function outOfYearChildren(state) {
+    return (state.children || []).filter(function (c) {
+      return childOutOfYear(c, state.settings);
+    });
+  }
+
   function sharePercent(child, settings) {
     if (child.sharePercentOverride !== null && child.sharePercentOverride !== undefined && child.sharePercentOverride !== '') {
       return Math.max(0, Math.min(100, num(child.sharePercentOverride)));
@@ -402,6 +417,7 @@ var Calc = (function () {
   return {
     num: num, round2: round2, toDate: toDate,
     autoSharePercent: autoSharePercent, sharePercent: sharePercent,
+    childOutOfYear: childOutOfYear, outOfYearChildren: outOfYearChildren,
     budgetTotal: budgetTotal, budgetByCategory: budgetByCategory,
     audienceCount: audienceCount, audienceLabel: audienceLabel,
     itemAmount: itemAmount, itemBreakdown: itemBreakdown,

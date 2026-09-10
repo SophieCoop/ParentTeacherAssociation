@@ -23,7 +23,10 @@ Views.children = (function () {
         '<div class="r-body"><div class="r-name">' + UI.esc(c.name) + '</div>' +
         '<div class="r-sub">' + (c.birthDate ? '🎂 ' + UI.dateShort(c.birthDate) : 'ללא תאריך לידה') +
         (parents ? ' · ' + UI.esc(parents) : '') + '</div></div>' +
-        '<div class="r-end">' + (pct < 100 ? '<span class="badge warn">' + pct + '%</span>' : '') + '</div>' +
+        '<div class="r-end">' +
+          (Calc.childOutOfYear(c, st.settings)
+            ? '<span class="badge over">מחוץ לשנה</span>'
+            : (pct < 100 ? '<span class="badge warn">' + pct + '%</span>' : '')) + '</div>' +
         '</div>';
     }).join('');
 
@@ -83,7 +86,13 @@ Views.children = (function () {
           UI.money(r.due) + ' — עודף של ' + UI.money(r.overAmount) + '.</div></div>'
         : '');
 
-    if (c.joinDate) {
+    if (Calc.childOutOfYear(c, st.settings)) {
+      body += '<div class="note" style="background:var(--orange)"><div class="n-ico">⚠️</div><div>' +
+        '<b>תאריך ההצטרפות מחוץ לשנת הלימודים</b>' +
+        'ההצטרפות נרשמה ב-' + UI.dateShort(c.joinDate) + ', אחרי סוף השנה שהוגדרה (' +
+        UI.dateShort(st.settings.yearEnd) + '), ולכן אחוז ההשתתפות הוא 0 והסכומים מתאפסים. ' +
+        'צריך לתקן את תאריכי שנת הלימודים בהגדרות או את תאריך ההצטרפות.</div></div>';
+    } else if (c.joinDate) {
       body += '<div class="note"><div class="n-ico">📆</div><div><b>תאריך הצטרפות</b>' +
         'הצטרף/ה ב-' + UI.dateShort(c.joinDate) + '. החישוב האוטומטי: ' + auto + '% מהסכום המלא' +
         (c.sharePercentOverride ? ' (נקבע ידנית ' + pct + '%)' : '') + '.</div></div>';

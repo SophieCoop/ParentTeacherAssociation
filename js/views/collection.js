@@ -339,9 +339,31 @@ Views.collection = (function () {
     });
   }
 
+  /* אזהרה כשתאריכי ההצטרפות נופלים מחוץ לשנת הלימודים המוגדרת —
+     במצב הזה כל הסכומים מתאפסים, וזה נראה כאילו הנתונים נעלמו */
+  function yearMismatchNote() {
+    var st = Store.state;
+    if (!st.children.length) return '';
+    var out = Calc.outOfYearChildren(st);
+    if (!out.length) return '';
+    var all = out.length === st.children.length;
+
+    return '<div class="note" style="background:var(--orange)"><div class="n-ico">⚠️</div><div>' +
+      '<b>תאריכי הצטרפות מחוץ לשנת הלימודים</b>' +
+      (all ? 'כל ' + st.children.length + ' הילדים ' : out.length + ' מתוך ' + st.children.length + ' הילדים ') +
+      'רשומים כמצטרפים אחרי סוף שנת הלימודים שהוגדרה (' +
+      UI.dateShort(st.settings.yearStart) + ' – ' + UI.dateShort(st.settings.yearEnd) + '), ' +
+      'ולכן אחוז ההשתתפות שלהם 0 והסכומים לתשלום יוצאים ריקים.' +
+      '<div class="btn-row mt">' +
+        '<button class="btn ghost" data-action="nav" data-view="children">בדיקת הילדים</button>' +
+        '<button class="btn" data-action="nav" data-view="settings">עדכון שנת הלימודים</button>' +
+      '</div></div></div>';
+  }
+
   function render() {
     var tab = App.vs('colTab', 'list');
     var html = UI.pageHead({ title: 'גבייה מההורים', subtitle: 'מי שילם, כמה, ובאיזה אמצעי', icon: '💰', tone: 'green', back: 'home' });
+    html += yearMismatchNote();
     html += '<div class="segment">' +
       '<button data-action="col-tab" data-tab="calc" class="' + (tab === 'calc' ? 'on' : '') + '">חישוב</button>' +
       '<button data-action="col-tab" data-tab="payments" class="' + (tab === 'payments' ? 'on' : '') + '">תשלומים</button>' +
