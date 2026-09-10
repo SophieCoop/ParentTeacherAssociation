@@ -415,6 +415,12 @@ table.tbl tr td:first-child{font-weight:600}
 .over-paid{color:var(--orange-ink)}
 
 /* הערה שנכתבה בתשלום — מוצגת לצד הסכום, בלי להסתיר אותו */
+/* שורת עריכה בתוך טופס — שדה, סכום וכפתור מחיקה באותה שורה */
+.edit-line{
+  display:flex;align-items:center;gap:6px;
+  background:#FAF8FD;border-radius:12px;padding:8px 10px;margin-bottom:7px;
+}
+
 /* תקופת פעילות בסעיף חודשי */
 .period{background:#FAF8FD;border-radius:14px;padding:10px 12px;margin-bottom:8px}
 .period .p-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}

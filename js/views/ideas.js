@@ -101,25 +101,105 @@ Views.ideas = (function () {
   /* ---------- טופס רעיון ---------- */
   function ideaForm(idea) {
     var isNew = !idea;
-    idea = idea || { title: '', categoryId: Store.state.categories[0].id, audiences: ['children'], note: '', lines: [], chosen: false };
+    idea = idea || { title: '', categoryId: Store.state.categories[0].id, audiences: ['children'],
+                     note: '', lines: [], chosen: false };
+
+    /* שורות ההוצאה נערכות בתוך הטופס, כדי שאפשר יהיה להזין רעיון שלם בבת אחת */
+    var lines = (idea.lines || []).map(function (l) {
+      return { id: l.id || Store.uid('ln'), label: l.label, amount: l.amount };
+    });
+
+    function linesTotal() {
+      return lines.reduce(function (s, l) { return s + Calc.num(l.amount); }, 0);
+    }
+
+    function refreshTotal(root) {
+      var el = root.querySelector('#lines-total');
+      if (el) el.textContent = UI.money(linesTotal());
+    }
+
+    function drawLines(root) {
+      var box = root.querySelector('#f-lines');
+      if (!box) return;
+
+      box.innerHTML =
+        '<label>שורות ההוצאה</label>' +
+        (lines.length ? lines.map(function (l, i) {
+          return '<div class="edit-line">' +
+            '<input class="input" data-ln="label" data-i="' + i + '" placeholder="שם המתנה" ' +
+              'value="' + UI.esc(l.label || '') + '" style="flex:1;min-width:0;padding:8px 10px;font-size:13px">' +
+            '<input class="input" data-ln="amount" data-i="' + i + '" type="number" inputmode="decimal" ' +
+              'placeholder="0" value="' + UI.esc(l.amount === '' || l.amount === undefined ? '' : l.amount) + '" ' +
+              'style="width:82px;flex:none;padding:8px 10px;font-size:13px;text-align:end;font-weight:700">' +
+            '<span class="small muted">₪</span>' +
+            '<button type="button" class="iconbtn del" data-ln-del="' + i + '" ' +
+              'style="width:26px;height:26px;font-size:12px" aria-label="מחיקת שורה">✕</button>' +
+            '</div>';
+        }).join('') : '<p class="small muted" style="margin:0 0 8px">עוד לא נוספו שורות הוצאה.</p>') +
+        '<button type="button" class="btn soft sm" data-ln-add="1" style="width:100%">+ הוספת שורה</button>' +
+        '<div class="flex-between" style="margin-top:10px">' +
+          '<span class="small muted">סה״כ הרעיון</span>' +
+          '<b id="lines-total" style="font-size:16px">' + UI.money(linesTotal()) + '</b>' +
+        '</div>';
+
+      Array.prototype.forEach.call(box.querySelectorAll('[data-ln]'), function (inp) {
+        var handler = function () {
+          var i = parseInt(inp.getAttribute('data-i'), 10);
+          if (!lines[i]) return;
+          var key = inp.getAttribute('data-ln');
+          lines[i][key] = key === 'amount' ? (inp.value === '' ? '' : Calc.num(inp.value)) : inp.value;
+          refreshTotal(root);
+        };
+        inp.addEventListener('input', handler);
+        inp.addEventListener('change', handler);
+      });
+      Array.prototype.forEach.call(box.querySelectorAll('[data-ln-del]'), function (btn) {
+        btn.addEventListener('click', function () {
+          lines.splice(parseInt(btn.getAttribute('data-ln-del'), 10), 1);
+          drawLines(root);
+        });
+      });
+      var add = box.querySelector('[data-ln-add]');
+      if (add) add.addEventListener('click', function () {
+        lines.push({ id: Store.uid('ln'), label: '', amount: '' });
+        drawLines(root);
+        var inputs = box.querySelectorAll('[data-ln="label"]');
+        if (inputs.length) inputs[inputs.length - 1].focus();
+      });
+    }
+
     UI.formModal({
       title: isNew ? 'רעיון חדש' : 'עריכת רעיון',
-      subtitle: 'בחרו קטגוריית תקציב וקהל יעד',
+      subtitle: 'קטגוריית תקציב, קהל יעד ופירוט ההוצאות',
       fields: [
-        { name: 'title', label: 'שם הרעיון', value: idea.title, required: true, placeholder: 'למשל: מתנת סוף שנה — ספר וכוס' },
-        { name: 'categoryId', label: 'קטגוריית תקציב', type: 'select', value: idea.categoryId, options: Views.budget.catOptions() },
+        { name: 'title', label: 'שם הרעיון', value: idea.title, required: true,
+          placeholder: 'למשל: מתנת סוף שנה — ספר וכוס' },
+        { name: 'categoryId', label: 'קטגוריית תקציב', type: 'select', value: idea.categoryId,
+          options: Views.budget.catOptions() },
         { name: 'audiences', label: 'קהל יעד', type: 'chips', multi: true, value: idea.audiences,
           options: Store.AUDIENCES.map(function (a) { return { value: a.id, label: a.name, icon: a.icon }; }),
           hint: 'אפשר לבחור יותר מאחד — החלוקה לנפש מתעדכנת בהתאם' },
-        { name: 'note', label: 'הערות', type: 'textarea', value: idea.note, placeholder: 'קישורים, ספקים, רעיונות…' }
+        { name: 'lines', type: 'html', html: '' },
+        { name: 'note', label: 'הערות', type: 'textarea', value: idea.note,
+          placeholder: 'קישורים, ספקים, רעיונות…' }
       ],
+
+      onMount: function (root) { drawLines(root); },
+
       onSubmit: function (v) {
+        // שורה ריקה לגמרי אינה נשמרת
+        var clean = lines.filter(function (l) {
+          return (l.label && l.label.trim()) || Calc.num(l.amount) > 0;
+        });
+        var data = {
+          title: v.title, categoryId: v.categoryId, audiences: v.audiences,
+          note: v.note, lines: clean
+        };
         if (isNew) {
-          v.lines = [];
-          v.chosen = false;
-          Store.add('ideas', v);
+          data.chosen = false;
+          Store.add('ideas', data);
         } else {
-          Store.update('ideas', idea.id, v);
+          Store.update('ideas', idea.id, data);
         }
         App.render();
         UI.toast(isNew ? 'הרעיון נוסף 💡' : 'עודכן ✓');
