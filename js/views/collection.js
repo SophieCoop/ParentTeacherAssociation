@@ -100,7 +100,8 @@ Views.collection = (function () {
         '<div class="r-ico" style="background:var(--blue)">' + Store.methodIcon(p.method) + '</div>' +
         '<div class="r-body"><div class="r-name">' + UI.esc(parent) + '</div>' +
         '<div class="r-sub">' + UI.esc(Store.methodName(p.method)) + ' · ' + UI.dateShort(p.date) +
-        (p.installments > 1 ? ' · ' + p.installments + ' תשלומים' : '') + '</div></div>' +
+        (p.installments > 1 ? ' · ' + p.installments + ' תשלומים' : '') +
+        (p.note ? ' · 📝 ' + UI.esc(p.note) : '') + '</div></div>' +
         '<div class="r-end"><div class="r-amount">' + UI.money(p.amount) + '</div></div></div>';
     }).join('');
 
@@ -253,8 +254,13 @@ Views.collection = (function () {
     body += r.payments.length ? r.payments.map(function (p) {
       return '<div class="row" style="box-shadow:none;background:#FAF8FD">' +
         '<div class="r-ico" style="background:#fff">' + Store.methodIcon(p.method) + '</div>' +
-        '<div class="r-body"><div class="r-name">' + UI.money(p.amount) + '</div>' +
-        '<div class="r-sub">' + UI.esc(Store.methodName(p.method)) + ' · ' + UI.dateShort(p.date) + '</div></div>' +
+        '<div class="r-body">' +
+          '<div class="r-name" style="display:flex;align-items:baseline;gap:8px">' +
+            '<span>' + UI.money(p.amount) + '</span>' +
+            (p.note ? '<span class="pay-note" title="' + UI.esc(p.note) + '">' + UI.esc(p.note) + '</span>' : '') +
+          '</div>' +
+          '<div class="r-sub">' + UI.esc(Store.methodName(p.method)) + ' · ' + UI.dateShort(p.date) + '</div>' +
+        '</div>' +
         '<button class="iconbtn plain" data-action="pay-edit" data-id="' + p.id + '">✏️</button></div>';
     }).join('') : '<p class="muted small">עוד לא נרשמו תשלומים.</p>';
 

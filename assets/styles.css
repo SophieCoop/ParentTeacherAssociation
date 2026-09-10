@@ -414,6 +414,12 @@ table.tbl tr td:first-child{font-weight:600}
 .pos{color:var(--ok)} .neg{color:var(--danger)}
 .over-paid{color:var(--orange-ink)}
 
+/* הערה שנכתבה בתשלום — מוצגת לצד הסכום, בלי להסתיר אותו */
+.pay-note{
+  font-size:12px;font-weight:400;color:var(--muted);
+  flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+
 /* ===================== מסך רחב ===================== */
 @media (min-width:900px){
   body{font-size:15.5px}
