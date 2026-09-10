@@ -67,7 +67,8 @@ Views.settings = (function () {
       '<button class="btn danger" data-action="set-reset">🗑 מחיקת כל הנתונים</button>' +
       '</div>';
 
-    html += '<p class="center small muted mt">ועד הורים גן שלנו · יחד למען הילדים ❤️</p>';
+    html += '<p class="center small muted mt">ועד הורים גן שלנו · יחד למען הילדים ❤️<br>' +
+      'גרסה ' + UI.esc(window.APP_VERSION || '—') + '</p>';
     return html;
   }
 

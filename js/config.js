@@ -7,6 +7,9 @@
 
    כדי להריץ את האפליקציה מקומית בלבד, בלי ענן — לרוקן את url.
    ============================================================ */
+/* מספר הגרסה מוצג בהגדרות — כך אפשר לוודא שהמכשיר טען את הקוד העדכני */
+var APP_VERSION = '2026.09.10';
+
 var CloudConfig = {
   url:   'https://pbqmbwxlumvrfgfzepdq.supabase.co',
   key:   'sb_publishable_hyFmuRw3lIGweNzgdrbYhw__tMGO-LF',
