@@ -90,7 +90,13 @@ Views.budget = (function () {
       var bits = [UI.money(bd.rate)];
       if (bd.perPerson) bits.push('× ' + Calc.audienceLabel(bd.audience, bd.count));
       if (bd.monthly)   bits.push('× ' + bd.months + ' ח׳');
-      if (bd.customWindow) bits.push('(' + UI.dateDayMonth(b.startDate) + '–' + UI.dateDayMonth(b.endDate) + ')');
+      if (bd.customWindow) {
+        var pr = Calc.validPeriods(b);
+        bits.push(pr.length > 1
+          ? '(' + pr.length + ' תקופות)'
+          : '(' + UI.dateDayMonth(pr.length ? pr[0].start : b.startDate) + '–' +
+            UI.dateDayMonth(pr.length ? pr[0].end : b.endDate) + ')');
+      }
       per = bits.join(' ');
     }
     return '<div class="row" data-action="budget-edit" data-id="' + b.id + '" style="background:' + UI.toneVar(cat.tone) + '55">' +
@@ -252,7 +258,7 @@ Views.budget = (function () {
     var st = Store.state;
     var bd = Calc.itemBreakdown(st, {
       audience: draft.audience, basis: draft.basis, period: draft.period, rate: draft.rate,
-      startDate: draft.startDate, endDate: draft.endDate
+      periods: draft.periods, startDate: draft.startDate, endDate: draft.endDate
     });
 
     if (bd.perPerson && bd.count === 0) {
@@ -265,7 +271,11 @@ Views.budget = (function () {
 
     var parts = [UI.money(bd.rate) + (bd.perPerson ? ' לאדם' : '')];
     if (bd.perPerson) parts.push('× ' + Calc.audienceLabel(bd.audience, bd.count));
-    if (bd.monthly)   parts.push('× ' + bd.months + ' חודשים' + (bd.customWindow ? ' של פעילות' : ''));
+    if (bd.monthly) {
+      parts.push('× ' + bd.months + ' חודשים' +
+        (bd.customWindow ? ' של פעילות' : '') +
+        (bd.periodCount > 1 ? ' (' + bd.periodCount + ' תקופות)' : ''));
+    }
 
     var units = Calc.totalShareUnits(st);
     var perParent = units > 0 ? bd.total / units : 0;
@@ -293,6 +303,74 @@ Views.budget = (function () {
                      audience: '', basis: 'total', period: 'year', rate: '',
                      startDate: '', endDate: '' };
 
+    /* תקופות הפעילות נערכות כרשימה, כדי לתמוך בחוג עם הפסקות באמצע */
+    var periods = (item.periods && item.periods.length)
+      ? item.periods.map(function (p) { return { id: p.id || Store.uid('per'), start: p.start, end: p.end }; })
+      : (item.startDate && item.endDate
+          ? [{ id: Store.uid('per'), start: item.startDate, end: item.endDate }]
+          : []);
+
+    /* ציור מחדש של שורת החישוב לפי מצב הטופס והתקופות שהוזנו */
+    function refreshCalc(root) {
+      var el = root.querySelector('#f-calc');
+      if (!el) return;
+      el.innerHTML = calcLine({
+        audience: root.querySelector('#f-audience').value,
+        basis: root.querySelector('#f-basis').value,
+        period: root.querySelector('#f-period').value,
+        rate: root.querySelector('#f-amount').value,
+        periods: periods
+      });
+    }
+
+    /* רשימת תקופות הפעילות — ניתנת להוספה, עריכה ומחיקה */
+    function drawPeriods(root) {
+      var box = root.querySelector('#f-periods');
+      if (!box) return;
+
+      box.innerHTML =
+        '<label>תקופות פעילות</label>' +
+        (periods.length ? periods.map(function (p, i) {
+          return '<div class="period">' +
+            '<div class="p-head">' +
+              '<span>תקופה ' + (i + 1) + '</span>' +
+              '<button type="button" class="iconbtn del" data-per-del="' + i + '" ' +
+                'aria-label="מחיקת תקופה">✕</button>' +
+            '</div>' +
+            '<div class="p-dates">' +
+              '<label>מתאריך<input class="input" type="date" data-per="start" data-i="' + i + '" ' +
+                'value="' + UI.esc(p.start || '') + '"></label>' +
+              '<label>עד תאריך<input class="input" type="date" data-per="end" data-i="' + i + '" ' +
+                'value="' + UI.esc(p.end || '') + '"></label>' +
+            '</div>' +
+            '</div>';
+        }).join('') : '<p class="small muted" style="margin:0 0 8px">לא הוגדרו תקופות — החישוב יתבצע לפי כל שנת הלימודים.</p>') +
+        '<button type="button" class="btn soft sm" data-per-add="1" style="width:100%">+ הוספת תקופה</button>' +
+        '<div class="hint">אפשר להוסיף כמה תקופות, למשל חוג שנעצר בחופשה וחוזר אחריה. ' +
+        'החישוב מסכם את חודשי הפעילות בלבד.</div>';
+
+      Array.prototype.forEach.call(box.querySelectorAll('[data-per]'), function (inp) {
+        inp.addEventListener('change', function () {
+          var i = parseInt(inp.getAttribute('data-i'), 10);
+          if (periods[i]) periods[i][inp.getAttribute('data-per')] = inp.value;
+          refreshCalc(root);
+        });
+      });
+      Array.prototype.forEach.call(box.querySelectorAll('[data-per-del]'), function (btn) {
+        btn.addEventListener('click', function () {
+          periods.splice(parseInt(btn.getAttribute('data-per-del'), 10), 1);
+          drawPeriods(root);
+          refreshCalc(root);
+        });
+      });
+      var add = box.querySelector('[data-per-add]');
+      if (add) add.addEventListener('click', function () {
+        periods.push({ id: Store.uid('per'), start: '', end: '' });
+        drawPeriods(root);
+        refreshCalc(root);
+      });
+    }
+
     var bd = Calc.itemBreakdown(Store.state, item);
     var startAudience = item.audience || '';
     var startBasis  = item.basis  || (bd.perPerson ? 'per_person' : 'total');
@@ -312,17 +390,20 @@ Views.budget = (function () {
           hint: '"לאדם" מוכפל במספר הילדים או אנשי הצוות · "לכולם" הוא סכום אחד לכל הקבוצה' },
         { name: 'period', label: 'תדירות', type: 'chips', value: startPeriod, options: PERIODS,
           hint: '"לחודש" מוכפל במספר חודשי שנת הלימודים' },
-        { name: 'startDate', label: 'תחילת הפעילות', type: 'date', value: item.startDate || '', half: true },
-        { name: 'endDate', label: 'סיום הפעילות', type: 'date', value: item.endDate || '', half: true },
+        { name: 'periods', type: 'html', html: '' },
         { name: 'amount', label: amountLabel(startBasis, startPeriod), type: 'number',
           value: startRate, placeholder: '0', step: '1', min: 0 },
         { name: 'calc', type: 'html',
           html: calcLine({ audience: startAudience, basis: startBasis, period: startPeriod, rate: startRate,
-                           startDate: item.startDate || '', endDate: item.endDate || '' }) },
+                           periods: periods }) },
         { name: 'date', label: 'תאריך יעד', type: 'date', value: item.date,
           hint: 'למתי צריך להביא את המתנה / לבצע את ההוצאה' },
         { name: 'note', label: 'הערות', type: 'textarea', value: item.note, placeholder: 'אופציונלי' }
       ],
+
+      onMount: function (root) {
+        drawPeriods(root);
+      },
 
       onFieldChange: function (name, value, root) {
         var audience = root.querySelector('#f-audience').value;
@@ -339,23 +420,13 @@ Views.budget = (function () {
         var period = root.querySelector('#f-period').value;
         var rate = root.querySelector('#f-amount').value;
 
-        // חלון הפעילות רלוונטי רק לסעיף חודשי
+        // תקופות הפעילות רלוונטיות רק לסעיף חודשי
         var monthly = period === 'month';
-        ['startDate', 'endDate'].forEach(function (f) {
-          var box = root.querySelector('#field-' + f);
-          if (box) box.style.display = monthly ? '' : 'none';
-        });
-        var grid = root.querySelector('#field-startDate');
-        if (grid && grid.parentNode && grid.parentNode.classList.contains('grid-2')) {
-          grid.parentNode.style.display = monthly ? '' : 'none';
-        }
+        var box = root.querySelector('#f-periods');
+        if (box) box.style.display = monthly ? '' : 'none';
 
         root.querySelector('label[for="f-amount"]').textContent = amountLabel(basis, period);
-        root.querySelector('#f-calc').innerHTML = calcLine({
-          audience: audience, basis: basis, period: period, rate: rate,
-          startDate: root.querySelector('#f-startDate').value,
-          endDate: root.querySelector('#f-endDate').value
-        });
+        refreshCalc(root);
       },
 
       onSubmit: function (v) {
@@ -364,12 +435,14 @@ Views.budget = (function () {
         var period = v.period || 'year';
         var rate = Calc.num(v.amount);
         var monthly = period === 'month';
-        var draft = { audience: audience, basis: basis, period: period, rate: rate,
-                      startDate: monthly ? v.startDate : '', endDate: monthly ? v.endDate : '' };
+        var clean = monthly ? periods.filter(function (p) {
+          return p.start && p.end && p.end > p.start;
+        }) : [];
+        var draft = { audience: audience, basis: basis, period: period, rate: rate, periods: clean };
         var data = {
           categoryId: v.categoryId, title: v.title, date: v.date, note: v.note,
           audience: audience, basis: basis, period: period, rate: rate,
-          startDate: draft.startDate, endDate: draft.endDate,
+          periods: clean, startDate: '', endDate: '',
           // הסכום השנתי נשמר גם הוא, ומחושב מחדש בתצוגה לפי הנתונים העדכניים
           amount: Calc.itemAmount(Store.state, draft)
         };

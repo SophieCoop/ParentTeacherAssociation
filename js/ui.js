@@ -283,6 +283,8 @@ var UI = (function () {
           if (opts.onSubmit(values, close) !== false) close();
         });
 
+        if (opts.onMount) opts.onMount(root, close);
+
         var del = root.querySelector('.js-del');
         if (del) del.addEventListener('click', function () {
           confirmBox('למחוק?', opts.deleteText || 'הפריט יימחק לצמיתות.', function () {

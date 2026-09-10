@@ -415,6 +415,15 @@ table.tbl tr td:first-child{font-weight:600}
 .over-paid{color:var(--orange-ink)}
 
 /* הערה שנכתבה בתשלום — מוצגת לצד הסכום, בלי להסתיר אותו */
+/* תקופת פעילות בסעיף חודשי */
+.period{background:#FAF8FD;border-radius:14px;padding:10px 12px;margin-bottom:8px}
+.period .p-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.period .p-head span{font-size:12px;color:var(--muted);font-weight:600}
+.period .p-head .iconbtn{width:26px;height:26px;font-size:12px}
+.period .p-dates{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.period .p-dates label{display:block;font-size:11px;color:var(--muted)}
+.period .p-dates .input{padding:8px 9px;font-size:12.5px;margin-top:3px}
+
 .pay-note{
   font-size:12px;font-weight:400;color:var(--muted);
   flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;

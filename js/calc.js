@@ -92,7 +92,23 @@ var Calc = (function () {
 
   /* מספר חודשי הפעילות של סעיף חודשי — לפי חלון הפעילות שלו
      (למשל חוג שרץ מנובמבר עד מרץ), ואם לא הוגדר — לפי שנת הלימודים */
+  function validPeriods(item) {
+    return ((item && item.periods) || []).filter(function (p) {
+      var a = toDate(p && p.start), b = toDate(p && p.end);
+      return a && b && b > a;
+    });
+  }
+
   function itemMonths(state, item) {
+    // כמה תקופות פעילות — למשל חוג שנעצר בחופשה וממשיך אחריה
+    var periods = validPeriods(item);
+    if (periods.length) {
+      var total = periods.reduce(function (sum, p) {
+        return sum + monthsBetween(toDate(p.start), toDate(p.end));
+      }, 0);
+      return Math.max(1, Math.round(total));
+    }
+    // תאימות לסעיפים שנשמרו עם מקטע יחיד
     var a = toDate(item && item.startDate);
     var b = toDate(item && item.endDate);
     if (a && b && b > a) return Math.max(1, Math.round(monthsBetween(a, b)));
@@ -125,7 +141,9 @@ var Calc = (function () {
       rate: rate, perPerson: perPerson, monthly: monthly,
       audience: item.audience || '',
       count: count, months: months,
-      customWindow: monthly && !!(toDate(item.startDate) && toDate(item.endDate)),
+      customWindow: monthly && (validPeriods(item).length > 0 ||
+                    !!(toDate(item.startDate) && toDate(item.endDate))),
+      periodCount: validPeriods(item).length,
       total: round2(rate * count * months)
     };
   }
@@ -436,7 +454,7 @@ var Calc = (function () {
     budgetTotal: budgetTotal, budgetByCategory: budgetByCategory,
     audienceCount: audienceCount, audienceLabel: audienceLabel,
     itemAmount: itemAmount, itemBreakdown: itemBreakdown,
-    schoolMonths: schoolMonths, itemMonths: itemMonths,
+    schoolMonths: schoolMonths, itemMonths: itemMonths, validPeriods: validPeriods,
     expensesTotal: expensesTotal, expensesByCategory: expensesByCategory,
     paymentsOf: paymentsOf, paidBy: paidBy, collectedTotal: collectedTotal,
     totalShareUnits: totalShareUnits, fullChildShare: fullChildShare,

@@ -120,11 +120,18 @@ var Store = (function () {
      והתדירות (לשנה / לחודש) — מקבלים את המשמעות שהייתה להם בפועל */
   function migrateBudgetItems(items) {
     (items || []).forEach(function (b) {
-      if (b.basis !== undefined || b.period !== undefined) return;
-      var wasPerPerson = !!(b.audience && b.perPerson !== '' && b.perPerson !== null && b.perPerson !== undefined);
-      b.basis = wasPerPerson ? 'per_person' : 'total';
-      b.period = 'year';
-      b.rate = wasPerPerson ? b.perPerson : b.amount;
+      if (b.basis === undefined && b.period === undefined) {
+        var wasPerPerson = !!(b.audience && b.perPerson !== '' && b.perPerson !== null && b.perPerson !== undefined);
+        b.basis = wasPerPerson ? 'per_person' : 'total';
+        b.period = 'year';
+        b.rate = wasPerPerson ? b.perPerson : b.amount;
+      }
+      // מקטע פעילות יחיד הופך לתקופה ראשונה ברשימה
+      if (!Array.isArray(b.periods)) {
+        b.periods = (b.startDate && b.endDate)
+          ? [{ id: uid('per'), start: b.startDate, end: b.endDate }]
+          : [];
+      }
     });
     return items;
   }
