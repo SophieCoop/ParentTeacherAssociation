@@ -363,6 +363,18 @@ var UI = (function () {
   };
   function toneHex(t) { return TONE_HEX[t] || '#B2A2ED'; }
 
+  /* אותם צבעים כערכים ממשיים — הקנבס אינו מבין var(--x) */
+  var TONE_SOFT = {
+    pink: '#FADCE5', yellow: '#FCEDC8', green: '#D8EFDD', purple: '#E6DDF9',
+    blue: '#DBE7F8', peach: '#FCE1D2', mint: '#D5EFEC', orange: '#FBE1CB'
+  };
+  var TONE_INK = {
+    pink: '#C9718F', yellow: '#C79A3B', green: '#5D9E72', purple: '#8B79CE',
+    blue: '#5B87C2', peach: '#CE7F55', mint: '#4E9E97', orange: '#D97F2E'
+  };
+  function toneSoftHex(t) { return TONE_SOFT[t] || TONE_SOFT.purple; }
+  function toneInkHex(t) { return TONE_INK[t] || TONE_INK.purple; }
+
   /* ---------- שיתוף בוואטסאפ ---------- */
   function whatsapp(text, phone) {
     var base = phone ? 'https://wa.me/' + normalizePhone(phone) : 'https://wa.me/';
@@ -394,6 +406,7 @@ var UI = (function () {
     daysUntil: daysUntil, relativeDays: relativeDays, todayISO: todayISO,
     initials: initials, faceFor: faceFor, toneFor: toneFor,
     toneVar: toneVar, toneInk: toneInk, toneHex: toneHex,
+    toneSoftHex: toneSoftHex, toneInkHex: toneInkHex,
     toast: toast, modal: modal, formModal: formModal, confirmBox: confirmBox,
     pageHead: pageHead, empty: empty, bar: bar, donut: donut,
     whatsapp: whatsapp, normalizePhone: normalizePhone, copyText: copyText

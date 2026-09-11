@@ -305,6 +305,14 @@ textarea.input{min-height:78px;resize:vertical}
 }
 .lines .line .l-name{flex:1;font-size:13.5px}
 .lines .line .l-amt{font-weight:700;font-size:13.5px}
+/* תצוגה מקדימה של הרעיון כתמונה, לפני השליחה */
+.wa-img{
+  background:var(--bg-2);border-radius:18px;padding:10px;margin-bottom:14px;
+  min-height:120px;display:flex;align-items:center;justify-content:center;
+}
+.wa-img img{width:100%;display:block;border-radius:12px;box-shadow:var(--shadow)}
+.wa-img p{margin:0}
+
 /* "כמה עולה הרעיון מתוך תקציב הסעיף" — מתחת לסה״כ שבכרטיס */
 .of-budget{margin-top:8px}
 .of-budget .ob-val{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}

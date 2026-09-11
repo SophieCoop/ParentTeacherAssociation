@@ -409,6 +409,9 @@ Views.ideas = (function () {
 
   return {
     render: render,
+    // נחשפים כדי שייצוא התמונה יציג בדיוק את אותם שמות
+    itemName: itemName,
+    audienceLabel: audienceLabel,
     actions: {
       'idea-add': function () { ideaForm(null); },
       'idea-edit': function (el) { ideaForm(Store.find('ideas', el.getAttribute('data-id'))); },
@@ -464,15 +467,72 @@ Views.ideas = (function () {
         var idea = Store.find('ideas', el.getAttribute('data-id'));
         if (!idea) return;
         var text = shareText(idea);
-        UI.modal({
+
+        var m = UI.modal({
           title: 'שליחה להתייעצות',
-          subtitle: 'שיתוף רשימת ההוצאות עם ההורים',
-          body: '<pre class="card flat small" style="white-space:pre-wrap;font-family:inherit;margin-bottom:14px">' + UI.esc(text) + '</pre>' +
-            '<div class="btn-row"><button class="btn ghost js-copy">📋 העתקה</button>' +
-            '<button class="btn wa js-wa">💬 פתיחת וואטסאפ</button></div>',
+          subtitle: 'שיתוף הרעיון עם ההורים',
+          body: '<div id="wa-img" class="wa-img"><p class="small muted center">מכינים תמונה…</p></div>' +
+            '<div class="btn-row mt">' +
+              '<button class="btn ghost js-text">📝 כטקסט</button>' +
+              '<button class="btn wa js-share" disabled>💬 שיתוף התמונה</button>' +
+            '</div>' +
+            '<p class="small muted center" style="margin:10px 0 0" id="wa-hint">&nbsp;</p>',
           onMount: function (root, close) {
-            root.querySelector('.js-copy').addEventListener('click', function () { UI.copyText(text); });
-            root.querySelector('.js-wa').addEventListener('click', function () { UI.whatsapp(text); close(); });
+
+            /* ----- התמונה ----- */
+            IdeaImage.render(idea, function (canvas, err) {
+              var box = root.querySelector('#wa-img');
+              if (!box) return;
+              if (err || !canvas) {
+                box.innerHTML = '<p class="small muted center">לא הצלחנו להכין תמונה — אפשר לשלוח כטקסט.</p>';
+                return;
+              }
+              box.innerHTML = '<img alt="הרעיון כתמונה" src="' + canvas.toDataURL('image/png') + '">';
+
+              var share = root.querySelector('.js-share');
+              var hint = root.querySelector('#wa-hint');
+              var name = (idea.title || 'רעיון').replace(/[\\/:*?"<>|]/g, '') + '.png';
+
+              canvas.toBlob(function (blob) {
+                if (!blob) return;
+                var file = null;
+                try { file = new File([blob], name, { type: 'image/png' }); } catch (e) { file = null; }
+                var canShare = !!(file && navigator.share && navigator.canShare &&
+                                  navigator.canShare({ files: [file] }));
+
+                share.disabled = false;
+                if (canShare) {
+                  hint.textContent = 'נפתחת בחירת האפליקציה — בוחרים וואטסאפ ואת הקבוצה';
+                  share.addEventListener('click', function () {
+                    navigator.share({ files: [file], title: idea.title || 'רעיון' })
+                      .catch(function () { /* המשתמשת ביטלה */ });
+                  });
+                } else {
+                  share.textContent = '⬇️ שמירת התמונה';
+                  hint.textContent = 'שומרים את התמונה ומצרפים אותה בוואטסאפ';
+                  share.addEventListener('click', function () {
+                    var url = URL.createObjectURL(blob);
+                    var a = document.createElement('a');
+                    a.href = url; a.download = name;
+                    document.body.appendChild(a); a.click(); a.remove();
+                    setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+                    UI.toast('התמונה נשמרה');
+                  });
+                }
+              }, 'image/png');
+            });
+
+            /* ----- גיבוי: שליחה כטקסט ----- */
+            root.querySelector('.js-text').addEventListener('click', function () {
+              m.setBody(
+                '<pre class="card flat small" style="white-space:pre-wrap;font-family:inherit;margin-bottom:14px">' +
+                  UI.esc(text) + '</pre>' +
+                '<div class="btn-row"><button class="btn ghost js-copy">📋 העתקה</button>' +
+                '<button class="btn wa js-wa">💬 פתיחת וואטסאפ</button></div>');
+              var b = m.el;
+              b.querySelector('.js-copy').addEventListener('click', function () { UI.copyText(text); });
+              b.querySelector('.js-wa').addEventListener('click', function () { UI.whatsapp(text); close(); });
+            });
           }
         });
       }
