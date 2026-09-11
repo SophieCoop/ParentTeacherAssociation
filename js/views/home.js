@@ -17,7 +17,7 @@ Views.home = (function () {
     /* כותרת מותאמת אישית */
     html += '<header class="pagehead" style="--tint:var(--purple)">' +
       '<button class="head-action" data-action="nav" data-view="settings" aria-label="הגדרות">⚙️</button>' +
-      '<div class="ph-icon">🌈</div>' +
+      '<div class="ph-icon app-icon"><img src="assets/icon-192.png" alt="" width="192" height="192"></div>' +
       '<h1>ועד הורים ' + UI.esc(name) + '</h1>' +
       '<p>יחד עושים טוב לילדים ❤️ · שנת ' + UI.esc(st.gan.yearLabel || '') + '</p>' +
       (Views.account.chipHTML() ? '<div style="margin-top:8px">' + Views.account.chipHTML() + '</div>' : '') +
