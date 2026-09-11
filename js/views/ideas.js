@@ -132,28 +132,6 @@ Views.ideas = (function () {
     return { planned: planned, spent: spent, left: Calc.round2(planned - spent) };
   }
 
-  function budgetInfoHTML(catId) {
-    var cat = Store.category(catId);
-    var b = catBudget(catId);
-
-    if (!b.planned) {
-      return '<div class="note" style="margin:0"><div class="n-ico">ℹ️</div><div>' +
-        'לא הוגדר תקציב לקטגוריה "' + UI.esc(cat.name) + '", ולכן אין מול מה להשוות.' +
-        '</div></div>';
-    }
-
-    return '<div class="row" style="box-shadow:none;margin:0;background:' + UI.toneVar(cat.tone) + '">' +
-      '<div class="r-ico" style="background:#fff">' + cat.icon + '</div>' +
-      '<div class="r-body">' +
-        '<div class="small" style="opacity:.75">תקציב ' + UI.esc(cat.name) + '</div>' +
-        '<div class="r-name">' + UI.money(b.planned) + '</div>' +
-      '</div>' +
-      '<div class="r-end">' +
-        '<div class="small" style="opacity:.75">' + (b.spent ? 'נותר' : 'פנוי') + '</div>' +
-        '<b class="nowrap">' + UI.money(b.left) + '</b>' +
-      '</div></div>';
-  }
-
   /* ---------- טופס רעיון ---------- */
   function ideaForm(idea) {
     var isNew = !idea;
@@ -266,8 +244,12 @@ Views.ideas = (function () {
         { name: 'title', label: 'שם הרעיון', value: idea.title, required: true,
           placeholder: 'למשל: מתנת סוף שנה — ספר וכוס' },
         { name: 'categoryId', label: 'קטגוריית תקציב', type: 'select', value: idea.categoryId,
-          options: Views.budget.catOptions() },
-        { name: 'budgetInfo', type: 'html', html: budgetInfoHTML(idea.categoryId) },
+          options: Store.state.categories.map(function (c) {
+            var b = catBudget(c.id);
+            return { value: c.id,
+                     label: c.icon + '  ' + c.name +
+                            (b.planned ? '  —  ' + UI.money(b.planned) : '  —  ללא תקציב') };
+          }) },
         { name: 'audiences', label: 'קהל יעד', type: 'chips', multi: true, value: idea.audiences,
           options: Store.AUDIENCES.map(function (a) {
             return { value: a.id, label: audienceLabel(a.id), icon: a.icon };
@@ -284,10 +266,7 @@ Views.ideas = (function () {
       },
 
       onFieldChange: function (name, value, root) {
-        if (name !== 'categoryId') return;
-        var box = root.querySelector('#f-budgetInfo');
-        if (box) box.innerHTML = budgetInfoHTML(root.querySelector('#f-categoryId').value);
-        refreshTotal(root);
+        if (name === 'categoryId') refreshTotal(root);
       },
 
       onSubmit: function (v) {
