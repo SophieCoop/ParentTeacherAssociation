@@ -70,6 +70,22 @@ Views.ideas = (function () {
       '<span class="small muted">סה״כ הרעיון</span>' +
       '<b style="font-size:19px">' + UI.money(split.total) + '</b></div>';
 
+    /* כמה מתוך תקציב הסעיף הרעיון תופס */
+    if (vs && vs.planned > 0) {
+      var pct = Math.round((vs.total / vs.planned) * 100);
+      var tone = pct > 100 ? 'over' : (pct > 90 ? 'warn' : 'ok');
+      html += '<div class="of-budget">' +
+        '<div class="flex-between">' +
+          '<span class="small muted">מתוך תקציב ' + (vs.item ? 'הסעיף' : 'הקטגוריה') + '</span>' +
+          '<b class="ob-val">' + UI.money(vs.total) + ' מתוך ' + UI.money(vs.planned) + '</b>' +
+        '</div>' +
+        '<div class="ob-bar">' +
+          UI.bar(vs.total, vs.planned, 'thin ' + tone) +
+          '<span class="ob-pct' + (pct > 100 ? ' neg' : '') + '">' + pct + '%</span>' +
+        '</div>' +
+        '</div>';
+    }
+
     /* חלוקה לנפש */
     if (split.parts.length) {
       html += '<div class="split">' + split.parts.map(function (p) {

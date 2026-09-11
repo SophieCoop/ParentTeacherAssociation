@@ -305,6 +305,17 @@ textarea.input{min-height:78px;resize:vertical}
 }
 .lines .line .l-name{flex:1;font-size:13.5px}
 .lines .line .l-amt{font-weight:700;font-size:13.5px}
+/* "כמה עולה הרעיון מתוך תקציב הסעיף" — מתחת לסה״כ שבכרטיס */
+.of-budget{margin-top:8px}
+.of-budget .ob-val{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+.of-budget .ob-bar{display:flex;align-items:center;gap:8px}
+.of-budget .ob-bar .bar{flex:1;margin-top:6px}
+.of-budget .ob-pct{
+  flex:none;min-width:42px;text-align:end;margin-top:6px;
+  font-size:12px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums;
+}
+.of-budget .ob-pct.neg{color:var(--danger)}
+
 /* שורת הוצאה בכרטיס הרעיון — תצוגה בלבד, בעמודות ברוחב קבוע
    כדי שכל השורות יתיישרו גם כשהכמות היא 1. העריכה בטופס הרעיון. */
 .idea-line{
