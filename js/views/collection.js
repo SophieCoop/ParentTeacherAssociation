@@ -451,13 +451,13 @@ Views.collection = (function () {
         if (!c) return;
         var r = Calc.childCollection(Store.state, c);
         var p = c.parents && c.parents[0] ? c.parents[0] : null;
-        var txt = 'היי' + (p ? ' ' + p.name : '') + ' 🌸\n' +
-          'תזכורת מוועד ההורים של ' + (Store.state.gan.name || 'הגן') + ':\n' +
-          'סכום ההשתתפות של ' + c.name + ' לשנה הוא ' + UI.money(r.due) +
-          (r.percent < 100 ? ' (' + r.percent + '% — הצטרפות באמצע השנה)' : '') + '.\n' +
+        var txt = 'היי' + (p ? ' ' + p.name : '') + ',\n' +
+          'תזכורת מוועד ההורים של ' + (Store.state.gan.name || 'הגן') + ':\n\n' +
+          'סכום ההשתתפות של ' + c.name + ' לשנה: ' + UI.money(r.due) +
+          (r.percent < 100 ? ' (מותאם לתאריך ההצטרפות)' : '') + '\n' +
           'שולם עד כה: ' + UI.money(r.paid) + '\n' +
-          'נותר לתשלום: ' + UI.money(Math.max(0, r.remaining)) + '\n' +
-          'אפשר להעביר בפייבוקס / ביט / העברה בנקאית. תודה רבה! ❤️';
+          'נותר לתשלום: ' + UI.money(Math.max(0, r.remaining)) + '\n\n' +
+          'אפשר להעביר בפייבוקס, ביט או העברה בנקאית. תודה רבה!';
         UI.whatsapp(txt, p ? p.phone : '');
       }
     }

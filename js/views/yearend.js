@@ -106,16 +106,16 @@ Views.yearend = (function () {
   function summaryText() {
     var st = Store.state;
     var rf = Calc.refunds(st);
-    return '🎈 *' + (st.gan.name || 'ועד ההורים') + ' — סיכום סוף שנה*\n\n' +
-      '💰 נגבה מההורים: ' + UI.money(rf.collected) + '\n' +
-      '🧾 הוצאות בפועל: ' + UI.money(rf.spent) + '\n' +
-      (rf.pot >= 0 ? '💗 יתרה להחזר: ' + UI.money(rf.pot) : '⚠️ חסר בקופה: ' + UI.money(Math.abs(rf.pot))) + '\n\n' +
-      '*פירוט:*\n' +
+    return (st.gan.name || 'ועד ההורים') + ' - סיכום סוף שנה\n\n' +
+      'נגבה מההורים: ' + UI.money(rf.collected) + '\n' +
+      'הוצאות בפועל: ' + UI.money(rf.spent) + '\n' +
+      (rf.pot >= 0 ? 'יתרה להחזר: ' + UI.money(rf.pot) : 'חסר בקופה: ' + UI.money(Math.abs(rf.pot))) + '\n\n' +
+      'פירוט:\n' +
       rf.rows.map(function (r) {
-        return '• ' + r.child.name + (r.percent < 100 ? ' (' + r.percent + '%)' : '') + ' — ' +
+        return r.child.name + ' - ' +
           (r.balance >= 0 ? 'החזר ' : 'להשלים ') + UI.money(Math.abs(r.balance));
       }).join('\n') +
-      '\n\nתודה על שנה נפלאה! ❤️';
+      '\n\nתודה על שנה נפלאה!';
   }
 
   return {
@@ -141,14 +141,14 @@ Views.yearend = (function () {
         var row = rf.rows.filter(function (r) { return r.child.id === id; })[0];
         if (!row) return;
         var parent = row.child.parents && row.child.parents[0] ? row.child.parents[0] : null;
-        var text = 'היי' + (parent ? ' ' + parent.name : '') + ' 🌸\n' +
-          'סיכום סוף שנה בוועד ההורים של ' + (st.gan.name || 'הגן') + ':\n' +
-          'שילמתם ' + UI.money(row.paid) +
-          (row.percent < 100 ? ' (' + row.percent + '% — הצטרפות באמצע השנה)' : '') + '\n' +
-          'חלקכם בהוצאות בפועל: ' + UI.money(row.fairCost) + '\n' +
+        var text = 'היי' + (parent ? ' ' + parent.name : '') + ',\n' +
+          'סיכום סוף שנה בוועד ההורים של ' + (st.gan.name || 'הגן') + ':\n\n' +
+          'שילמתם: ' + UI.money(row.paid) + '\n' +
+          'חלקכם בהוצאות בפועל: ' + UI.money(row.fairCost) +
+          (row.percent < 100 ? ' (מותאם לתאריך ההצטרפות)' : '') + '\n' +
           (row.balance >= 0 ? 'מגיע לכם החזר של ' + UI.money(row.balance)
-                            : 'נדרשת השלמה של ' + UI.money(-row.balance)) + '\n' +
-          'תודה על שנה נפלאה! ❤️';
+                            : 'נדרשת השלמה של ' + UI.money(-row.balance)) + '\n\n' +
+          'תודה על שנה נפלאה!';
         UI.whatsapp(text, parent ? parent.phone : '');
       }
     }

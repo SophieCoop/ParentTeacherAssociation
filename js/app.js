@@ -8,7 +8,8 @@ var App = (function () {
     { id: 'budget',     icon: '🧮', label: 'תקציב' },
     { id: 'collection', icon: '💰', label: 'גבייה' },
     { id: 'expenses',   icon: '🧾', label: 'הוצאות' },
-    { id: 'ideas',      icon: '💡', label: 'רעיונות' }
+    { id: 'ideas',      icon: '💡', label: 'רעיונות' },
+    { id: 'dates',      icon: '📅', label: 'תאריכים' }
   ];
 
   var current = 'home';
@@ -33,7 +34,7 @@ var App = (function () {
   function tabbar() {
     return '<nav class="tabbar">' + TABS.map(function (t) {
       var on = (t.id === current) || (current === 'children' && t.id === 'home') ||
-               (current === 'staff' && t.id === 'home') || (current === 'dates' && t.id === 'home') ||
+               (current === 'staff' && t.id === 'home') ||
                (current === 'yearend' && t.id === 'expenses') || (current === 'settings' && t.id === 'home');
       return '<button data-action="nav" data-view="' + t.id + '" class="' + (on ? 'on' : '') + '">' +
         '<span class="tb-ico">' + t.icon + '</span><span>' + t.label + '</span></button>';

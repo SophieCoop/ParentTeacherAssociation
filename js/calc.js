@@ -558,8 +558,10 @@ var Calc = (function () {
       perHead: heads > 0 ? round2(total / heads) : 0,
       perChild: childCount > 0 && aud.indexOf('children') > -1 ? round2(total / Math.max(1, heads)) : 0,
       parts: parts,
-      // כמה זה מוסיף לעלות לכל הורה (מתוך יחידות ההשתתפות)
-      perParent: totalShareUnits(state) > 0 ? round2(total / totalShareUnits(state)) : 0
+      /* כמה זה מוסיף לכל משפחה. רעיון הוא הוצאה עתידית, ולכן הוא
+         מתחלק שווה בשווה בין כל הילדים שברשימה — גם מי שהצטרף
+         באמצע השנה משתתף בו במלואו. */
+      perParent: childCount > 0 ? round2(total / childCount) : 0
     };
   }
 
@@ -620,6 +622,10 @@ var Calc = (function () {
       out.push({ id: 'ev-' + e.id, type: e.type || 'event', title: e.title,
                  date: e.date, icon: e.icon || '📅', tone: e.tone || 'blue', refId: e.id });
     });
+    if (state.settings && state.settings.yearEnd) {
+      out.push({ id: 'year-end', type: 'year', title: 'סוף שנת הלימודים',
+                 date: state.settings.yearEnd, icon: '🎓', tone: 'yellow', refId: '' });
+    }
     return out;
   }
 

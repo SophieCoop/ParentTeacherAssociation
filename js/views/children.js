@@ -245,7 +245,7 @@ Views.children = (function () {
       },
       'child-wa': function (el) {
         var phone = el.getAttribute('data-phone');
-        UI.whatsapp('היי! הודעה מוועד ההורים של ' + (Store.state.gan.name || 'הגן') + ' 🌸', phone);
+        UI.whatsapp('היי, הודעה מוועד ההורים של ' + (Store.state.gan.name || 'הגן'), phone);
       }
     }
   };

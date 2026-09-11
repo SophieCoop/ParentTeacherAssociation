@@ -96,7 +96,7 @@ Views.staff = (function () {
       'staff-edit': function (el) { staffForm(Store.find('staff', el.getAttribute('data-id'))); },
       'staff-wa': function (el, ev) {
         if (ev) ev.stopPropagation();
-        UI.whatsapp('היי! הודעה מוועד ההורים של ' + (Store.state.gan.name || 'הגן') + ' 🌸', el.getAttribute('data-phone'));
+        UI.whatsapp('היי, הודעה מוועד ההורים של ' + (Store.state.gan.name || 'הגן'), el.getAttribute('data-phone'));
       }
     }
   };

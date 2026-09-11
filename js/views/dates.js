@@ -80,7 +80,8 @@ Views.dates = (function () {
 
     if (!items.length) return UI.empty({ icon: '📅', title: 'אין תאריכים', text: 'הוסיפו ימי הולדת לילדים או אירועים לגן.', action: { act: 'date-add', label: '+ הוספת תאריך' } });
 
-    return items.map(function (it) {
+    var add = '<button class="btn ghost" data-action="date-add" style="margin-bottom:14px">+ הוספת תאריך</button>';
+    return add + items.map(function (it) {
       return '<div class="row">' +
         '<div class="r-ico" style="background:' + UI.toneVar(it.tone) + '">' + it.icon + '</div>' +
         '<div class="r-body"><div class="r-name">' + UI.esc(it.title) + '</div>' +
@@ -169,7 +170,9 @@ Views.dates = (function () {
 
   function render() {
     var tab = App.vs('dateTab', 'all');
-    var html = UI.pageHead({ title: 'תאריכים', subtitle: 'ימי הולדת, אירועים ולוח שנה', icon: '📅', tone: 'blue', back: 'home' });
+    var html = UI.pageHead({ title: 'תאריכים מיוחדים',
+      subtitle: 'חגים מהתקציב, ימי הולדת, סוף השנה ואירועי הגן',
+      icon: '📅', tone: 'blue', back: 'home' });
     html += '<div class="segment">' +
       '<button data-action="date-tab" data-tab="events" class="' + (tab === 'events' ? 'on' : '') + '">אירועים</button>' +
       '<button data-action="date-tab" data-tab="birthdays" class="' + (tab === 'birthdays' ? 'on' : '') + '">ימי הולדת</button>' +
