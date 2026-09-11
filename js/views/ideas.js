@@ -335,18 +335,23 @@ Views.ideas = (function () {
     });
   }
 
+  /* פירוט שורות הרעיון כטקסט — משמש גם לשיתוף וגם להערות ההוצאה */
+  function linesText(idea) {
+    return (idea.lines || []).map(function (l) {
+      var q = Calc.lineQty(l);
+      return '• ' + (l.label || 'סעיף') + ' — ' +
+        (q !== 1 ? q + ' × ' + UI.money(l.amount) + ' = ' + UI.money(Calc.lineTotal(l))
+                 : UI.money(Calc.lineTotal(l)));
+    }).join('\n');
+  }
+
   /* ---------- טקסט לשיתוף בוואטסאפ ---------- */
   function shareText(idea) {
     var st = Store.state;
     var cat = idea.categoryId ? Store.category(idea.categoryId) : null;
     var bi = Calc.budgetItem(st, idea.budgetItemId);
     var split = Calc.ideaSplit(st, idea);
-    var lines = (idea.lines || []).map(function (l) {
-      var q = Calc.lineQty(l);
-      return '• ' + (l.label || 'סעיף') + ' — ' +
-        (q !== 1 ? q + ' × ' + UI.money(l.amount) + ' = ' + UI.money(Calc.lineTotal(l))
-                 : UI.money(Calc.lineTotal(l)));
-    }).join('\n');
+    var lines = linesText(idea);
 
     var aud = (idea.audiences || []).map(function (a) { return Store.audience(a).name; }).join(' + ');
 
@@ -360,6 +365,15 @@ Views.ideas = (function () {
       '\n🏠 ' + UI.money(split.perParent) + ' לכל הורה' +
       (idea.note ? '\n\n📝 ' + idea.note : '') +
       '\n\nמה דעתכם? 😊';
+  }
+
+  /* הערות ההוצאה שנוצרת מרעיון: מאיפה היא הגיעה, ופירוט השורות
+     שהיו ברעיון — כדי שהפירוט יישאר גם אם הרעיון ישתנה או יימחק */
+  function expenseNote(idea, total) {
+    var detail = linesText(idea);
+    return 'נוצר מרעיון בסיעור מוחות' +
+      (detail ? '\n\n' + detail + '\nסה״כ: ' + UI.money(total) : '') +
+      (idea.note ? '\n\n📝 ' + idea.note : '');
   }
 
   /* ---------- המסך ---------- */
@@ -443,7 +457,7 @@ Views.ideas = (function () {
                 title: idea.title || 'רעיון שנבחר',
                 amount: total,
                 date: UI.todayISO(),
-                note: 'נוצר מרעיון בסיעור מוחות',
+                note: expenseNote(idea, total),
                 ideaId: idea.id
               });
               Store.update('ideas', idea.id, { chosen: true });

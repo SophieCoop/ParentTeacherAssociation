@@ -287,6 +287,17 @@ var UI = (function () {
           if (opts.onSubmit(values, close) !== false) close();
         });
 
+        /* תיבת הערות מתאימה את גובהה לתוכן, כדי שהערה ארוכה
+           (למשל פירוט שורות של רעיון) תיקרא בלי גלילה פנימית */
+        Array.prototype.forEach.call(root.querySelectorAll('textarea.input'), function (ta) {
+          function fit() {
+            ta.style.height = 'auto';
+            ta.style.height = Math.min(300, Math.max(78, ta.scrollHeight + 2)) + 'px';
+          }
+          ta.addEventListener('input', fit);
+          fit();
+        });
+
         if (opts.onMount) opts.onMount(root, close);
 
         var del = root.querySelector('.js-del');
