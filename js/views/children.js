@@ -16,7 +16,7 @@ Views.children = (function () {
     }
 
     html += kids.map(function (c) {
-      var pct = Calc.sharePercent(c, st.settings);
+      var pct = Calc.sharePercentOf(st, c);
       var parents = (c.parents || []).map(function (p) { return p.name; }).join(' · ');
       return '<div class="row" data-action="child-open" data-id="' + c.id + '">' +
         '<div class="avatar" style="background:' + UI.toneVar(UI.toneFor(c.name)) + '">' + UI.faceFor(c.name) + '</div>' +
@@ -66,7 +66,7 @@ Views.children = (function () {
     var st = Store.state;
     var c = Store.find('children', id);
     if (!c) return '';
-    var pct = Calc.sharePercent(c, st.settings);
+    var pct = Calc.sharePercentOf(st, c);
     var auto = Calc.autoSharePercent(c, st.settings);
     var r = Calc.childCollection(st, c);
 
@@ -93,9 +93,39 @@ Views.children = (function () {
         UI.dateShort(st.settings.yearEnd) + '), ולכן אחוז ההשתתפות הוא 0 והסכומים מתאפסים. ' +
         'צריך לתקן את תאריכי שנת הלימודים בהגדרות או את תאריך ההצטרפות.</div></div>';
     } else if (c.joinDate) {
+      var detail = Calc.childBudgetDetail(st, c);
+      var skipped = detail.filter(function (d) { return d.exempt > 0.5; });
+
       body += '<div class="note"><div class="n-ico">📆</div><div><b>תאריך הצטרפות</b>' +
-        'הצטרף/ה ב-' + UI.dateShort(c.joinDate) + '. החישוב האוטומטי: ' + auto + '% מהסכום המלא' +
-        (c.sharePercentOverride ? ' (נקבע ידנית ' + pct + '%)' : '') + '.</div></div>';
+        'הצטרף/ה ב-' + UI.dateShort(c.joinDate) + '. ' +
+        (Calc.hasOverride(c)
+          ? 'נקבע ידנית ' + pct + '% מהסכום של ילד שהיה כל השנה.'
+          : (skipped.length
+              ? 'אינו/ה מחויב/ת בסעיפים שכבר היו לפני כן, ומחויב/ת במחיר מלא על כל השאר.'
+              : 'היה/תה בגן לכל הסעיפים, ולכן משלם/ת מלא.')) +
+        '</div></div>';
+
+      /* פירוט סעיף-סעיף — כדי שיהיה ברור על מה בדיוק משלמים */
+      if (!Calc.hasOverride(c) && detail.length) {
+        body += '<div class="section-title" style="margin-top:6px"><span>מה נכלל בתשלום</span></div>';
+        body += detail.map(function (d) {
+          var cat = Store.category(d.item.categoryId);
+          var name = d.item.title || cat.name;
+          var none = d.amount <= 0.5;
+          return '<div class="row" style="box-shadow:none;background:' +
+              (none ? '#FAF8FD' : '#fff') + '">' +
+            '<div class="r-ico" style="background:' + UI.toneVar(cat.tone) + '">' + cat.icon + '</div>' +
+            '<div class="r-body"><div class="r-name">' + UI.esc(name) + '</div>' +
+            '<div class="r-sub">' +
+              (none ? 'היה לפני ההצטרפות — לא מחויב/ת'
+                    : (d.exempt > 0.5
+                        ? 'חלק מהתקופה — ' + UI.money(d.exempt) + ' לא מחויבים'
+                        : 'מחויב/ת במלוא הסעיף')) +
+            '</div></div>' +
+            '<div class="r-end"><div class="r-amount' + (none ? ' muted' : '') + '">' +
+              UI.money(d.amount) + '</div></div></div>';
+        }).join('');
+      }
     }
 
     body += '<div class="section-title" style="margin-top:6px"><span>הורים</span></div>';
@@ -160,10 +190,11 @@ Views.children = (function () {
         { name: 'joinDate', label: 'תאריך הצטרפות לגן', type: 'date',
           value: child.joinDate || yearStart(),
           hint: 'ברירת המחדל היא תחילת שנת הלימודים. משנים רק אם הילד/ה הצטרף/ה מאוחר יותר — ואז הסכום מחושב יחסית' },
-        { name: 'sharePercentOverride', label: 'אחוז השתתפות ידני (%)', type: 'number',
+        { name: 'sharePercentOverride', label: 'אחוז תשלום ידני (%)', type: 'number',
           value: child.sharePercentOverride === null ? '' : child.sharePercentOverride,
           min: 0, max: 100, placeholder: 'ריק = חישוב אוטומטי',
-          hint: 'משאירים ריק כדי שהמערכת תחשב לבד לפי תאריך ההצטרפות' }
+          hint: 'אחוז מהסכום של ילד שהיה בגן כל השנה. משאירים ריק כדי שהחישוב '
+              + 'ייעשה לבד לפי הסעיפים שהיו אחרי תאריך ההצטרפות' }
       ],
       onSubmit: function (v) {
         var parents = [];

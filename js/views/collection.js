@@ -121,8 +121,8 @@ Views.collection = (function () {
       '<div class="card-title"><h2>איך מחושב הסכום לכל הורה?</h2></div>' +
       '<table class="tbl"><tbody>' +
         row('סה״כ תקציב מתוכנן', UI.money(Calc.budgetTotal(st))) +
-        row('יחידות השתתפות', units.toFixed(2) + ' (ילד מלא = 1)') +
-        row('סכום לילד מלא', '<b>' + UI.money(perFull) + '</b>') +
+        row('ילד שהיה כל השנה משלם', '<b>' + UI.money(perFull) + '</b>') +
+        row('שווה ערך לכמה ילדים מלאים', units.toFixed(2)) +
         row('סה״כ לגבייה', UI.money(sum.due)) +
         row('נגבה בפועל', '<span class="pos">' + UI.money(sum.paid) + '</span>') +
         row('נותר לגבייה', '<span class="' + (sum.remaining > 0 ? 'neg' : 'pos') + '">' + UI.money(sum.remaining) + '</span>') +
@@ -172,7 +172,8 @@ Views.collection = (function () {
     html += '<div class="section-title"><span>ילדים בחישוב יחסי</span></div>';
     if (!partials.length) {
       html += '<div class="note"><div class="n-ico">✅</div><div><b>כל הילדים משלמים מלא</b>' +
-        'ילד שיצטרף באמצע השנה יקבל אוטומטית אחוז מופחת לפי תאריך ההצטרפות.</div></div>';
+        'ילד שיצטרף באמצע השנה לא יחויב על סעיפים שכבר היו לפני שהגיע, ' +
+        'ויחויב במחיר מלא על כל מה שאחריהם.</div></div>';
     } else {
       html += partials.map(function (r) {
         return '<div class="row"><div class="avatar" style="background:' + UI.toneVar(UI.toneFor(r.child.name)) + '">' + UI.faceFor(r.child.name) + '</div>' +

@@ -16,7 +16,7 @@ Views.budget = (function () {
     var st = Store.state;
     var levels = {};
     st.staff.forEach(function (t) { levels[t.level] = (levels[t.level] || 0) + 1; });
-    var full = st.children.filter(function (c) { return Calc.sharePercent(c, st.settings) >= 100; }).length;
+    var full = st.children.filter(function (c) { return Calc.sharePercentOf(st, c) >= 100; }).length;
     var partial = st.children.length - full;
 
     var html = '';
@@ -57,7 +57,8 @@ Views.budget = (function () {
         '<div class="field mb0"><label>סוף שנה</label>' +
           '<input class="input" type="date" data-change="bud-set" data-key="yearEnd" value="' + UI.esc(st.settings.yearEnd) + '"></div>' +
       '</div>' +
-      '<div class="hint mt">לפי התאריכים האלה מחושב האחוז היחסי של ילד שמצטרף באמצע השנה.</div>' +
+      '<div class="hint mt">התאריכים האלה קובעים את חודשי הפעילות של סעיפים חודשיים, ' +
+      'ואת ברירת המחדל לתאריך ההצטרפות של ילד חדש.</div>' +
       '</div>';
 
     return html;
@@ -174,8 +175,8 @@ Views.budget = (function () {
       '</div></div>';
 
     html += '<div class="note"><div class="n-ico">🧮</div><div><b>כמה כל הורה משלם?</b>' +
-      'התקציב (' + UI.money(total) + ') מחולק ב־' + units.toFixed(2) + ' יחידות השתתפות ' +
-      '(ילד מלא = 1, ילד שהצטרף באמצע שנה = החלק היחסי) ויוצא ' + UI.money(perFull) + ' לילד מלא.</div></div>';
+      'כל סעיף מתחלק בין הילדים שכבר היו בגן בתאריך שלו. ילד שהיה בגן מתחילת השנה ' +
+      'משלם ' + UI.money(perFull) + ', וילד שהצטרף באמצע משלם רק על מה שבא אחריו.</div></div>';
 
     html += '<div class="section-title"><span>פילוח לפי קטגוריה</span></div>';
 
@@ -256,10 +257,12 @@ Views.budget = (function () {
      ולצידה כמה הסעיף מוסיף לכל הורה */
   function calcLine(draft) {
     var st = Store.state;
-    var bd = Calc.itemBreakdown(st, {
+    var synth = {
       audience: draft.audience, basis: draft.basis, period: draft.period, rate: draft.rate,
-      periods: draft.periods, startDate: draft.startDate, endDate: draft.endDate
-    });
+      periods: draft.periods, startDate: draft.startDate, endDate: draft.endDate,
+      date: draft.date || ''
+    };
+    var bd = Calc.itemBreakdown(st, synth);
 
     if (bd.perPerson && bd.count === 0) {
       return '<div class="note" style="background:#FDF0F2;margin:0"><div class="n-ico">⚠️</div><div>' +
@@ -277,14 +280,19 @@ Views.budget = (function () {
         (bd.periodCount > 1 ? ' (' + bd.periodCount + ' תקופות)' : ''));
     }
 
-    var units = Calc.totalShareUnits(st);
-    var perParent = units > 0 ? bd.total / units : 0;
+    var alloc = Calc.itemAllocation(st, synth);
+    // כשיש ילדים שהצטרפו אחרי המועד, הסכום בפועל נמוך מהמכפלה
+    var less = Calc.round2(bd.total - alloc.total);
 
     return '<div class="row" style="box-shadow:none;background:var(--primary-soft);margin:0">' +
       '<div class="r-body">' +
         '<div class="small muted" style="white-space:normal">' + parts.join('  ') + '</div>' +
-        '<div class="r-name" style="font-size:18px">= ' + UI.money(bd.total) + ' לשנה</div>' +
-        (units > 0 ? '<div class="small muted">≈ ' + UI.money(perParent) + ' לכל הורה (לילד במימון מלא)</div>' : '') +
+        '<div class="r-name" style="font-size:18px">= ' + UI.money(alloc.total) + ' לשנה</div>' +
+        (less > 0.5
+          ? '<div class="small muted">' + UI.money(less) + ' פחות, בגלל ילדים שהצטרפו אחרי</div>'
+          : '') +
+        (alloc.full > 0 ? '<div class="small muted">≈ ' + UI.money(alloc.full) +
+          ' להורה של ילד שהיה כל השנה</div>' : '') +
       '</div></div>';
   }
 
@@ -319,7 +327,8 @@ Views.budget = (function () {
         basis: root.querySelector('#f-basis').value,
         period: root.querySelector('#f-period').value,
         rate: root.querySelector('#f-amount').value,
-        periods: periods
+        periods: periods,
+        date: (root.querySelector('#f-date') || {}).value || ''
       });
     }
 
@@ -395,9 +404,9 @@ Views.budget = (function () {
           value: startRate, placeholder: '0', step: '1', min: 0 },
         { name: 'calc', type: 'html',
           html: calcLine({ audience: startAudience, basis: startBasis, period: startPeriod, rate: startRate,
-                           periods: periods }) },
+                           periods: periods, date: item.date }) },
         { name: 'date', label: 'תאריך יעד', type: 'date', value: item.date,
-          hint: 'למתי צריך להביא את המתנה / לבצע את ההוצאה' },
+          hint: 'לפי התאריך הזה נקבע מי משתתף בסעיף: ילד שהצטרף אחריו אינו משלם עליו' },
         { name: 'note', label: 'הערות', type: 'textarea', value: item.note, placeholder: 'אופציונלי' }
       ],
 

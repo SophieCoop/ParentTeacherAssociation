@@ -27,21 +27,16 @@ Views.settings = (function () {
       '</div></div>';
 
     html += '<div class="card">' +
-      '<div class="card-title"><h2>שנת הלימודים והחישוב היחסי</h2></div>' +
+      '<div class="card-title"><h2>שנת הלימודים</h2></div>' +
       '<div class="grid-2">' +
         '<div class="field"><label>תחילת שנה</label>' +
           '<input class="input" type="date" data-change="set-cfg" data-key="yearStart" value="' + UI.esc(st.settings.yearStart) + '"></div>' +
         '<div class="field"><label>סוף שנה</label>' +
           '<input class="input" type="date" data-change="set-cfg" data-key="yearEnd" value="' + UI.esc(st.settings.yearEnd) + '"></div>' +
       '</div>' +
-      '<div class="field mb0"><label>עיגול אחוז ההשתתפות</label>' +
-        '<select class="input" data-change="set-cfg" data-key="roundShare">' +
-          [['0', 'ללא עיגול'], ['5', 'לכפולות של 5%'], ['10', 'לכפולות של 10%'], ['25', 'לרבעונים (25%)']]
-            .map(function (o) {
-              return '<option value="' + o[0] + '"' + (String(st.settings.roundShare) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
-            }).join('') +
-        '</select>' +
-        '<div class="hint">משפיע על החישוב האוטומטי לילדים שמצטרפים באמצע שנה.</div></div>' +
+      '<div class="hint mb0">התאריכים קובעים את חודשי הפעילות של סעיפים חודשיים. ' +
+        'החלוקה בין ההורים נעשית סעיף-סעיף: כל סעיף מתחלק בין הילדים שכבר היו בגן ' +
+        'בתאריך שלו, כך שילד שהצטרף באמצע אינו משלם על מה שקדם לו.</div>' +
       '</div>';
 
     html += '<div class="card">' +

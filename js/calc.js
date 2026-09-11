@@ -22,6 +22,23 @@ var Calc = (function () {
     return (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth()) + (b.getDate() - a.getDate()) / 30;
   }
 
+  /* ---------- נוכחות ילד בתאריך ---------- */
+  /* ילד משתתף בהוצאה רק אם כבר הצטרף לגן במועד שלה. הוצאה ללא
+     תאריך נחשבת כמשותפת לכולם, כי אין לה רגע מוגדר בזמן. */
+  function childPresentAt(child, dateStr) {
+    var d = toDate(dateStr);
+    if (!d) return true;
+    var join = toDate(child && child.joinDate);
+    if (!join) return true;
+    return join <= d;
+  }
+
+  function childrenPresentAt(state, dateStr) {
+    return (state.children || []).filter(function (c) {
+      return childPresentAt(c, dateStr);
+    });
+  }
+
   /* ---------- אחוז ההשתתפות של ילד ---------- */
   /* ילד שהצטרף באמצע השנה משלם רק על החלק היחסי של השנה שנותר.
      האחוז מחושב אוטומטית לפי תאריך ההצטרפות, וניתן לדריסה ידנית. */
@@ -56,11 +73,45 @@ var Calc = (function () {
     });
   }
 
-  function sharePercent(child, settings) {
-    if (child.sharePercentOverride !== null && child.sharePercentOverride !== undefined && child.sharePercentOverride !== '') {
-      return Math.max(0, Math.min(100, num(child.sharePercentOverride)));
+  function hasOverride(child) {
+    return child && child.sharePercentOverride !== null &&
+           child.sharePercentOverride !== undefined && child.sharePercentOverride !== '';
+  }
+
+  /* כמה משלם ילד בפועל, לפי ההוצאות שהיה נוכח בהן.
+     full — כמה משלם ילד שנמצא בגן מתחילת השנה.
+     percent — היחס ביניהם, לתצוגה בלבד. */
+  function childShare(state, child) {
+    var alloc = budgetAllocation(state);
+    var full = alloc.full;
+    var due = alloc.per[child.id] || 0;
+
+    if (hasOverride(child)) {
+      var pct = Math.max(0, Math.min(100, num(child.sharePercentOverride)));
+      return { due: round2(full * pct / 100), full: full, percent: pct, manual: true };
     }
-    return autoSharePercent(child, settings);
+    return {
+      due: round2(due), full: full, manual: false,
+      // בלי תקציב אין ממה לגזור יחס, ולכן נופלים לחישוב לפי תאריכים
+      percent: full > 0 ? Math.round((due / full) * 100)
+                        : autoSharePercent(child, state.settings)
+    };
+  }
+
+  function sharePercentOf(state, child) { return childShare(state, child).percent; }
+
+  /* פירוט לכל סעיף: כמה הילד משלם עליו, וכמה היה משלם אילו היה
+     בגן מתחילת השנה. ההפרש הוא מה שקדם להצטרפות שלו. */
+  function childBudgetDetail(state, child) {
+    return (state.budgetItems || []).map(function (item) {
+      var a = itemAllocation(state, item);
+      return {
+        item: item,
+        amount: round2(a.per[child.id] || 0),
+        full: a.full,
+        exempt: round2(Math.max(0, a.full - (a.per[child.id] || 0)))
+      };
+    });
   }
 
   /* ---------- קהל יעד של סעיף תקציב ---------- */
@@ -148,15 +199,108 @@ var Calc = (function () {
     };
   }
 
-  /* הסכום השנתי האפקטיבי — מחושב מחדש בכל תצוגה, כדי שלא ייווצר
-     פער בין מה שנשמר למספר הילדים או לאורך השנה בפועל */
+  /* ---------- מועדי הסעיף ---------- */
+  /* כל סעיף מתפרק ל"מועדים": סעיף חד-פעמי הוא מועד אחד בתאריך היעד,
+     וסעיף חודשי הוא מועד לכל חודש פעילות. הנוכחות נבדקת מול המועד,
+     ולכן ילד שהצטרף אחרי חג מסוים אינו משלם עליו, אך משלם במלואו
+     על כל מה שבא אחריו. */
+  function itemOccasions(state, item) {
+    var bd = itemBreakdown(state, item);
+    if (!bd.monthly) return [item && item.date ? item.date : null];
+
+    var windows = validPeriods(item).map(function (p) {
+      return { a: toDate(p.start), b: toDate(p.end) };
+    });
+    if (!windows.length) {
+      var a = toDate(item && item.startDate), b = toDate(item && item.endDate);
+      if (a && b && b > a) windows = [{ a: a, b: b }];
+    }
+    if (!windows.length) {
+      var ys = toDate(state.settings && state.settings.yearStart);
+      var ye = toDate(state.settings && state.settings.yearEnd);
+      if (ys && ye && ye > ys) windows = [{ a: ys, b: ye }];
+    }
+    if (!windows.length) return [null];
+
+    var out = [];
+    windows.forEach(function (w) {
+      var y = w.a.getFullYear(), m = w.a.getMonth(), guard = 0;
+      while (guard++ < 240) {
+        if (new Date(y, m, 1) > w.b) break;
+        var last = new Date(y, m + 1, 0);              // היום האחרון בחודש
+        var ref = last < w.b ? last : w.b;
+        out.push(iso(ref));
+        if (++m > 11) { m = 0; y++; }
+      }
+    });
+    return out.length ? out : [null];
+  }
+
+  function iso(d) {
+    return d.getFullYear() + '-' +
+      ('0' + (d.getMonth() + 1)).slice(-2) + '-' +
+      ('0' + d.getDate()).slice(-2);
+  }
+
+  /* ---------- חלוקת סעיף בין הילדים ---------- */
+  /* לכל מועד נבדק מי מהילדים כבר הצטרף:
+     • סכום לילד — כל ילד נוכח עולה את הסכום שהוקלד.
+     • סכום כולל — הסכום של אותו מועד מתחלק בין הנוכחים בלבד.
+     כך ילד שהצטרף באמצע אינו משלם על מה שהיה לפניו, ושאר ההורים
+     משלמים פחות על מה שנותר, כי הוא מתחלק ביניהם ובינו. */
+  function itemAllocation(state, item) {
+    var bd = itemBreakdown(state, item);
+    var kids = state.children || [];
+    var per = {};
+    kids.forEach(function (c) { per[c.id] = 0; });
+
+    var occ = itemOccasions(state, item);
+    // הסכום נשמר כפי שתוכנן: מספר החודשים שבחישוב מחולק למועדים בפועל
+    var k = bd.monthly && occ.length ? bd.months / occ.length : 1;
+    var perChildKids = bd.perPerson && bd.audience === 'children';
+    var perOccasion = perChildKids ? num(bd.rate) * k
+                                   : (bd.perPerson ? bd.rate * bd.count : bd.rate) * k;
+
+    if (!kids.length) return { per: per, full: 0, total: round2(bd.total) };
+
+    var full = 0;      // כמה משלם ילד שנמצא בגן מתחילת השנה
+    occ.forEach(function (date) {
+      var present = kids.filter(function (c) { return childPresentAt(c, date); });
+      // אם אף ילד לא היה בגן במועד הזה, ההוצאה מתחלקת בין כולם
+      if (!present.length) present = kids;
+      var share = perChildKids ? perOccasion : perOccasion / present.length;
+      full += share;
+      present.forEach(function (c) { per[c.id] += share; });
+    });
+
+    var total = kids.reduce(function (sum, c) { return sum + per[c.id]; }, 0);
+    return { per: per, full: round2(full), total: round2(total) };
+  }
+
+  /* הסכום השנתי האפקטיבי — סך מה שהילדים משלמים על הסעיף */
   function itemAmount(state, item) {
-    return itemBreakdown(state, item).total;
+    return itemAllocation(state, item).total;
   }
 
   /* ---------- תקציב מתוכנן ---------- */
+  /* חלוקת כל התקציב בין הילדים, במעבר אחד */
+  function budgetAllocation(state) {
+    var kids = state.children || [];
+    var per = {};
+    kids.forEach(function (c) { per[c.id] = 0; });
+    var full = 0, total = 0;
+
+    (state.budgetItems || []).forEach(function (item) {
+      var a = itemAllocation(state, item);
+      kids.forEach(function (c) { per[c.id] += a.per[c.id] || 0; });
+      full += a.full;
+      total += a.total;
+    });
+    return { per: per, full: round2(full), total: round2(total) };
+  }
+
   function budgetTotal(state) {
-    return (state.budgetItems || []).reduce(function (s, b) { return s + itemAmount(state, b); }, 0);
+    return budgetAllocation(state).total;
   }
   function budgetByCategory(state) {
     var map = {};
@@ -204,18 +348,17 @@ var Calc = (function () {
     return (state.payments || []).reduce(function (s, p) { return s + num(p.amount); }, 0);
   }
 
-  /* סך יחידות ההשתתפות בגן — ילד מלא = 1, ילד ב-50% = 0.5 */
-  function totalShareUnits(state) {
-    return (state.children || []).reduce(function (s, c) {
-      return s + sharePercent(c, state.settings) / 100;
-    }, 0);
+  /* עלות לילד שנמצא בגן מתחילת השנה */
+  function fullChildShare(state) {
+    return budgetAllocation(state).full;
   }
 
-  /* עלות לילד "מלא" — התקציב מחולק במספר יחידות ההשתתפות */
-  function fullChildShare(state) {
-    var units = totalShareUnits(state);
-    if (units <= 0) return 0;
-    return budgetTotal(state) / units;
+  /* כמה "ילדים מלאים" שווה הגן — התקציב חלקי העלות לילד מלא.
+     נשאר לתצוגה, אבל אינו מחלק עוד את התקציב: החלוקה נעשית
+     סעיף-סעיף לפי מי שהיה בגן באותו מועד. */
+  function totalShareUnits(state) {
+    var a = budgetAllocation(state);
+    return a.full > 0 ? round2(a.total / a.full) : 0;
   }
 
   /* גובה כל אחד מהתשלומים שנותרו: היתרה מחולקת במספר התשלומים שנותרו.
@@ -230,8 +373,9 @@ var Calc = (function () {
 
   /* פירוט הגבייה לכל ילד */
   function childCollection(state, child) {
-    var pct = sharePercent(child, state.settings);
-    var due = Math.round(fullChildShare(state) * (pct / 100));   // מעגלים לשקלים שלמים — נוח לגבייה
+    var sh = childShare(state, child);
+    var pct = sh.percent;
+    var due = Math.round(sh.due);   // מעגלים לשקלים שלמים — נוח לגבייה
     var pays = paymentsOf(state, child.id);
     var paid = pays.reduce(function (s, p) { return s + num(p.amount); }, 0);
     var remaining = round2(due - paid);
@@ -308,17 +452,42 @@ var Calc = (function () {
   /* עלות אמיתית לכל הורה = ההוצאות בפועל מחולקות לפי מפתח ההשתתפות
      (ילד מלא = 1, ילד שהצטרף באמצע שנה = החלק היחסי שלו).
      ההחזר = מה ששולם פחות העלות האמיתית. תוצאה שלילית = ההורה עדיין חייב. */
+  /* חלוקת ההוצאות שבוצעו בפועל בין הילדים, לפי מי שכבר היה בגן
+     בתאריך ההוצאה. הוצאה ללא תאריך מתחלקת בין כולם. */
+  function expenseAllocation(state) {
+    var kids = state.children || [];
+    var per = {};
+    kids.forEach(function (c) { per[c.id] = 0; });
+    var full = 0;
+
+    (state.expenses || []).forEach(function (e) {
+      if (!kids.length) return;
+      var amount = num(e.amount);
+      var present = kids.filter(function (c) { return childPresentAt(c, e.date); });
+      if (!present.length) present = kids;
+      var share = amount / present.length;
+      full += share;
+      present.forEach(function (c) { per[c.id] += share; });
+    });
+    return { per: per, full: round2(full) };
+  }
+
   function refunds(state) {
     var collected = collectedTotal(state);
     var spent = expensesTotal(state);
     var pot = round2(collected - spent);
     var rows = collectionRows(state);
-    var units = totalShareUnits(state);
-    var costPerUnit = units > 0 ? spent / units : 0;
+    var alloc = expenseAllocation(state);
+    var costPerUnit = alloc.full;                    // עלות לילד שהיה כל השנה
+    var units = costPerUnit > 0 ? round2(spent / costPerUnit) : 0;
 
     var out = rows.map(function (r) {
-      var weight = r.percent / 100;
-      var fairCost = round2(costPerUnit * weight);   // חלקו האמיתי של ההורה בהוצאות
+      // ילד עם אחוז ידני משלם לפי האחוז שנקבע לו; אחרת לפי ההוצאות
+      // שהיה נוכח בהן בפועל
+      var fairCost = hasOverride(r.child)
+        ? round2(costPerUnit * (r.percent / 100))
+        : round2(alloc.per[r.child.id] || 0);
+      var weight = costPerUnit > 0 ? round2(fairCost / costPerUnit) : 0;
       var balance = round2(r.paid - fairCost);
       return {
         child: r.child,
@@ -481,7 +650,12 @@ var Calc = (function () {
 
   return {
     num: num, round2: round2, toDate: toDate,
-    autoSharePercent: autoSharePercent, sharePercent: sharePercent,
+    autoSharePercent: autoSharePercent,
+    childShare: childShare, sharePercentOf: sharePercentOf, hasOverride: hasOverride,
+    childBudgetDetail: childBudgetDetail,
+    childPresentAt: childPresentAt, childrenPresentAt: childrenPresentAt,
+    itemOccasions: itemOccasions, itemAllocation: itemAllocation,
+    budgetAllocation: budgetAllocation, expenseAllocation: expenseAllocation,
     childOutOfYear: childOutOfYear, outOfYearChildren: outOfYearChildren,
     budgetTotal: budgetTotal, budgetByCategory: budgetByCategory,
     audienceCount: audienceCount, audienceLabel: audienceLabel,
