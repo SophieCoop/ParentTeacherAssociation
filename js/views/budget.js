@@ -81,10 +81,9 @@ Views.budget = (function () {
       '</div>';
   }
 
-  function itemRow(st, b, total) {
+  function itemRow(st, b) {
     var cat = Store.category(b.categoryId);
     var amount = Calc.itemAmount(st, b);
-    var share = total > 0 ? (amount / total) * 100 : 0;
     var bd = Calc.itemBreakdown(st, b);
     var per = '';
     if (bd.perPerson || bd.monthly) {
@@ -107,8 +106,7 @@ Views.budget = (function () {
         '<div class="r-sub" style="white-space:normal">' + (per ? per + ' · ' : '') + UI.esc(cat.name) +
           (b.date ? ' · 🗓 ' + UI.dateShort(b.date) : '') + '</div>' +
       '</div>' +
-      '<div class="r-end"><div class="r-amount">' + UI.money(amount) + '</div>' +
-      '<div class="r-pct">' + share.toFixed(1) + '%</div></div>' +
+      '<div class="r-end"><div class="r-amount">' + UI.money(amount) + '</div></div>' +
       '</div>';
   }
 
@@ -134,7 +132,7 @@ Views.budget = (function () {
       if (!group.length) return;
       var sum = group.reduce(function (acc, b) { return acc + Calc.itemAmount(st, b); }, 0);
       html += groupHead(g, sum, group.length);
-      html += group.map(function (b) { return itemRow(st, b, total); }).join('');
+      html += group.map(function (b) { return itemRow(st, b); }).join('');
     });
 
     html += '<div class="row" style="background:var(--primary-soft);box-shadow:none;margin-top:18px">' +
