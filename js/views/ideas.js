@@ -348,11 +348,12 @@ Views.ideas = (function () {
     });
   }
 
-  /* פירוט שורות הרעיון כטקסט — משמש גם לשיתוף וגם להערות ההוצאה */
-  function linesText(idea) {
+  /* פירוט שורות הרעיון כטקסט — משמש גם לשיתוף וגם להערות ההוצאה.
+     prefix מאפשר תבליט בהערות, ובלעדיו הטקסט נקי לוואטסאפ. */
+  function linesText(idea, prefix) {
     return (idea.lines || []).map(function (l) {
       var q = Calc.lineQty(l);
-      return '• ' + (l.label || 'סעיף') + ' — ' +
+      return (prefix || '') + (l.label || 'סעיף') + ' - ' +
         (q !== 1 ? q + ' × ' + UI.money(l.amount) + ' = ' + UI.money(Calc.lineTotal(l))
                  : UI.money(Calc.lineTotal(l)));
     }).join('\n');
@@ -366,27 +367,29 @@ Views.ideas = (function () {
     var split = Calc.ideaSplit(st, idea);
     var lines = linesText(idea);
 
-    var aud = (idea.audiences || []).map(function (a) { return Store.audience(a).name; }).join(' + ');
+    var aud = (idea.audiences || []).map(function (a) { return Store.audience(a).name; }).join(', ');
 
-    return '🌸 *' + (st.gan.name || 'ועד ההורים') + ' — התייעצות* 🌸\n\n' +
-      '💡 *' + (idea.title || 'רעיון') + '*\n' +
-      (bi ? '📂 סעיף בתקציב: ' + itemName(bi) + '\n' : (cat ? '📂 קטגוריה: ' + cat.name + '\n' : '')) +
-      (aud ? '🎯 עבור: ' + aud + '\n' : '') +
-      '\n*פירוט ההוצאות:*\n' + (lines || '—') +
-      '\n\n💰 *סה״כ: ' + UI.money(split.total) + '*' +
-      (split.heads > 0 ? '\n👥 ' + split.heads + ' נפשות — ' + UI.money(split.perHead) + ' לכל אחד' : '') +
-      '\n🏠 ' + UI.money(split.perParent) + ' לכל הורה' +
-      (idea.note ? '\n\n📝 ' + idea.note : '') +
-      '\n\nמה דעתכם? 😊';
+    return (st.gan.name || 'ועד ההורים') + ' - התייעצות\n\n' +
+      'רעיון: ' + (idea.title || 'רעיון') + '\n' +
+      (bi ? 'סעיף בתקציב: ' + itemName(bi) + '\n' : (cat ? 'קטגוריה: ' + cat.name + '\n' : '')) +
+      (aud ? 'עבור: ' + aud + '\n' : '') +
+      '\nפירוט ההוצאות:\n' + (lines || 'אין עדיין שורות') +
+      '\n\nסה״כ: ' + UI.money(split.total) +
+      (split.heads > 0
+        ? '\n' + UI.money(split.perHead) + ' ' + perHeadLabel(idea) + ', ' + split.heads + ' נפשות'
+        : '') +
+      '\n' + UI.money(split.perParent) + ' לכל הורה' +
+      (idea.note ? '\n\nהערות: ' + idea.note : '') +
+      '\n\nמה דעתכם?';
   }
 
   /* הערות ההוצאה שנוצרת מרעיון: מאיפה היא הגיעה, ופירוט השורות
      שהיו ברעיון — כדי שהפירוט יישאר גם אם הרעיון ישתנה או יימחק */
   function expenseNote(idea, total) {
-    var detail = linesText(idea);
+    var detail = linesText(idea, '• ');
     return 'נוצר מרעיון בסיעור מוחות' +
       (detail ? '\n\n' + detail + '\nסה״כ: ' + UI.money(total) : '') +
-      (idea.note ? '\n\n📝 ' + idea.note : '');
+      (idea.note ? '\n\nהערות: ' + idea.note : '');
   }
 
   /* ---------- המסך ---------- */
