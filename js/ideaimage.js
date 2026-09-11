@@ -187,7 +187,8 @@ var IdeaImage = (function () {
 
       ctx.font = font(14); ctx.fillStyle = MUTED; ctx.textAlign = 'center';
       ctx.fillText((split.heads > 0
-                      ? split.heads + ' נפשות · ' + UI.money(split.perHead) + ' לכל אחד'
+                      ? split.heads + ' נפשות · ' + UI.money(split.perHead) + ' ' +
+                        Views.ideas.perHeadLabel(idea)
                       : 'הוצאה כללית לגן') +
                    ' · ' + UI.money(split.perParent) + ' לכל הורה', W / 2, y + 8);
       y += 26;

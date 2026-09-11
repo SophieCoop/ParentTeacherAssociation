@@ -14,6 +14,17 @@ Views.ideas = (function () {
     return null;
   }
 
+  /* צורת יחיד לקהלי היעד, לניסוח "לכל ילד" / "לכל איש צוות".
+     "כיבוד" אינו נספר לפי נפש ולכן אינו מופיע כאן. */
+  var ONE = { children: 'ילד', staff: 'איש צוות' };
+
+  /* למי מיועדת המתנה — לפי מה שנבחר ברעיון */
+  function perHeadLabel(idea) {
+    var names = (idea.audiences || []).filter(function (id) { return ONE[id]; })
+                                      .map(function (id) { return ONE[id]; });
+    return names.length ? 'לכל ' + names.join('/') : 'לכל אחד';
+  }
+
   function audienceLabel(id) {
     var au = Store.audience(id);
     var n = audienceSize(id);
@@ -96,7 +107,8 @@ Views.ideas = (function () {
           '<div class="sp-lab">' + au.name + ' · ' + p.count + '</div></div>';
       }).join('') + '</div>';
       html += '<div class="small muted center" style="margin-top:8px">' +
-        (split.heads > 0 ? split.heads + ' נפשות · ' + UI.money(split.perHead) + ' לכל אחד' : 'הוצאה כללית לגן') +
+        (split.heads > 0 ? split.heads + ' נפשות · ' + UI.money(split.perHead) + ' ' + perHeadLabel(idea)
+                         : 'הוצאה כללית לגן') +
         ' · ' + UI.money(split.perParent) + ' לכל הורה</div>';
     }
 
@@ -426,6 +438,7 @@ Views.ideas = (function () {
     // נחשפים כדי שייצוא התמונה יציג בדיוק את אותם שמות
     itemName: itemName,
     audienceLabel: audienceLabel,
+    perHeadLabel: perHeadLabel,
     actions: {
       'idea-add': function () { ideaForm(null); },
       'idea-edit': function (el) { ideaForm(Store.find('ideas', el.getAttribute('data-id'))); },
