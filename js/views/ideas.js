@@ -170,9 +170,12 @@ Views.ideas = (function () {
                 'aria-label="מחיקת שורה">✕</button>' +
             '</div>' +
             '<div class="lc-calc">' +
-              '<input class="input" data-ln="qty" data-i="' + i + '" type="number" inputmode="numeric" min="0" ' +
-                'placeholder="1" value="' + UI.esc(l.qty === '' || l.qty === undefined ? '' : l.qty) + '" ' +
-                'aria-label="כמות">' +
+              '<div class="lc-field">' +
+                '<span class="lc-lab">כמות</span>' +
+                '<input class="input" data-ln="qty" data-i="' + i + '" type="number" inputmode="numeric" min="0" ' +
+                  'placeholder="1" value="' + UI.esc(l.qty === '' || l.qty === undefined ? '' : l.qty) + '" ' +
+                  'aria-label="כמות">' +
+              '</div>' +
               '<span>×</span>' +
               '<input class="input" data-ln="amount" data-i="' + i + '" type="number" inputmode="decimal" min="0" ' +
                 'placeholder="0" value="' + UI.esc(l.amount === '' || l.amount === undefined ? '' : l.amount) + '" ' +

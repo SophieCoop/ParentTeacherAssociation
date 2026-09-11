@@ -459,11 +459,18 @@ table.tbl tr td:first-child{font-weight:600}
 .line-card .lc-top{display:flex;align-items:center;gap:6px}
 .line-card .lc-top .input{flex:1;min-width:0;padding:8px 10px;font-size:13px}
 .line-card .lc-top .iconbtn{width:26px;height:26px;font-size:12px;flex:none}
-.line-card .lc-calc{display:flex;align-items:center;gap:6px;margin-top:8px}
+.line-card .lc-calc{display:flex;align-items:flex-end;gap:6px;margin-top:8px}
 .line-card .lc-calc .input{width:64px;flex:none;padding:7px 8px;font-size:13px;text-align:center}
-.line-card .lc-calc .input[data-ln="amount"],
-.line-card .lc-calc .lc-amount{width:86px;text-align:end;font-weight:700}
+.line-card .lc-calc .input[data-ln="amount"]{width:86px;text-align:end;font-weight:700}
 .line-card .lc-calc span{font-size:12px;color:var(--muted)}
+/* תיבה עם כיתוב קטן מעליה */
+.line-card .lc-field{display:flex;flex-direction:column;gap:3px;flex:none}
+.line-card .lc-field .lc-lab{
+  font-size:10.5px;font-weight:600;color:var(--muted);text-align:center;line-height:1;
+}
+/* יישור הסימנים והסה״כ למרכז התיבות, למרות הכיתוב שמעליהן */
+.line-card .lc-calc > span,
+.line-card .lc-calc > b{padding-bottom:8px}
 /* רוחב קבוע לעמודת הסה״כ, כך שכל השורות מיושרות בשני הקצוות
    גם כשהכמות היא 1 והמספרים באורכים שונים */
 .line-card .lc-calc b{margin-inline-start:auto;font-size:14px;min-width:82px;text-align:end;font-variant-numeric:tabular-nums}
