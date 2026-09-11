@@ -100,17 +100,6 @@ Views.ideas = (function () {
         ' · ' + UI.money(split.perParent) + ' לכל הורה</div>';
     }
 
-    /* מול התקציב */
-    if (vs) {
-      html += '<div class="row" style="box-shadow:none;background:' + (vs.fits ? 'var(--green)' : 'var(--pink)') + ';margin-top:12px">' +
-        '<div class="r-ico" style="background:#fff">' + (vs.fits ? '✅' : '⚠️') + '</div>' +
-        '<div class="r-body"><div class="r-name" style="font-size:13.5px">' +
-          (vs.fits ? 'נכנס בתקציב ' + (vs.item ? 'הסעיף' : 'הקטגוריה')
-                   : 'חורג מהתקציב ב-' + UI.money(Math.abs(vs.diff))) + '</div>' +
-        '<div class="r-sub" style="color:inherit;opacity:.75">נותר ב' +
-          (vs.item ? 'סעיף' : 'קטגוריה') + ': ' + UI.money(vs.left) + '</div></div></div>';
-    }
-
     if (idea.note) {
       html += '<p class="small muted" style="margin:10px 0 0">📝 ' + UI.esc(idea.note) + '</p>';
     }
