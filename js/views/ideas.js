@@ -55,18 +55,24 @@ Views.ideas = (function () {
       html += '<p class="muted small" style="margin:0 0 8px">עוד אין שורות הוצאה ברעיון הזה.</p>';
     } else {
       html += idea.lines.map(function (l) {
-        var q = Calc.lineQty(l);
-        return '<div class="line" style="flex-wrap:wrap">' +
-          '<input class="l-name input" style="border:none;background:transparent;padding:2px 0;flex:1;min-width:90px" ' +
-            'value="' + UI.esc(l.label) + '" data-change="idea-line-name" data-id="' + idea.id + '" data-line="' + l.id + '" placeholder="שם הסעיף">' +
-          '<input class="input" style="border:none;background:transparent;padding:2px 0;width:44px;text-align:center" ' +
-            'type="number" inputmode="numeric" min="0" value="' + UI.esc(q) + '" data-change="idea-line-qty" data-id="' + idea.id + '" data-line="' + l.id + '" aria-label="כמות">' +
-          '<span class="small muted">×</span>' +
-          '<input class="l-amt input" style="border:none;background:transparent;padding:2px 0;width:72px;text-align:end;font-weight:700" ' +
-            'type="number" inputmode="decimal" value="' + UI.esc(l.amount) + '" data-change="idea-line-amt" data-id="' + idea.id + '" data-line="' + l.id + '" placeholder="0" aria-label="סכום ליחידה">' +
-          '<span class="small muted">₪</span>' +
-          (q !== 1 ? '<span class="small" style="font-weight:700">= ' + UI.money(Calc.lineTotal(l)) + '</span>' : '') +
-          '<button class="iconbtn del" style="width:26px;height:26px;font-size:13px" data-action="idea-line-del" data-id="' + idea.id + '" data-line="' + l.id + '" aria-label="מחיקת שורה">✕</button>' +
+        return '<div class="line-card">' +
+          '<div class="lc-top">' +
+            '<input class="input" value="' + UI.esc(l.label) + '" placeholder="שם הסעיף" ' +
+              'data-change="idea-line-name" data-id="' + idea.id + '" data-line="' + l.id + '">' +
+            '<button class="iconbtn del" data-action="idea-line-del" data-id="' + idea.id + '" ' +
+              'data-line="' + l.id + '" aria-label="מחיקת שורה">\u2715</button>' +
+          '</div>' +
+          '<div class="lc-calc">' +
+            '<input class="input" type="number" inputmode="numeric" min="0" aria-label="\u05db\u05de\u05d5\u05ea" ' +
+              'value="' + UI.esc(Calc.lineQty(l)) + '" ' +
+              'data-change="idea-line-qty" data-id="' + idea.id + '" data-line="' + l.id + '">' +
+            '<span>\u00d7</span>' +
+            '<input class="input lc-amount" type="number" inputmode="decimal" min="0" placeholder="0" ' +
+              'aria-label="\u05e1\u05db\u05d5\u05dd \u05dc\u05d9\u05d7\u05d9\u05d3\u05d4" value="' + UI.esc(l.amount) + '" ' +
+              'data-change="idea-line-amt" data-id="' + idea.id + '" data-line="' + l.id + '">' +
+            '<span>\u20aa =</span>' +
+            '<b>' + UI.money(Calc.lineTotal(l)) + '</b>' +
+          '</div>' +
           '</div>';
       }).join('');
     }
