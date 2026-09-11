@@ -103,7 +103,8 @@ Views.ideas = (function () {
         var au = Store.audience(p.id);
         return '<div class="sp" style="background:' + UI.toneVar(au.tone) + ';color:' + UI.toneInk(au.tone) + '">' +
           '<div class="sp-ico">' + au.icon + '</div>' +
-          '<div class="sp-val">' + UI.money(p.share) + '</div>' +
+          '<div class="sp-val">' + UI.money(p.share) +
+            (ONE[p.id] ? ' <span class="sp-per">לכל ' + ONE[p.id] + '</span>' : '') + '</div>' +
           '<div class="sp-lab">' + au.name + ' · ' + p.count + '</div></div>';
       }).join('') + '</div>';
       html += '<div class="small muted center" style="margin-top:8px">' +
@@ -439,6 +440,7 @@ Views.ideas = (function () {
     itemName: itemName,
     audienceLabel: audienceLabel,
     perHeadLabel: perHeadLabel,
+    perOneLabel: function (id) { return ONE[id] ? 'לכל ' + ONE[id] : ''; },
     actions: {
       'idea-add': function () { ideaForm(null); },
       'idea-edit': function (el) { ideaForm(Store.find('ideas', el.getAttribute('data-id'))); },

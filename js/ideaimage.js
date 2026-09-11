@@ -173,15 +173,46 @@ var IdeaImage = (function () {
     /* ----- חלוקה לנפש ----- */
     if (split.parts.length) {
       var n = split.parts.length, gap = 10;
-      var bw2 = (cw - gap * (n - 1)) / n, bh2 = 86;
+      var bw2 = (cw - gap * (n - 1)) / n;
+
+      /* "לכל ילד" נכתב לצד הסכום. בתיבה צרה מדי הוא יורד לשורה
+         משלו, ואז כל התיבות מקבלות את הגובה הגדול יותר. */
+      var per = split.parts.map(function (p) {
+        var lbl = Views.ideas.perOneLabel(p.id);
+        if (!lbl) return { label: '', two: false, w1: 0, w2: 0 };
+        ctx.font = font(19, 800); var w1 = ctx.measureText(UI.money(p.share)).width;
+        ctx.font = font(12, 700); var w2 = ctx.measureText(' ' + lbl).width;
+        return { label: lbl, two: (w1 + w2) > bw2 - 16, w1: w1, w2: w2 };
+      });
+      var twoLine = per.some(function (x) { return x.two; });
+      var bh2 = twoLine ? 100 : 86;
+
       split.parts.forEach(function (p, i) {
         var au = Store.audience(p.id);
         var x = right - bw2 - i * (bw2 + gap);
+        var cx = x + bw2 / 2;
         roundFill(ctx, x, y, bw2, bh2, 16, UI.toneSoftHex(au.tone));
-        ctx.textAlign = 'center'; ctx.fillStyle = UI.toneInkHex(au.tone);
-        ctx.font = font(20);      ctx.fillText(au.icon, x + bw2 / 2, y + 24);
-        ctx.font = font(19, 800); ctx.fillText(UI.money(p.share), x + bw2 / 2, y + 52);
-        ctx.font = font(12);      ctx.fillText(au.name + ' · ' + p.count, x + bw2 / 2, y + 72);
+        ctx.fillStyle = UI.toneInkHex(au.tone);
+        ctx.textAlign = 'center';
+        ctx.font = font(20); ctx.fillText(au.icon, cx, y + 24);
+
+        var e = per[i];
+        if (e.label && !twoLine) {
+          // סכום וכיתוב על שורה אחת: הסכום מימין, הכיתוב משמאלו
+          var tot = e.w1 + e.w2, rightEdge = cx + tot / 2;
+          ctx.textAlign = 'right';
+          ctx.font = font(19, 800); ctx.fillText(UI.money(p.share), rightEdge, y + 52);
+          ctx.font = font(12, 700); ctx.fillText(' ' + e.label, rightEdge - e.w1, y + 52);
+          ctx.textAlign = 'center';
+          ctx.font = font(12); ctx.fillText(au.name + ' · ' + p.count, cx, y + 72);
+        } else if (e.label) {
+          ctx.font = font(19, 800); ctx.fillText(UI.money(p.share), cx, y + 50);
+          ctx.font = font(12, 700); ctx.fillText(e.label, cx, y + 70);
+          ctx.font = font(12);      ctx.fillText(au.name + ' · ' + p.count, cx, y + 88);
+        } else {
+          ctx.font = font(19, 800); ctx.fillText(UI.money(p.share), cx, y + 52);
+          ctx.font = font(12);      ctx.fillText(au.name + ' · ' + p.count, cx, y + 72);
+        }
       });
       y += bh2 + 12;
 

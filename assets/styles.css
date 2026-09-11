@@ -345,7 +345,9 @@ textarea.input{min-height:78px;resize:vertical}
 .split{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px;margin-top:10px}
 .split .sp{border-radius:var(--r-sm);padding:10px 8px;text-align:center}
 .split .sp .sp-ico{font-size:16px}
-.split .sp .sp-val{font-weight:800;font-size:14px;margin-top:2px}
+.split .sp .sp-val{font-weight:800;font-size:14px;margin-top:2px;line-height:1.35}
+/* "לכל ילד" לצד הסכום; בתיבה צרה הוא יורד לשורה משלו במקום לגלוש */
+.split .sp .sp-per{font-size:11px;font-weight:700;opacity:.75;white-space:nowrap}
 .split .sp .sp-lab{font-size:10.5px;opacity:.8}
 
 /* ===================== לוח שנה ===================== */
