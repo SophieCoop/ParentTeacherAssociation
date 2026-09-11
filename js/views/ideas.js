@@ -41,7 +41,8 @@ Views.ideas = (function () {
 
     /* קטגוריית תקציב וקהל יעד */
     html += '<div class="flex wrap" style="gap:6px;margin-bottom:10px">' +
-      '<span class="badge info">🧮 ' + UI.esc(cat ? cat.name : 'ללא קטגוריה') + '</span>' +
+      '<span class="badge info">🧮 ' +
+        UI.esc(vs && vs.item ? itemName(vs.item) : (cat ? cat.name : 'ללא סעיף תקציב')) + '</span>' +
       (idea.audiences || []).map(function (a) {
         var au = Store.audience(a);
         return '<span class="badge" style="background:' + UI.toneVar(au.tone) + ';color:' + UI.toneInk(au.tone) + '">' +
@@ -88,8 +89,10 @@ Views.ideas = (function () {
       html += '<div class="row" style="box-shadow:none;background:' + (vs.fits ? 'var(--green)' : 'var(--pink)') + ';margin-top:12px">' +
         '<div class="r-ico" style="background:#fff">' + (vs.fits ? '✅' : '⚠️') + '</div>' +
         '<div class="r-body"><div class="r-name" style="font-size:13.5px">' +
-          (vs.fits ? 'נכנס בתקציב הקטגוריה' : 'חורג מהתקציב ב-' + UI.money(Math.abs(vs.diff))) + '</div>' +
-        '<div class="r-sub" style="color:inherit;opacity:.75">נותר בקטגוריה: ' + UI.money(vs.left) + '</div></div></div>';
+          (vs.fits ? 'נכנס בתקציב ' + (vs.item ? 'הסעיף' : 'הקטגוריה')
+                   : 'חורג מהתקציב ב-' + UI.money(Math.abs(vs.diff))) + '</div>' +
+        '<div class="r-sub" style="color:inherit;opacity:.75">נותר ב' +
+          (vs.item ? 'סעיף' : 'קטגוריה') + ': ' + UI.money(vs.left) + '</div></div></div>';
     }
 
     if (idea.note) {
@@ -108,19 +111,58 @@ Views.ideas = (function () {
     return html;
   }
 
-  /* תקציב הקטגוריה שנבחרה לרעיון: כמה תוכנן, כמה כבר הוצא, וכמה נותר */
-  function catBudget(catId) {
+  /* שם הסעיף כפי שהוא מוצג ברשימה: שם חופשי, ובהיעדרו שם הקטגוריה */
+  function itemName(b) {
+    var cat = Store.category(b.categoryId);
+    return b.title || cat.name;
+  }
+
+  /* רשימת סעיפי התקציב לבחירה, מסודרת לפי סדר הקטגוריות ואז לפי תאריך */
+  function budgetOptions() {
     var st = Store.state;
-    var planned = Calc.budgetByCategory(st)[catId] || 0;
-    var spent = Calc.expensesByCategory(st)[catId] || 0;
+    var order = {};
+    (st.categories || []).forEach(function (c, i) { order[c.id] = i; });
+
+    var items = (st.budgetItems || []).slice().sort(function (a, b) {
+      var d = (order[a.categoryId] === undefined ? 99 : order[a.categoryId]) -
+              (order[b.categoryId] === undefined ? 99 : order[b.categoryId]);
+      if (d) return d;
+      if (a.date && b.date && a.date !== b.date) return a.date < b.date ? -1 : 1;
+      return itemName(a).localeCompare(itemName(b), 'he');
+    });
+
+    return [{ value: '', label: '— ללא סעיף תקציב —' }].concat(items.map(function (b) {
+      return { value: b.id,
+               label: Store.category(b.categoryId).icon + '  ' + itemName(b) +
+                      '  —  ' + UI.money(Calc.itemAmount(st, b)) };
+    }));
+  }
+
+  /* כמה נותר בסעיף: המתוכנן פחות מה שכבר נרשם עליו בפועל */
+  function itemLeft(itemId) {
+    var st = Store.state;
+    var b = Calc.budgetItem(st, itemId);
+    if (!b) return null;
+    var planned = Calc.itemAmount(st, b);
+    var spent = Calc.expensesByBudgetItem(st)[b.id] || 0;
     return { planned: planned, spent: spent, left: Calc.round2(planned - spent) };
   }
 
   /* ---------- טופס רעיון ---------- */
   function ideaForm(idea) {
     var isNew = !idea;
-    idea = idea || { title: '', categoryId: Store.state.categories[0].id, audiences: ['children'],
+    idea = idea || { title: '', budgetItemId: '', categoryId: '', audiences: ['children'],
                      note: '', lines: [], chosen: false };
+
+    /* רעיון שנוצר לפני שהרעיונות הוצמדו לסעיף תקציב: אם בקטגוריה שלו יש
+       בדיוק סעיף אחד, הוא נבחר מראש. אם יש כמה — לא מנחשים. */
+    var startItem = idea.budgetItemId || '';
+    if (!startItem && idea.categoryId) {
+      var same = (Store.state.budgetItems || []).filter(function (b) {
+        return b.categoryId === idea.categoryId;
+      });
+      if (same.length === 1) startItem = same[0].id;
+    }
 
     /* שורות ההוצאה נערכות בתוך הטופס, כדי שאפשר יהיה להזין רעיון שלם בבת אחת */
     var lines = (idea.lines || []).map(function (l) {
@@ -138,12 +180,12 @@ Views.ideas = (function () {
       var el = root.querySelector('#lines-total');
       if (el) el.textContent = UI.money(total);
 
-      var catSel = root.querySelector('#f-categoryId');
+      var sel = root.querySelector('#f-budgetItemId');
       var rem = root.querySelector('#budget-left');
-      if (!catSel || !rem) return;
+      if (!sel || !rem) return;
 
-      var b = catBudget(catSel.value);
-      if (!b.planned) {
+      var b = itemLeft(sel.value);
+      if (!b || !b.planned) {
         rem.parentNode.style.display = 'none';
         return;
       }
@@ -152,7 +194,7 @@ Views.ideas = (function () {
       rem.textContent = after >= 0 ? UI.money(after) : 'חריגה של ' + UI.money(-after);
       rem.className = after >= 0 ? 'pos' : 'neg';
       var lbl = root.querySelector('#budget-left-label');
-      if (lbl) lbl.textContent = after >= 0 ? 'נותר מתקציב הקטגוריה' : 'מעבר לתקציב הקטגוריה';
+      if (lbl) lbl.textContent = after >= 0 ? 'נותר בסעיף התקציב' : 'מעבר לסעיף התקציב';
     }
 
     function drawLines(root) {
@@ -226,17 +268,15 @@ Views.ideas = (function () {
 
     UI.formModal({
       title: isNew ? 'רעיון חדש' : 'עריכת רעיון',
-      subtitle: 'קטגוריית תקציב, קהל יעד ופירוט ההוצאות',
+      subtitle: 'סעיף התקציב, קהל יעד ופירוט ההוצאות',
       fields: [
         { name: 'title', label: 'שם הרעיון', value: idea.title, required: true,
           placeholder: 'למשל: מתנת סוף שנה — ספר וכוס' },
-        { name: 'categoryId', label: 'קטגוריית תקציב', type: 'select', value: idea.categoryId,
-          options: Store.state.categories.map(function (c) {
-            var b = catBudget(c.id);
-            return { value: c.id,
-                     label: c.icon + '  ' + c.name +
-                            (b.planned ? '  —  ' + UI.money(b.planned) : '  —  ללא תקציב') };
-          }) },
+        { name: 'budgetItemId', label: 'סעיף התקציב', type: 'select', value: startItem,
+          options: budgetOptions(),
+          hint: (Store.state.budgetItems || []).length
+                  ? 'הרעיון מוצמד לסעיף שתוכנן בתקציב, והחישוב נעשה מולו'
+                  : 'עוד לא הוגדרו סעיפי תקציב — אפשר להוסיף בלשונית "תקציב"' },
         { name: 'audiences', label: 'קהל יעד', type: 'chips', multi: true, value: idea.audiences,
           options: Store.AUDIENCES.map(function (a) {
             return { value: a.id, label: audienceLabel(a.id), icon: a.icon };
@@ -253,7 +293,7 @@ Views.ideas = (function () {
       },
 
       onFieldChange: function (name, value, root) {
-        if (name === 'categoryId') refreshTotal(root);
+        if (name === 'budgetItemId') refreshTotal(root);
       },
 
       onSubmit: function (v) {
@@ -265,8 +305,12 @@ Views.ideas = (function () {
                    qty: (l.qty === '' || l.qty === undefined) ? 1 : Calc.num(l.qty),
                    amount: l.amount };
         });
+        var bi = Calc.budgetItem(Store.state, v.budgetItemId);
         var data = {
-          title: v.title, categoryId: v.categoryId, audiences: v.audiences,
+          title: v.title,
+          budgetItemId: v.budgetItemId || '',
+          categoryId: bi ? bi.categoryId : '',
+          audiences: v.audiences,
           note: v.note, lines: clean
         };
         if (isNew) {
@@ -290,6 +334,7 @@ Views.ideas = (function () {
   function shareText(idea) {
     var st = Store.state;
     var cat = idea.categoryId ? Store.category(idea.categoryId) : null;
+    var bi = Calc.budgetItem(st, idea.budgetItemId);
     var split = Calc.ideaSplit(st, idea);
     var lines = (idea.lines || []).map(function (l) {
       var q = Calc.lineQty(l);
@@ -302,7 +347,7 @@ Views.ideas = (function () {
 
     return '🌸 *' + (st.gan.name || 'ועד ההורים') + ' — התייעצות* 🌸\n\n' +
       '💡 *' + (idea.title || 'רעיון') + '*\n' +
-      (cat ? '📂 קטגוריה: ' + cat.name + '\n' : '') +
+      (bi ? '📂 סעיף בתקציב: ' + itemName(bi) + '\n' : (cat ? '📂 קטגוריה: ' + cat.name + '\n' : '')) +
       (aud ? '🎯 עבור: ' + aud + '\n' : '') +
       '\n*פירוט ההוצאות:*\n' + (lines || '—') +
       '\n\n💰 *סה״כ: ' + UI.money(split.total) + '*' +
@@ -373,9 +418,11 @@ Views.ideas = (function () {
           title: 'בחירת הרעיון',
           subtitle: idea.title,
           body: '<p class="small">הרעיון ייכנס ללשונית ההוצאות בפועל, והעלות (' + UI.money(total) + ') תרד מהתקציב' +
-                (vs ? ' של הקטגוריה "' + UI.esc(Store.category(idea.categoryId).name) + '"' : '') + '.</p>' +
+                (vs ? ' של ' + (vs.item ? 'הסעיף' : 'הקטגוריה') + ' "' +
+                      UI.esc(vs.item ? itemName(vs.item) : Store.category(idea.categoryId).name) + '"' : '') + '.</p>' +
                 (vs && !vs.fits ? '<div class="note" style="background:#FDF0F2"><div class="n-ico">⚠️</div><div>' +
-                  '<b>שימו לב</b>הסכום חורג מהתקציב שנותר בקטגוריה ב-' + UI.money(Math.abs(vs.diff)) + '.</div></div>' : '') +
+                  '<b>שימו לב</b>הסכום חורג מהתקציב שנותר ב' + (vs.item ? 'סעיף' : 'קטגוריה') +
+                  ' ב-' + UI.money(Math.abs(vs.diff)) + '.</div></div>' : '') +
                 '<div class="btn-row mt"><button class="btn ghost js-cancel">ביטול</button>' +
                 '<button class="btn js-ok">אישור והוספה להוצאות</button></div>',
           onMount: function (root, close) {
@@ -384,6 +431,7 @@ Views.ideas = (function () {
               Store.state.expenses = Store.state.expenses.filter(function (e) { return e.ideaId !== idea.id; });
               Store.add('expenses', {
                 categoryId: idea.categoryId,
+                budgetItemId: idea.budgetItemId || '',
                 title: idea.title || 'רעיון שנבחר',
                 amount: total,
                 date: UI.todayISO(),

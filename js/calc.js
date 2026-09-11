@@ -170,6 +170,21 @@ var Calc = (function () {
   function expensesTotal(state) {
     return (state.expenses || []).reduce(function (s, e) { return s + num(e.amount); }, 0);
   }
+  /* סעיף תקציב לפי מזהה */
+  function budgetItem(state, id) {
+    if (!id) return null;
+    return (state.budgetItems || []).filter(function (b) { return b.id === id; })[0] || null;
+  }
+
+  /* הוצאות שנרשמו על סעיף תקציב מסוים (נוצרות מרעיון שנבחר) */
+  function expensesByBudgetItem(state) {
+    var map = {};
+    (state.expenses || []).forEach(function (e) {
+      if (e.budgetItemId) map[e.budgetItemId] = (map[e.budgetItemId] || 0) + num(e.amount);
+    });
+    return map;
+  }
+
   function expensesByCategory(state) {
     var map = {};
     (state.expenses || []).forEach(function (e) {
@@ -381,12 +396,21 @@ var Calc = (function () {
 
   /* השוואה מול הקטגוריה שנבחרה לרעיון */
   function ideaVsBudget(state, idea) {
-    if (!idea.categoryId) return null;
-    var planned = budgetByCategory(state)[idea.categoryId] || 0;
-    var spent = expensesByCategory(state)[idea.categoryId] || 0;
+    var item = budgetItem(state, idea.budgetItemId);
+    var planned, spent;
+    if (item) {
+      planned = itemAmount(state, item);
+      spent = expensesByBudgetItem(state)[item.id] || 0;
+    } else {
+      // רעיונות שנוצרו לפני שהרעיון הוצמד לסעיף תקציב — השוואה מול הקטגוריה
+      if (!idea.categoryId) return null;
+      planned = budgetByCategory(state)[idea.categoryId] || 0;
+      spent = expensesByCategory(state)[idea.categoryId] || 0;
+    }
     var left = planned - spent;
     var total = ideaTotal(idea);
     return {
+      item: item,
       planned: round2(planned),
       spent: round2(spent),
       left: round2(left),
@@ -464,6 +488,7 @@ var Calc = (function () {
     itemAmount: itemAmount, itemBreakdown: itemBreakdown,
     schoolMonths: schoolMonths, itemMonths: itemMonths, validPeriods: validPeriods,
     expensesTotal: expensesTotal, expensesByCategory: expensesByCategory,
+    budgetItem: budgetItem, expensesByBudgetItem: expensesByBudgetItem,
     paymentsOf: paymentsOf, paidBy: paidBy, collectedTotal: collectedTotal,
     totalShareUnits: totalShareUnits, fullChildShare: fullChildShare,
     childCollection: childCollection, collectionRows: collectionRows,

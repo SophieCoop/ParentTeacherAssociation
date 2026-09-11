@@ -278,6 +278,10 @@ var Store = (function () {
                            note: '', audience: '', basis: 'total', period: 'year', rate: b[2] });
     });
 
+    // הרעיונות לדוגמה מוצמדים לסעיף שתוכנן בתקציב
+    var yearendItem = s.budgetItems.filter(function (b) { return b.categoryId === 'cat-yearend'; })[0];
+    var yearendId = yearendItem ? yearendItem.id : '';
+
     [['cat-bday', 'מתנה ליומולדת של נועה', 320, d(Y, 12, 5)],
      ['cat-food', 'כיבוד לאירוע ראש השנה', 480, d(Y, 9, 20)],
      ['cat-holiday', 'מתנות חג לצוות', 1450, d(Y, 9, 22)]].forEach(function (e) {
@@ -289,6 +293,7 @@ var Store = (function () {
 
     s.ideas.push({
       id: uid('ide'), title: 'מתנת סוף שנה — ספר וכוס', categoryId: 'cat-yearend',
+      budgetItemId: yearendId,
       audiences: ['children', 'staff'], note: 'הצעה של דנה', chosen: false,
       lines: [
         { id: uid('ln'), label: 'ספר אישי', amount: 1400 },
@@ -298,6 +303,7 @@ var Store = (function () {
     });
     s.ideas.push({
       id: uid('ide'), title: 'מתנת סוף שנה — ערכת יצירה', categoryId: 'cat-yearend',
+      budgetItemId: yearendId,
       audiences: ['children'], note: '', chosen: false,
       lines: [
         { id: uid('ln'), label: 'ערכת יצירה', amount: 1600 },
