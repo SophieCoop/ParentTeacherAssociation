@@ -114,6 +114,7 @@ var UI = (function () {
     back.innerHTML =
       '<div class="modal" role="dialog" aria-modal="true">' +
         '<div class="grab"></div>' +
+        '<button type="button" class="modal-close" aria-label="סגירה ללא שמירה">✕</button>' +
         (opts.title ? '<h3>' + esc(opts.title) + '</h3>' : '') +
         (opts.subtitle ? '<div class="m-sub">' + esc(opts.subtitle) + '</div>' : '') +
         '<div class="m-body">' + (opts.body || '') + '</div>' +
@@ -128,6 +129,9 @@ var UI = (function () {
       if (!openModals) document.body.style.overflow = '';
     }
     back.addEventListener('mousedown', function (e) { if (e.target === back) close(); });
+    // סגירה ללא שמירה — מה שהוקלד בטופס אינו נשמר
+    var closeBtn = back.querySelector('.modal-close');
+    if (closeBtn) closeBtn.addEventListener('click', close);
     document.addEventListener('keydown', function onKey(e) {
       if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); }
     });
