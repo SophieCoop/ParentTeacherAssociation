@@ -118,6 +118,36 @@ Views.ideas = (function () {
     return html;
   }
 
+  /* תקציב הקטגוריה שנבחרה לרעיון: כמה תוכנן, כמה כבר הוצא, וכמה נותר */
+  function catBudget(catId) {
+    var st = Store.state;
+    var planned = Calc.budgetByCategory(st)[catId] || 0;
+    var spent = Calc.expensesByCategory(st)[catId] || 0;
+    return { planned: planned, spent: spent, left: Calc.round2(planned - spent) };
+  }
+
+  function budgetInfoHTML(catId) {
+    var cat = Store.category(catId);
+    var b = catBudget(catId);
+
+    if (!b.planned) {
+      return '<div class="note" style="margin:0"><div class="n-ico">ℹ️</div><div>' +
+        'לא הוגדר תקציב לקטגוריה "' + UI.esc(cat.name) + '", ולכן אין מול מה להשוות.' +
+        '</div></div>';
+    }
+
+    return '<div class="row" style="box-shadow:none;margin:0;background:' + UI.toneVar(cat.tone) + '">' +
+      '<div class="r-ico" style="background:#fff">' + cat.icon + '</div>' +
+      '<div class="r-body">' +
+        '<div class="small" style="opacity:.75">תקציב ' + UI.esc(cat.name) + '</div>' +
+        '<div class="r-name">' + UI.money(b.planned) + '</div>' +
+      '</div>' +
+      '<div class="r-end">' +
+        '<div class="small" style="opacity:.75">' + (b.spent ? 'נותר' : 'פנוי') + '</div>' +
+        '<b class="nowrap">' + UI.money(b.left) + '</b>' +
+      '</div></div>';
+  }
+
   /* ---------- טופס רעיון ---------- */
   function ideaForm(idea) {
     var isNew = !idea;
@@ -136,8 +166,25 @@ Views.ideas = (function () {
     }
 
     function refreshTotal(root) {
+      var total = linesTotal();
       var el = root.querySelector('#lines-total');
-      if (el) el.textContent = UI.money(linesTotal());
+      if (el) el.textContent = UI.money(total);
+
+      var catSel = root.querySelector('#f-categoryId');
+      var rem = root.querySelector('#budget-left');
+      if (!catSel || !rem) return;
+
+      var b = catBudget(catSel.value);
+      if (!b.planned) {
+        rem.parentNode.style.display = 'none';
+        return;
+      }
+      rem.parentNode.style.display = '';
+      var after = Calc.round2(b.left - total);
+      rem.textContent = after >= 0 ? UI.money(after) : 'חריגה של ' + UI.money(-after);
+      rem.className = after >= 0 ? 'pos' : 'neg';
+      var lbl = root.querySelector('#budget-left-label');
+      if (lbl) lbl.textContent = after >= 0 ? 'נותר מתקציב הקטגוריה' : 'מעבר לתקציב הקטגוריה';
     }
 
     function drawLines(root) {
@@ -171,6 +218,10 @@ Views.ideas = (function () {
         '<div class="flex-between" style="margin-top:10px">' +
           '<span class="small muted">סה״כ הרעיון</span>' +
           '<b id="lines-total" style="font-size:16px">' + UI.money(linesTotal()) + '</b>' +
+        '</div>' +
+        '<div class="flex-between" style="margin-top:4px">' +
+          '<span class="small muted" id="budget-left-label">נותר מתקציב הקטגוריה</span>' +
+          '<b id="budget-left" class="pos">—</b>' +
         '</div>';
 
       Array.prototype.forEach.call(box.querySelectorAll('[data-ln]'), function (inp) {
@@ -210,6 +261,7 @@ Views.ideas = (function () {
           placeholder: 'למשל: מתנת סוף שנה — ספר וכוס' },
         { name: 'categoryId', label: 'קטגוריית תקציב', type: 'select', value: idea.categoryId,
           options: Views.budget.catOptions() },
+        { name: 'budgetInfo', type: 'html', html: budgetInfoHTML(idea.categoryId) },
         { name: 'audiences', label: 'קהל יעד', type: 'chips', multi: true, value: idea.audiences,
           options: Store.AUDIENCES.map(function (a) {
             return { value: a.id, label: audienceLabel(a.id), icon: a.icon };
@@ -220,7 +272,17 @@ Views.ideas = (function () {
           placeholder: 'קישורים, ספקים, רעיונות…' }
       ],
 
-      onMount: function (root) { drawLines(root); },
+      onMount: function (root) {
+        drawLines(root);
+        refreshTotal(root);
+      },
+
+      onFieldChange: function (name, value, root) {
+        if (name !== 'categoryId') return;
+        var box = root.querySelector('#f-budgetInfo');
+        if (box) box.innerHTML = budgetInfoHTML(root.querySelector('#f-categoryId').value);
+        refreshTotal(root);
+      },
 
       onSubmit: function (v) {
         // שורה ריקה לגמרי אינה נשמרת
