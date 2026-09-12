@@ -126,6 +126,12 @@ ul{margin:0;padding:0;list-style:none}
   margin-bottom:14px;
 }
 .card.flat{box-shadow:none;border:1px solid var(--line)}
+/* כרטיס שכולו לחיץ — מתנהג כמו אריח ניווט */
+.card.tappable{
+  display:block;width:100%;text-align:start;
+  transition:transform .15s ease;
+}
+.card.tappable:active{transform:scale(.985)}
 .card-title{
   display:flex;align-items:center;justify-content:space-between;
   gap:10px;margin-bottom:12px;
@@ -149,15 +155,21 @@ ul{margin:0;padding:0;list-style:none}
 /* ===================== רשת אריחים ===================== */
 .tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .tile{
-  border-radius:var(--r);padding:16px 14px;text-align:start;
-  box-shadow:var(--shadow);min-height:104px;
-  display:flex;flex-direction:column;justify-content:space-between;
+  border-radius:var(--r);padding:12px 14px;text-align:start;
+  box-shadow:var(--shadow);min-height:112px;
+  display:flex;align-items:center;gap:4px;
   transition:transform .15s ease;
 }
 .tile:active{transform:scale(.975)}
-.tile .t-ico{font-size:22px}
-.tile .t-name{font-weight:700;font-size:15px;margin-top:8px}
-.tile .t-sub{font-size:12px;opacity:.75}
+.tile .t-text{flex:1;min-width:0}
+.tile .t-art{width:70px;height:70px;flex:none;object-fit:contain}
+.tile .t-name{display:block;font-weight:700;font-size:15px}
+.tile .t-sub{display:block;font-size:12px;opacity:.75}
+/* במסכים צרים האיור מתכווץ, כדי שתווית כמו "5 אנשי צוות" תישאר בשורה אחת */
+@media (max-width:380px){
+  .tile{padding:12px 11px}
+  .tile .t-art{width:58px;height:58px}
+}
 
 .t-pink{background:var(--pink);color:var(--pink-ink)}
 .t-yellow{background:var(--yellow);color:var(--yellow-ink)}
@@ -449,6 +461,9 @@ textarea.input{min-height:78px;resize:vertical}
 .scroll-x{overflow-x:auto;-webkit-overflow-scrolling:touch}
 table.tbl{width:100%;border-collapse:collapse;font-size:13px;min-width:440px}
 table.tbl.wide{min-width:560px}
+/* טבלת תווית-וערך צרה — נכנסת לרוחב הכרטיס בלי גלילה אופקית */
+table.tbl.slim{min-width:0}
+table.tbl.slim td{padding:10px 2px}
 table.tbl th{font-size:11.5px;color:var(--muted);font-weight:600;text-align:start;padding:8px 10px;white-space:nowrap}
 table.tbl td{padding:10px;border-top:1px solid var(--line);white-space:nowrap}
 table.tbl td:first-child{white-space:normal}
@@ -510,6 +525,79 @@ table.tbl tr td:first-child{font-weight:600}
   font-size:12px;font-weight:400;color:var(--muted);
   flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
+
+/* ===================== עמוד ההוצאות ===================== */
+.svg-ico{display:block}
+
+/* כרטיס הסיכום — ארנק, סכום מול התקציב, ופס ניצול */
+.exp-sum{display:flex;align-items:center;gap:14px}
+.exp-sum .es-ico{
+  width:58px;height:58px;border-radius:18px;flex:none;
+  display:grid;place-items:center;
+  background:var(--primary-soft);color:var(--primary-dark);
+}
+.exp-sum .es-body{flex:1;min-width:0}
+.exp-sum .es-lab{font-weight:700;font-size:15px}
+.exp-sum .es-nums{font-size:12.5px;color:var(--muted);margin-top:2px}
+.exp-sum .es-nums b{font-size:17px;font-weight:800;color:var(--ink)}
+.exp-prog{display:flex;align-items:center;gap:12px;margin-top:13px}
+.exp-prog .bar{flex:1;margin-top:0}
+.exp-prog .ep-pct{font-weight:800;font-size:13px;color:var(--ink-2);flex:none}
+
+/* שלושת כרטיסי הקהל */
+.aud-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:6px}
+.aud-card{
+  background:var(--tint);border-radius:var(--r);box-shadow:var(--shadow);
+  padding:14px 6px 13px;color:var(--ink);
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  transition:transform .15s ease;
+}
+.aud-card:active{transform:translateY(1px)}
+.aud-card .ac-ico{color:var(--tint-ink);margin-bottom:5px}
+.aud-card .ac-name{font-size:12px;color:var(--ink-2);font-weight:600}
+.aud-card .ac-val{font-size:15px;font-weight:800;white-space:nowrap}
+.aud-card .ac-pct{font-size:11px;color:var(--muted);margin-top:1px}
+
+/* סינון לפי קבוצה */
+.gfilter{
+  display:flex;align-items:center;gap:2px;background:#fff;padding:5px;
+  border-radius:18px;box-shadow:var(--shadow);margin-bottom:12px;overflow-x:auto;
+}
+.gfilter button{
+  flex:1 0 auto;display:flex;align-items:center;justify-content:center;gap:6px;
+  padding:9px 12px;border-radius:14px;font-size:12.5px;font-weight:700;
+  color:var(--muted);white-space:nowrap;
+}
+.gfilter button .svg-ico{opacity:.85}
+.gfilter button.on{background:var(--primary-soft);color:var(--primary-dark)}
+.gfilter .gf-sep{width:1px;height:22px;background:var(--line);flex:none}
+
+/* קבוצת הוצאות — כותרת צבועה והכרטיסים שבתוכה */
+.gblock{background:var(--tint);border-radius:var(--r-lg);padding:5px;margin-bottom:14px}
+.gblock-head{
+  display:flex;align-items:center;gap:10px;width:100%;
+  padding:10px 12px 12px;color:var(--ink);text-align:start;
+}
+.gblock-head .gb-ico{color:var(--tint-ink);flex:none}
+.gblock-head .gb-name{font-weight:700;font-size:14.5px;flex:1;min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gblock-head .gb-sum{font-size:12px;font-weight:700;color:var(--ink-2);white-space:nowrap}
+.gblock-head .gb-chev{color:var(--ink-2);opacity:.55;flex:none}
+.gblock .row{margin-bottom:5px}
+.gblock .row:last-child{margin-bottom:0}
+.exp-row{padding:11px 12px}
+.exp-row .r-ico{width:40px;height:40px;border-radius:50%;font-size:17px}
+.exp-row .r-chev{color:var(--muted);opacity:.6;flex:none}
+
+/* הוספת הוצאה */
+.exp-add{display:flex;flex-direction:column;align-items:center;gap:9px;margin:24px auto 6px}
+.exp-add .ea-btn{
+  width:56px;height:56px;border-radius:50%;display:grid;place-items:center;
+  background:var(--ok);color:#fff;box-shadow:0 10px 22px rgba(93,158,114,.34);
+  transition:transform .12s ease;
+}
+.exp-add:active .ea-btn{transform:translateY(2px)}
+.exp-add .ea-lab{font-size:13px;font-weight:700;color:var(--ink-2)}
 
 /* ===================== מסך רחב ===================== */
 @media (min-width:900px){

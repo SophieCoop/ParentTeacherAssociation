@@ -1,75 +1,9 @@
 /* ============================================================
-   תאריכים — לוח שנה, ימי הולדת ואירועי הגן
+   תאריכים — ימי הולדת ואירועי הגן
    ============================================================ */
 var Views = (typeof Views === 'undefined') ? {} : Views;
 
 Views.dates = (function () {
-
-  function monthRef() {
-    var m = App.vs('calMonth', null);
-    if (!m) {
-      var now = new Date();
-      m = { y: now.getFullYear(), m: now.getMonth() };
-      App.setVs('calMonth', m);
-    }
-    return m;
-  }
-
-  function iso(y, m, d) {
-    return y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
-  }
-
-  /* ---------- לוח שנה חודשי ---------- */
-  function calendar() {
-    var ref = monthRef();
-    var first = new Date(ref.y, ref.m, 1);
-    var startDow = first.getDay();
-    var daysInMonth = new Date(ref.y, ref.m + 1, 0).getDate();
-    var prevDays = new Date(ref.y, ref.m, 0).getDate();
-    var today = new Date();
-
-    // מיפוי אירועים לפי יום בחודש
-    var marks = {};
-    Calc.allDates(Store.state).forEach(function (it) {
-      var d = Calc.toDate(it.date);
-      if (!d) return;
-      if (it.type === 'birthday') {
-        if (d.getMonth() === ref.m) push(marks, d.getDate(), 'bd', it);
-      } else if (d.getFullYear() === ref.y && d.getMonth() === ref.m) {
-        push(marks, d.getDate(), it.type === 'budget' ? 'ev' : 'hol', it);
-      }
-    });
-
-    var cells = '';
-    UI.DOW.forEach(function (d) { cells += '<div class="dow">' + d + '</div>'; });
-    for (var i = startDow - 1; i >= 0; i--) cells += '<div class="day out">' + (prevDays - i) + '</div>';
-    for (var d2 = 1; d2 <= daysInMonth; d2++) {
-      var mk = marks[d2];
-      var isToday = today.getFullYear() === ref.y && today.getMonth() === ref.m && today.getDate() === d2;
-      var cls = 'day' + (isToday ? ' today' : '') + (mk ? ' has ' + mk.kind : '');
-      cells += '<button class="' + cls + '" data-action="cal-day" data-date="' + iso(ref.y, ref.m, d2) + '">' + d2 + '</button>';
-    }
-    var used = startDow + daysInMonth;
-    for (var t = 1; used % 7 !== 0; t++, used++) cells += '<div class="day out">' + t + '</div>';
-
-    return '<div class="card">' +
-      '<div class="cal-head">' +
-        '<button class="iconbtn plain" data-action="cal-prev">›</button>' +
-        '<b>' + UI.MONTHS[ref.m] + ' ' + ref.y + '</b>' +
-        '<button class="iconbtn plain" data-action="cal-next">‹</button>' +
-      '</div>' +
-      '<div class="cal">' + cells + '</div>' +
-      '<div class="legend">' +
-        '<span><i style="background:var(--pink-ink)"></i>יום הולדת</span>' +
-        '<span><i style="background:var(--blue-ink)"></i>סעיף תקציב</span>' +
-        '<span><i style="background:var(--green-ink)"></i>אירוע</span>' +
-      '</div></div>';
-  }
-
-  function push(map, day, kind, item) {
-    if (!map[day]) map[day] = { kind: kind, items: [] };
-    map[day].items.push(item);
-  }
 
   /* ---------- רשימות ---------- */
   function listAll() {
@@ -178,7 +112,6 @@ Views.dates = (function () {
       '<button data-action="date-tab" data-tab="birthdays" class="' + (tab === 'birthdays' ? 'on' : '') + '">ימי הולדת</button>' +
       '<button data-action="date-tab" data-tab="all" class="' + (tab === 'all' ? 'on' : '') + '">כל התאריכים</button>' +
       '</div>';
-    html += calendar();
     html += '<div class="section-title"><span>' +
       (tab === 'events' ? 'אירועי הגן' : tab === 'birthdays' ? 'ימי הולדת' : 'כל התאריכים') + '</span></div>';
     if (tab === 'events') html += listEvents();
@@ -192,39 +125,7 @@ Views.dates = (function () {
     actions: {
       'date-tab': function (el) { App.setVs('dateTab', el.getAttribute('data-tab')); App.render(); },
       'date-add': function () { dateForm(null); },
-      'date-edit': function (el) { dateForm(Store.find('events', el.getAttribute('data-id'))); },
-      'cal-prev': function () {
-        var r = monthRef();
-        var d = new Date(r.y, r.m - 1, 1);
-        App.setVs('calMonth', { y: d.getFullYear(), m: d.getMonth() });
-        App.render();
-      },
-      'cal-next': function () {
-        var r = monthRef();
-        var d = new Date(r.y, r.m + 1, 1);
-        App.setVs('calMonth', { y: d.getFullYear(), m: d.getMonth() });
-        App.render();
-      },
-      'cal-day': function (el) {
-        var date = el.getAttribute('data-date');
-        var d = Calc.toDate(date);
-        var items = Calc.allDates(Store.state).filter(function (it) {
-          var x = Calc.toDate(it.date);
-          if (!x) return false;
-          if (it.type === 'birthday') return x.getMonth() === d.getMonth() && x.getDate() === d.getDate();
-          return it.date === date;
-        });
-        UI.modal({
-          title: UI.dateShort(date),
-          subtitle: items.length ? items.length + ' אירועים' : 'אין אירועים ביום זה',
-          body: (items.map(function (it) {
-            return '<div class="row" style="box-shadow:none;background:' + UI.toneVar(it.tone) + '">' +
-              '<div class="r-ico" style="background:#fff">' + it.icon + '</div>' +
-              '<div class="r-body"><div class="r-name">' + UI.esc(it.title) + '</div></div></div>';
-          }).join('') || '<p class="muted small">יום שקט 🌤</p>') +
-          '<button class="btn mt" data-action="date-add">+ הוספת אירוע</button>'
-        });
-      }
+      'date-edit': function (el) { dateForm(Store.find('events', el.getAttribute('data-id'))); }
     }
   };
 })();

@@ -55,20 +55,21 @@ Views.home = (function () {
 
     /* אריחי ניווט */
     html += '<div class="tiles">' +
-      tile('budget', 't-pink', '🧮', 'תקציב', UI.money(ov.budget)) +
-      tile('collection', 't-green', '💰', 'גבייה', col.pct + '% נגבו') +
-      tile('expenses', 't-yellow', '🧾', 'הוצאות', UI.money(ov.spent)) +
-      tile('ideas', 't-purple', '💡', 'רעיונות', (st.ideas.length || 0) + ' רעיונות') +
-      tile('children', 't-blue', '🧒', 'ילדי הגן', st.children.length + ' ילדים') +
-      tile('staff', 't-mint', '👩‍🏫', 'צוות הגן', st.staff.length + ' אנשי צוות') +
-      tile('dates', 't-peach', '📅', 'תאריכים', up.length ? UI.relativeDays(up[0].next) : 'אין אירועים') +
-      tile('yearend', 't-pink', '🎈', 'סוף שנה', 'חישוב החזרים') +
+      tile('budget', 't-pink', 'budget', 'תקציב', UI.money(ov.budget)) +
+      tile('collection', 't-green', 'collection', 'גבייה', col.pct + '% נגבו') +
+      tile('expenses', 't-yellow', 'expenses', 'הוצאות', UI.money(ov.spent)) +
+      tile('ideas', 't-purple', 'ideas', 'רעיונות', (st.ideas.length || 0) + ' רעיונות') +
+      tile('children', 't-blue', 'children', 'ילדי הגן', st.children.length + ' ילדים') +
+      tile('staff', 't-mint', 'staff', 'צוות הגן', st.staff.length + ' אנשי צוות') +
+      tile('dates', 't-peach', 'dates', 'תאריכים', up.length ? UI.relativeDays(up[0].next) : 'אין אירועים') +
+      tile('yearend', 't-pink', 'yearend', 'סוף שנה', 'חישוב החזרים') +
       '</div>';
 
     /* גבייה — מבט מהיר */
     html += '<div class="section-title"><span>מצב הגבייה</span>' +
       '<button class="btn sm soft" data-action="nav" data-view="collection">לפירוט</button></div>';
-    html += '<div class="card">' +
+    html += '<button class="card tappable" data-action="nav" data-view="collection" ' +
+      'aria-label="פירוט מצב הגבייה">' +
       '<div class="flex-between"><span class="small muted">נגבה ' + UI.money(col.paid) + ' מתוך ' + UI.money(col.due) + '</span>' +
       '<b>' + col.pct + '%</b></div>' +
       UI.bar(col.paid, col.due, col.pct >= 100 ? 'ok' : '') +
@@ -76,7 +77,7 @@ Views.home = (function () {
         '<span class="badge ok">שילמו במלואו · ' + col.fullCount + '</span>' +
         '<span class="badge warn">שילמו חלקית · ' + col.partialCount + '</span>' +
         '<span class="badge no">טרם שילמו · ' + col.noneCount + '</span>' +
-      '</div></div>';
+      '</div></button>';
 
     /* אירועים קרובים */
     html += '<div class="section-title"><span>אירועים קרובים</span>' +
@@ -107,10 +108,13 @@ Views.home = (function () {
     return html;
   }
 
-  function tile(view, cls, ico, name, sub) {
+  /* אריח ניווט — הטקסט מימין והאיור לצידו, כמו בעיצוב */
+  function tile(view, cls, art, name, sub) {
     return '<button class="tile ' + cls + '" data-action="nav" data-view="' + view + '">' +
-      '<div class="t-ico">' + ico + '</div>' +
-      '<div><div class="t-name">' + UI.esc(name) + '</div><div class="t-sub">' + UI.esc(sub) + '</div></div>' +
+      '<span class="t-text"><span class="t-name">' + UI.esc(name) + '</span>' +
+      '<span class="t-sub">' + UI.esc(sub) + '</span></span>' +
+      '<img class="t-art" src="assets/icons/' + art + '.webp" alt="" ' +
+        'width="176" height="176" loading="lazy" decoding="async">' +
       '</button>';
   }
 

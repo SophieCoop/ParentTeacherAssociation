@@ -310,6 +310,16 @@ var Calc = (function () {
     return map;
   }
 
+  /* תכנון לפי קהל יעד — ילדים, צוות חינוכי, או כללי */
+  function budgetByAudience(state) {
+    var map = {};
+    (state.budgetItems || []).forEach(function (b) {
+      var key = b.audience || '';
+      map[key] = (map[key] || 0) + itemAmount(state, b);
+    });
+    return map;
+  }
+
   /* ---------- הוצאות בפועל ---------- */
   function expensesTotal(state) {
     return (state.expenses || []).reduce(function (s, e) { return s + num(e.amount); }, 0);
@@ -333,6 +343,16 @@ var Calc = (function () {
     var map = {};
     (state.expenses || []).forEach(function (e) {
       map[e.categoryId] = (map[e.categoryId] || 0) + num(e.amount);
+    });
+    return map;
+  }
+
+  /* הוצאה שלא סומן לה קהל יעד נספרת ככללית — בלי לנחש מהקטגוריה */
+  function expensesByAudience(state) {
+    var map = {};
+    (state.expenses || []).forEach(function (e) {
+      var key = e.audience || '';
+      map[key] = (map[key] || 0) + num(e.amount);
     });
     return map;
   }
@@ -664,6 +684,7 @@ var Calc = (function () {
     budgetAllocation: budgetAllocation, expenseAllocation: expenseAllocation,
     childOutOfYear: childOutOfYear, outOfYearChildren: outOfYearChildren,
     budgetTotal: budgetTotal, budgetByCategory: budgetByCategory,
+    budgetByAudience: budgetByAudience, expensesByAudience: expensesByAudience,
     audienceCount: audienceCount, audienceLabel: audienceLabel,
     itemAmount: itemAmount, itemBreakdown: itemBreakdown,
     schoolMonths: schoolMonths, itemMonths: itemMonths, validPeriods: validPeriods,

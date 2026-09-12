@@ -114,15 +114,13 @@ Views.collection = (function () {
     var sum = Calc.collectionSummary(st);
     var methods = Calc.byMethod(st);
     var perFull = Calc.fullChildShare(st);
-    var units = Calc.totalShareUnits(st);
     var used = Store.PAY_METHODS.filter(function (m) { return methods[m.id]; });
 
     var html = '<div class="card">' +
       '<div class="card-title"><h2>איך מחושב הסכום לכל הורה?</h2></div>' +
-      '<table class="tbl"><tbody>' +
+      '<table class="tbl slim"><tbody>' +
         row('סה״כ תקציב מתוכנן', UI.money(Calc.budgetTotal(st))) +
         row('ילד שהיה כל השנה משלם', '<b>' + UI.money(perFull) + '</b>') +
-        row('שווה ערך לכמה ילדים מלאים', units.toFixed(2)) +
         row('סה״כ לגבייה', UI.money(sum.due)) +
         row('נגבה בפועל', '<span class="pos">' + UI.money(sum.paid) + '</span>') +
         row('נותר לגבייה', '<span class="' + (sum.remaining > 0 ? 'neg' : 'pos') + '">' + UI.money(sum.remaining) + '</span>') +
