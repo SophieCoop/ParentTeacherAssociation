@@ -158,6 +158,27 @@ Views.budget = (function () {
   }
 
   /* ---------- לשונית: סיכום ---------- */
+
+  /* בפילוח לפי קטגוריה, לחיצה על קטגוריה פותחת את הסעיפים שבה —
+     למשל פסח וחנוכה תחת "מתנה לחג". כל סעיף נפתח לעריכה. */
+  var AUD_LABEL = { children: 'לילדים', staff_edu: 'לצוות החינוכי' };
+
+  function summaryItemRow(st, b) {
+    var amount = Calc.itemAmount(st, b);
+    var bd = Calc.itemBreakdown(st, b);
+    var bits = [];
+    if (AUD_LABEL[b.audience]) bits.push(AUD_LABEL[b.audience]);
+    if (bd.perPerson) bits.push(UI.money(bd.rate) + ' × ' + Calc.audienceLabel(bd.audience, bd.count));
+    if (bd.monthly) bits.push(bd.months + ' חודשים');
+    if (b.date) bits.push(UI.dateShort(b.date));
+    return '<button class="bcat-item" data-action="budget-edit" data-id="' + b.id + '">' +
+      '<span class="bi-body"><span class="bi-name">' + UI.esc(b.title || Store.category(b.categoryId).name) + '</span>' +
+        (bits.length ? '<span class="bi-sub">' + bits.join(' · ') + '</span>' : '') +
+      '</span>' +
+      '<b class="bi-amount">' + UI.money(amount) + '</b>' +
+      '</button>';
+  }
+
   function tabSummary() {
     var st = Store.state;
     var total = Calc.budgetTotal(st);
@@ -194,18 +215,36 @@ Views.budget = (function () {
     if (!cats.length) {
       html += UI.empty({ icon: '🥧', title: 'אין עדיין נתונים לפילוח', text: 'הוסיפו סעיפי תקציב כדי לראות את החלוקה.' });
     } else {
+      var open = App.vs('budgetOpenCats', {});
+      var itemsByCat = {};
+      st.budgetItems.forEach(function (b) { (itemsByCat[b.categoryId] = itemsByCat[b.categoryId] || []).push(b); });
       html += cats.map(function (c) {
         var amt = byCat[c.id] || 0;
         var used = spentByCat[c.id] || 0;
         var share = total > 0 ? (amt / total) * 100 : 0;
-        return '<div class="card" style="padding:13px 14px">' +
-          '<div class="flex-between">' +
-            '<div class="flex"><span class="r-ico" style="background:' + UI.toneVar(c.tone) + '">' + UI.catIcon(c) + '</span>' +
-            '<div><div class="r-name">' + UI.esc(c.name) + '</div>' +
-            '<div class="r-sub">' + share.toFixed(1) + '% מהתקציב · הוצא ' + UI.money(used) + '</div></div></div>' +
-            '<b class="nowrap">' + UI.money(amt) + '</b>' +
-          '</div>' +
-          UI.bar(used, amt, used > amt ? 'over' : (used === amt ? 'ok' : 'thin')) +
+        var list = (itemsByCat[c.id] || []).slice().sort(function (a, b) {
+          return (a.date || '9999').localeCompare(b.date || '9999');
+        });
+        var isOpen = !!open[c.id];
+        return '<div class="card sumcat' + (isOpen ? ' open' : '') + '">' +
+          '<button class="sumcat-head" data-action="budget-cat" data-id="' + c.id + '" ' +
+            'aria-expanded="' + (isOpen ? 'true' : 'false') + '">' +
+            '<div class="flex-between">' +
+              '<div class="flex"><span class="r-ico" style="background:' + UI.toneVar(c.tone) + '">' + UI.catIcon(c) + '</span>' +
+              '<div><div class="r-name">' + UI.esc(c.name) + '</div>' +
+              '<div class="r-sub">' + share.toFixed(1) + '% מהתקציב · הוצא ' + UI.money(used) + '</div></div></div>' +
+              '<div class="sc-end"><b class="nowrap">' + UI.money(amt) + '</b>' +
+                '<span class="sc-chev">' + UI.svgIcon('chevron', 16) + '</span></div>' +
+            '</div>' +
+            UI.bar(used, amt, used > amt ? 'over' : (used === amt ? 'ok' : 'thin')) +
+          '</button>' +
+          (isOpen
+            ? '<div class="bcat-body">' +
+                list.map(function (b) { return summaryItemRow(st, b); }).join('') +
+                '<button class="bcat-add" data-action="budget-add" data-category="' + c.id + '">' +
+                  '+ הוספת סעיף ל' + UI.esc(c.name) + '</button>' +
+              '</div>'
+            : '') +
           '</div>';
       }).join('');
     }
@@ -307,9 +346,12 @@ Views.budget = (function () {
     });
   }
 
-  function itemForm(item) {
+  function itemForm(item, presetCategory) {
     var isNew = !item;
-    item = item || { categoryId: Store.state.categories[0].id, title: '', date: '', note: '',
+    var startCategory = presetCategory && Store.find('categories', presetCategory)
+      ? presetCategory
+      : Store.state.categories[0].id;
+    item = item || { categoryId: startCategory, title: '', date: '', note: '',
                      audience: '', basis: 'total', period: 'year', rate: '',
                      startDate: '', endDate: '' };
 
@@ -508,7 +550,15 @@ Views.budget = (function () {
     catOptions: catOptions,
     actions: {
       'budget-tab': function (el) { App.setVs('budgetTab', el.getAttribute('data-tab')); App.render(); },
-      'budget-add': function () { itemForm(null); },
+      'budget-add': function (el) {
+        itemForm(null, el && el.getAttribute ? el.getAttribute('data-category') : null);
+      },
+      'budget-cat': function (el) {
+        var id = el.getAttribute('data-id');
+        var open = App.vs('budgetOpenCats', {});
+        open[id] = !open[id];
+        App.render();
+      },
       'budget-edit': function (el) { itemForm(Store.find('budgetItems', el.getAttribute('data-id'))); },
       'cat-add': function () { catForm(null); },
       'cat-edit': function (el) { catForm(Store.find('categories', el.getAttribute('data-id'))); },

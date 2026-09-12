@@ -619,6 +619,25 @@ table.tbl tr td:first-child{font-weight:600}
 .exp-add:active .ea-btn{transform:translateY(2px)}
 .exp-add .ea-lab{font-size:13px;font-weight:700;color:var(--ink-2)}
 
+/* ===================== תכנון תקציב — פילוח שנפתח לסעיפים ===================== */
+.card.sumcat{padding:0;overflow:hidden}
+.sumcat-head{display:block;width:100%;padding:13px 14px;text-align:start;color:var(--ink)}
+.sumcat .sc-end{display:flex;align-items:center;gap:6px;flex:none}
+.sumcat .sc-chev{color:var(--muted);display:grid;place-items:center}
+.sumcat .sc-chev .svg-ico{transition:transform .2s ease}
+.sumcat.open .sc-chev .svg-ico{transform:rotate(-90deg)}
+.bcat-body{border-top:1px solid var(--line);padding:2px 14px 12px}
+.bcat-item{display:flex;align-items:center;gap:10px;width:100%;padding:10px 2px;text-align:start;color:var(--ink)}
+.bcat-item + .bcat-item{border-top:1px solid var(--line)}
+.bcat-item .bi-body{flex:1;min-width:0}
+.bcat-item .bi-name{display:block;font-weight:600;font-size:14.5px}
+.bcat-item .bi-sub{display:block;font-size:12px;color:var(--muted)}
+.bcat-item .bi-amount{flex:none;font-weight:800;font-size:14.5px;white-space:nowrap}
+.bcat-add{
+  display:block;width:100%;margin-top:8px;padding:10px;border-radius:var(--r-sm);
+  background:var(--primary-soft);color:var(--primary-dark);font-weight:700;font-size:13.5px;
+}
+
 /* ===================== עמוד התאריכים ===================== */
 /* תג תאריך, גוף וכותרת — משותפים לכרטיס "האירוע הבא" ולשורות שבחודשים */
 .d-badge{
