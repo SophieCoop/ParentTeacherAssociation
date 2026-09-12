@@ -100,7 +100,7 @@ Views.budget = (function () {
       per = bits.join(' ');
     }
     return '<div class="row" data-action="budget-edit" data-id="' + b.id + '" style="background:' + UI.toneVar(cat.tone) + '55">' +
-      '<div class="r-ico" style="background:#fff">' + cat.icon + '</div>' +
+      '<div class="r-ico" style="background:#fff">' + UI.catIcon(cat) + '</div>' +
       '<div class="r-body">' +
         '<div class="r-name">' + UI.esc(b.title || cat.name) + '</div>' +
         '<div class="r-sub" style="white-space:normal">' + (per ? per + ' · ' : '') + UI.esc(cat.name) +
@@ -108,6 +108,18 @@ Views.budget = (function () {
       '</div>' +
       '<div class="r-end"><div class="r-amount">' + UI.money(amount) + '</div></div>' +
       '</div>';
+  }
+
+  /* ניהול הקטגוריות — יושב בלשונית הקטגוריות, גם כשעוד אין סעיפים */
+  function categoryManager(st) {
+    return '<div class="section-title"><span>ניהול קטגוריות</span>' +
+      '<button class="btn sm soft" data-action="cat-add">+ קטגוריה</button></div>' +
+      '<div class="card"><div class="flex wrap" style="gap:8px">' +
+      st.categories.map(function (c) {
+        return '<button class="chip" data-action="cat-edit" data-id="' + c.id + '" ' +
+          'style="background:' + UI.toneVar(c.tone) + ';color:' + UI.toneInk(c.tone) + '">' + UI.catIcon(c) + ' ' + UI.esc(c.name) + '</button>';
+      }).join('') +
+      '</div></div>';
   }
 
   function tabItems() {
@@ -121,10 +133,10 @@ Views.budget = (function () {
 
     if (!items.length) {
       return html + UI.empty({
-        icon: '🧮', title: 'עוד לא תכננתם תקציב',
+        art: 'budget', title: 'עוד לא תכננתם תקציב',
         text: 'הוסיפו סעיפי הוצאה מתוך הקטגוריות — מתנות, כיבוד, חוגים ועוד.',
         action: { act: 'budget-add', label: '+ הוספת הסעיף הראשון' }
-      });
+      }) + categoryManager(st);
     }
 
     GROUPS.forEach(function (g) {
@@ -136,11 +148,12 @@ Views.budget = (function () {
     });
 
     html += '<div class="row" style="background:var(--primary-soft);box-shadow:none;margin-top:18px">' +
-      '<div class="r-ico" style="background:#fff">💰</div>' +
+      '<div class="r-ico has-art" style="background:#fff">' + UI.art('budget') + '</div>' +
       '<div class="r-body"><div class="r-name">סה״כ כל הקטגוריות</div>' +
       '<div class="r-sub">' + items.length + ' סעיפים</div></div>' +
       '<div class="r-end"><div class="r-amount">' + UI.money(total) + '</div></div></div>';
 
+    html += categoryManager(st);
     return html;
   }
 
@@ -172,7 +185,7 @@ Views.budget = (function () {
         '<div class="stat"><div class="s-val">' + UI.money(perFull) + '</div><div class="s-lab">לילד מלא</div></div>' +
       '</div></div>';
 
-    html += '<div class="note"><div class="n-ico">🧮</div><div><b>כמה כל הורה משלם?</b>' +
+    html += '<div class="note"><div class="n-ico">' + UI.art('budget') + '</div><div><b>כמה כל הורה משלם?</b>' +
       'כל סעיף מתחלק בין הילדים שכבר היו בגן בתאריך שלו. ילד שהיה בגן מתחילת השנה ' +
       'משלם ' + UI.money(perFull) + ', וילד שהצטרף באמצע משלם רק על מה שבא אחריו.</div></div>';
 
@@ -187,7 +200,7 @@ Views.budget = (function () {
         var share = total > 0 ? (amt / total) * 100 : 0;
         return '<div class="card" style="padding:13px 14px">' +
           '<div class="flex-between">' +
-            '<div class="flex"><span class="r-ico" style="background:' + UI.toneVar(c.tone) + '">' + c.icon + '</span>' +
+            '<div class="flex"><span class="r-ico" style="background:' + UI.toneVar(c.tone) + '">' + UI.catIcon(c) + '</span>' +
             '<div><div class="r-name">' + UI.esc(c.name) + '</div>' +
             '<div class="r-sub">' + share.toFixed(1) + '% מהתקציב · הוצא ' + UI.money(used) + '</div></div></div>' +
             '<b class="nowrap">' + UI.money(amt) + '</b>' +
@@ -197,21 +210,12 @@ Views.budget = (function () {
       }).join('');
     }
 
-    html += '<div class="section-title"><span>ניהול קטגוריות</span>' +
-      '<button class="btn sm soft" data-action="cat-add">+ קטגוריה</button></div>';
-    html += '<div class="card"><div class="flex wrap" style="gap:8px">' +
-      st.categories.map(function (c) {
-        return '<button class="chip" data-action="cat-edit" data-id="' + c.id + '" ' +
-          'style="background:' + UI.toneVar(c.tone) + ';color:' + UI.toneInk(c.tone) + '">' + c.icon + ' ' + UI.esc(c.name) + '</button>';
-      }).join('') +
-      '</div></div>';
-
     return html;
   }
 
   function render() {
     var tab = App.vs('budgetTab', 'items');
-    var html = UI.pageHead({ title: 'תכנון תקציב', subtitle: 'סעיפי ההוצאה המתוכננים לשנה', icon: '🧮', tone: 'pink', back: 'home' });
+    var html = UI.pageHead({ title: 'תכנון תקציב', subtitle: 'סעיפי ההוצאה המתוכננים לשנה', art: 'budget', tone: 'pink', back: 'home' });
 
     html += '<div class="segment">' +
       seg('settings', 'הגדרות', tab) +

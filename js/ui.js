@@ -26,6 +26,8 @@ var UI = (function () {
 
   var MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
                 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+  var MONTHS_SHORT = ['ינו׳', 'פבר׳', 'מרץ', 'אפר׳', 'מאי', 'יוני',
+                      'יולי', 'אוג׳', 'ספט׳', 'אוק׳', 'נוב׳', 'דצמ׳'];
   var DOW = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
 
   function dateShort(str) {
@@ -330,7 +332,8 @@ var UI = (function () {
     return '<header class="pagehead" style="--tint:' + toneVar(o.tone) + '">' +
       (o.back ? '<button class="back" data-action="nav" data-view="' + esc(o.back) + '" aria-label="חזרה">→</button>' : '') +
       (o.action ? '<button class="head-action" data-action="' + esc(o.action.act) + '" aria-label="' + esc(o.action.label) + '">' + o.action.icon + '</button>' : '') +
-      (o.icon ? '<div class="ph-icon">' + o.icon + '</div>' : '') +
+      (o.art ? '<div class="ph-icon has-art">' + art(o.art) + '</div>'
+             : o.icon ? '<div class="ph-icon">' + o.icon + '</div>' : '') +
       '<h1>' + esc(o.title) + '</h1>' +
       (o.subtitle ? '<p>' + esc(o.subtitle) + '</p>' : '') +
       '</header>';
@@ -381,6 +384,32 @@ var UI = (function () {
       '<path d="M16 8.5v15M8.5 16h15" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>'
   };
 
+  /* איורי האפליקציה — אותם שמונה איורים של אריחי הבית, בכל מקום שמייצג
+     את אותו אזור. הגודל נקבע ב-CSS לפי ההקשר (ניווט, כותרת, מצב ריק). */
+  var ARTS = ['budget', 'collection', 'expenses', 'ideas', 'children', 'staff', 'dates', 'yearend'];
+
+  function art(name) {
+    if (ARTS.indexOf(name) < 0) return '';
+    return '<img class="art" src="assets/icons/' + name + '.webp" alt="" ' +
+      'width="176" height="176" decoding="async">';
+  }
+
+  /* איורי הקטגוריות. איור מוצג רק כשהקטגוריה עדיין עם האמוג׳י המקורי שלה —
+     מי ששינה אמוג׳י בטופס רואה את הבחירה שלו. */
+  var CAT_ART = {
+    'cat-bday': '🎁', 'cat-holiday': '🎊', 'cat-yearend': '🎓', 'cat-clubs': '🎨', 'cat-food': '🧁',
+    'cat-events': '🎪', 'cat-gear': '🔧', 'cat-other': '💗'
+  };
+
+  function catIcon(cat) {
+    if (!cat) return '';
+    if (CAT_ART[cat.id] && CAT_ART[cat.id] === cat.icon) {
+      return '<img class="art cat-art" src="assets/icons/' + cat.id + '.webp" alt="" ' +
+        'width="176" height="176" decoding="async">';
+    }
+    return cat.icon || '';
+  }
+
   function svgIcon(name, size) {
     var d = ICONS[name];
     if (!d) return '';
@@ -391,7 +420,7 @@ var UI = (function () {
 
   function empty(o) {
     return '<div class="empty">' +
-      '<div class="e-ico">' + (o.icon || '🌱') + '</div>' +
+      '<div class="e-ico">' + (o.art ? art(o.art) : (o.icon || '🌱')) + '</div>' +
       '<b>' + esc(o.title) + '</b>' +
       '<p>' + esc(o.text || '') + '</p>' +
       (o.action ? '<button class="btn auto" data-action="' + esc(o.action.act) + '">' + esc(o.action.label) + '</button>' : '') +
@@ -465,14 +494,14 @@ var UI = (function () {
   }
 
   return {
-    esc: esc, money: money, pct: pct, MONTHS: MONTHS, DOW: DOW,
+    esc: esc, money: money, pct: pct, MONTHS: MONTHS, MONTHS_SHORT: MONTHS_SHORT, DOW: DOW,
     dateShort: dateShort, dateDayMonth: dateDayMonth, ageText: ageText,
     daysUntil: daysUntil, relativeDays: relativeDays, todayISO: todayISO,
     initials: initials, faceFor: faceFor, toneFor: toneFor,
     toneVar: toneVar, toneInk: toneInk, toneHex: toneHex,
     toneSoftHex: toneSoftHex, toneInkHex: toneInkHex,
     toast: toast, modal: modal, formModal: formModal, confirmBox: confirmBox,
-    pageHead: pageHead, empty: empty, bar: bar, donut: donut, svgIcon: svgIcon,
+    pageHead: pageHead, empty: empty, bar: bar, donut: donut, svgIcon: svgIcon, art: art, catIcon: catIcon,
     whatsapp: whatsapp, normalizePhone: normalizePhone, copyText: copyText
   };
 })();

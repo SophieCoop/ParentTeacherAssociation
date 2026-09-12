@@ -49,7 +49,7 @@ Views.collection = (function () {
       'data-input="col-search" value="' + UI.esc(q) + '"></div>';
 
     if (!st.children.length) {
-      return html + UI.empty({ icon: '🧒', title: 'אין ילדים ברשימה', text: 'הוסיפו את ילדי הגן כדי להתחיל בגבייה.', action: { act: 'nav-children', label: 'לרשימת הילדים' } });
+      return html + UI.empty({ art: 'children', title: 'אין ילדים ברשימה', text: 'הוסיפו את ילדי הגן כדי להתחיל בגבייה.', action: { act: 'nav-children', label: 'לרשימת הילדים' } });
     }
 
     html += rows.map(function (r) {
@@ -73,7 +73,7 @@ Views.collection = (function () {
     }).join('');
 
     html += '<div class="row" style="background:var(--green);box-shadow:none;margin-top:14px">' +
-      '<div class="r-ico" style="background:#fff">💰</div>' +
+      '<div class="r-ico has-art" style="background:#fff">' + UI.art('collection') + '</div>' +
       '<div class="r-body"><div class="r-name">סיכום גבייה</div>' +
       '<div class="r-sub" style="opacity:.75">' + st.children.length + ' ילדים</div></div>' +
       '<div class="r-end"><div class="r-amount">' + UI.money(sum.paid) + '</div>' +
@@ -90,7 +90,7 @@ Views.collection = (function () {
     var html = '<button class="btn ghost" data-action="pay-add" style="margin-bottom:14px">+ רישום תשלום חדש</button>';
 
     if (!pays.length) {
-      return html + UI.empty({ icon: '🧾', title: 'עוד לא נרשמו תשלומים', text: 'כל תשלום שנרשם מתעדכן מיד במצב הגבייה.', action: { act: 'pay-add', label: '+ רישום התשלום הראשון' } });
+      return html + UI.empty({ art: 'collection', title: 'עוד לא נרשמו תשלומים', text: 'כל תשלום שנרשם מתעדכן מיד במצב הגבייה.', action: { act: 'pay-add', label: '+ רישום התשלום הראשון' } });
     }
 
     html += pays.map(function (p) {
@@ -188,7 +188,7 @@ Views.collection = (function () {
   function instResult(amount, count) {
     var per = Math.round((amount / Math.max(1, count)) * 100) / 100;
     return '<div class="row mt" style="background:var(--primary-soft);box-shadow:none;margin-bottom:0">' +
-      '<div class="r-ico" style="background:#fff">📅</div>' +
+      '<div class="r-ico has-art" style="background:#fff">' + UI.art('dates') + '</div>' +
       '<div class="r-body"><div class="r-name">' + UI.money(per) + ' לתשלום</div>' +
       '<div class="r-sub">' + count + ' תשלומים חודשיים · סה״כ ' + UI.money(amount) + '</div></div>' +
       '</div>';
@@ -256,7 +256,7 @@ Views.collection = (function () {
         line = 'כל ' + r.installments + ' התשלומים בוצעו, ועדיין נותרו <b>' +
           UI.money(r.remaining) + '</b> להשלמה.';
       }
-      body += '<div class="note"><div class="n-ico">📅</div><div>' +
+      body += '<div class="note"><div class="n-ico">' + UI.art('dates') + '</div><div>' +
         '<b>פריסה ל-' + r.installments + ' תשלומים</b>' + line + '</div></div>';
     }
 
@@ -378,7 +378,7 @@ Views.collection = (function () {
 
   function render() {
     var tab = App.vs('colTab', 'list');
-    var html = UI.pageHead({ title: 'גבייה מההורים', subtitle: 'מי שילם, כמה, ובאיזה אמצעי', icon: '💰', tone: 'green', back: 'home' });
+    var html = UI.pageHead({ title: 'גבייה מההורים', subtitle: 'מי שילם, כמה, ובאיזה אמצעי', art: 'collection', tone: 'green', back: 'home' });
     html += yearMismatchNote();
     html += '<div class="segment">' +
       '<button data-action="col-tab" data-tab="calc" class="' + (tab === 'calc' ? 'on' : '') + '">חישוב</button>' +

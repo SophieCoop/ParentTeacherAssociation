@@ -11,7 +11,7 @@ Views.staff = (function () {
     var list = st.staff.slice();
     if (filter !== 'all') list = list.filter(function (t) { return t.level === filter; });
 
-    var html = UI.pageHead({ title: 'צוות הגן', subtitle: st.staff.length + ' אנשי צוות', icon: '👩‍🏫', tone: 'green', back: 'home' });
+    var html = UI.pageHead({ title: 'צוות הגן', subtitle: st.staff.length + ' אנשי צוות', art: 'staff', tone: 'green', back: 'home' });
 
     html += '<div class="chips" style="margin-bottom:14px">' +
       '<button class="chip ' + (filter === 'all' ? 'on' : '') + '" data-action="staff-filter" data-level="all">הכל</button>' +
@@ -23,7 +23,7 @@ Views.staff = (function () {
       '</div>';
 
     if (!st.staff.length) {
-      return html + UI.empty({ icon: '👩‍🏫', title: 'עוד לא הוספתם צוות', text: 'הצוות עוזר בחישוב מתנות לחגים ולסוף שנה.', action: { act: 'staff-add', label: '+ הוספת איש צוות' } }) +
+      return html + UI.empty({ art: 'staff', title: 'עוד לא הוספתם צוות', text: 'הצוות עוזר בחישוב מתנות לחגים ולסוף שנה.', action: { act: 'staff-add', label: '+ הוספת איש צוות' } }) +
         '<button class="btn" data-action="staff-add">+ הוספת איש צוות</button>';
     }
 

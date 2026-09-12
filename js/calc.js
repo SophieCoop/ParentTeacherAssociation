@@ -625,26 +625,28 @@ var Calc = (function () {
     (state.children || []).forEach(function (c) {
       if (!c.birthDate) return;
       out.push({ id: 'bd-' + c.id, type: 'birthday', title: 'יום הולדת — ' + c.name,
-                 date: c.birthDate, icon: '🎂', tone: 'pink', refId: c.id });
+                 date: c.birthDate, icon: '🎂', tone: 'pink', kind: 'יום הולדת', refId: c.id });
     });
     (state.staff || []).forEach(function (t) {
       if (!t.birthDate) return;
       out.push({ id: 'bs-' + t.id, type: 'birthday', title: 'יום הולדת — ' + t.name + ' (צוות)',
-                 date: t.birthDate, icon: '🎂', tone: 'purple', refId: t.id });
+                 date: t.birthDate, icon: '🎂', tone: 'purple', kind: 'יום הולדת · צוות', refId: t.id });
     });
     (state.budgetItems || []).forEach(function (b) {
       if (!b.date) return;
       var cat = Store.category(b.categoryId);
       out.push({ id: 'bi-' + b.id, type: 'budget', title: b.title || cat.name,
-                 date: b.date, icon: cat.icon, tone: cat.tone, refId: b.id });
+                 date: b.date, icon: cat.icon, tone: cat.tone, kind: cat.name, catId: cat.id, refId: b.id });
     });
     (state.events || []).forEach(function (e) {
       out.push({ id: 'ev-' + e.id, type: e.type || 'event', title: e.title,
-                 date: e.date, icon: e.icon || '📅', tone: e.tone || 'blue', refId: e.id });
+                 date: e.date, icon: e.icon || '📅', tone: e.tone || 'blue',
+                 kind: e.note || 'אירוע הגן', refId: e.id });
     });
     if (state.settings && state.settings.yearEnd) {
       out.push({ id: 'year-end', type: 'year', title: 'סוף שנת הלימודים',
-                 date: state.settings.yearEnd, icon: '🎓', tone: 'yellow', refId: '' });
+                 date: state.settings.yearEnd, icon: '🎓', tone: 'yellow',
+                 kind: 'סוף שנה', refId: '' });
     }
     return out;
   }

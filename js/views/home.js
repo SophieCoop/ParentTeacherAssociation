@@ -79,22 +79,28 @@ Views.home = (function () {
         '<span class="badge no">טרם שילמו · ' + col.noneCount + '</span>' +
       '</div></button>';
 
-    /* אירועים קרובים */
-    html += '<div class="section-title"><span>אירועים קרובים</span>' +
-      '<button class="btn sm soft" data-action="nav" data-view="dates">ללוח השנה</button></div>';
+    /* אירועים קרובים — כרטיס אחד, באותו מבנה שורה של עמוד התאריכים */
     if (!up.length) {
-      html += UI.empty({ icon: '📅', title: 'אין אירועים קרובים', text: 'הוסיפו ימי הולדת ותאריכים בלשונית התאריכים.' });
+      html += '<div class="section-title"><span>אירועים קרובים</span></div>';
+      html += UI.empty({ art: 'dates', title: 'אין אירועים קרובים', text: 'הוסיפו ימי הולדת ותאריכים בלשונית התאריכים.' });
     } else {
-      html += up.map(function (it) {
-        return '<div class="row tinted" style="background:' + UI.toneVar(it.tone) + '">' +
-          '<div class="r-ico" style="background:rgba(255,255,255,.7)">' + it.icon + '</div>' +
-          '<div class="r-body"><div class="r-name">' + UI.esc(it.title) + '</div>' +
-          '<div class="r-sub" style="color:inherit;opacity:.7">' + UI.dateShort(
-            it.next.getFullYear() + '-' + String(it.next.getMonth() + 1).padStart(2, '0') + '-' + String(it.next.getDate()).padStart(2, '0')
-          ) + '</div></div>' +
-          '<div class="r-end"><span class="badge" style="background:rgba(255,255,255,.75)">' + UI.relativeDays(it.next) + '</span></div>' +
-          '</div>';
-      }).join('');
+      html += '<div class="card home-events">' +
+        '<div class="he-head"><h2>אירועים קרובים</h2>' +
+          '<button class="btn sm soft he-all" data-action="nav" data-view="dates">לכל האירועים ' +
+            UI.svgIcon('chevron', 14) + '</button></div>' +
+        up.map(function (it) {
+          var iso = it.next.getFullYear() + '-' + String(it.next.getMonth() + 1).padStart(2, '0') +
+                    '-' + String(it.next.getDate()).padStart(2, '0');
+          return '<div class="drow">' +
+            '<span class="d-ico" style="background:' + UI.toneVar(it.tone) + '">' + Views.dates.dateIcon(it) + '</span>' +
+            '<span class="d-body">' +
+              '<span class="d-name">' + UI.esc(it.title) + '</span>' +
+              '<span class="d-sub">' + UI.relativeDays(it.next) + ' · ' + UI.dateShort(iso) + '</span>' +
+            '</span>' +
+            Views.dates.badge(it) +
+            '</div>';
+        }).join('') +
+        '</div>';
     }
 
     var synced = window.Cloud && Cloud.signedIn();

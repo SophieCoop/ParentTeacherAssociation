@@ -4,12 +4,12 @@
 var App = (function () {
 
   var TABS = [
-    { id: 'home',       icon: '🏠', label: 'בית' },
-    { id: 'budget',     icon: '🧮', label: 'תקציב' },
-    { id: 'collection', icon: '💰', label: 'גבייה' },
-    { id: 'expenses',   icon: '🧾', label: 'הוצאות' },
-    { id: 'ideas',      icon: '💡', label: 'רעיונות' },
-    { id: 'dates',      icon: '📅', label: 'תאריכים' }
+    { id: 'home',       label: 'בית' },
+    { id: 'budget',     label: 'תקציב' },
+    { id: 'collection', label: 'גבייה' },
+    { id: 'expenses',   label: 'הוצאות' },
+    { id: 'ideas',      label: 'רעיונות' },
+    { id: 'dates',      label: 'תאריכים' }
   ];
 
   var current = 'home';
@@ -31,13 +31,19 @@ var App = (function () {
   }
   function setVs(key, val) { viewState[key] = val; }
 
+  /* לבית אין איור משלו — הוא מקבל את סמל האפליקציה */
+  function tabIcon(id) {
+    if (id === 'home') return '<img class="art" src="assets/icon-64.png" alt="" width="64" height="64">';
+    return UI.art(id);
+  }
+
   function tabbar() {
     return '<nav class="tabbar">' + TABS.map(function (t) {
       var on = (t.id === current) || (current === 'children' && t.id === 'home') ||
                (current === 'staff' && t.id === 'home') ||
                (current === 'yearend' && t.id === 'expenses') || (current === 'settings' && t.id === 'home');
       return '<button data-action="nav" data-view="' + t.id + '" class="' + (on ? 'on' : '') + '">' +
-        '<span class="tb-ico">' + t.icon + '</span><span>' + t.label + '</span></button>';
+        '<span class="tb-ico">' + tabIcon(t.id) + '</span><span>' + t.label + '</span></button>';
     }).join('') + '</nav>';
   }
 

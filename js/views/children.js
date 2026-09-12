@@ -12,7 +12,7 @@ Views.children = (function () {
     var html = '<button class="btn ghost" data-action="child-add" style="margin-bottom:14px">+ הוספת ילד</button>';
 
     if (!kids.length) {
-      return html + UI.empty({ icon: '🧒', title: 'עוד אין ילדים ברשימה', text: 'הוסיפו את ילדי הגן, ההורים והטלפונים.', action: { act: 'child-add', label: '+ הוספת הילד הראשון' } });
+      return html + UI.empty({ art: 'children', title: 'עוד אין ילדים ברשימה', text: 'הוסיפו את ילדי הגן, ההורים והטלפונים.', action: { act: 'child-add', label: '+ הוספת הילד הראשון' } });
     }
 
     html += kids.map(function (c) {
@@ -114,7 +114,7 @@ Views.children = (function () {
           var none = d.amount <= 0.5;
           return '<div class="row" style="box-shadow:none;background:' +
               (none ? '#FAF8FD' : '#fff') + '">' +
-            '<div class="r-ico" style="background:' + UI.toneVar(cat.tone) + '">' + cat.icon + '</div>' +
+            '<div class="r-ico" style="background:' + UI.toneVar(cat.tone) + '">' + UI.catIcon(cat) + '</div>' +
             '<div class="r-body"><div class="r-name">' + UI.esc(name) + '</div>' +
             '<div class="r-sub">' +
               (none ? 'היה לפני ההצטרפות — לא מחויב/ת'
@@ -223,7 +223,7 @@ Views.children = (function () {
 
   function render() {
     var tab = App.vs('kidTab', 'list');
-    var html = UI.pageHead({ title: 'ילדי הגן', subtitle: Store.state.children.length + ' ילדים רשומים', icon: '🧒', tone: 'blue', back: 'home' });
+    var html = UI.pageHead({ title: 'ילדי הגן', subtitle: Store.state.children.length + ' ילדים רשומים', art: 'children', tone: 'blue', back: 'home' });
     html += '<div class="segment">' +
       '<button data-action="kid-tab" data-tab="contacts" class="' + (tab === 'contacts' ? 'on' : '') + '">פרטים</button>' +
       '<button data-action="kid-tab" data-tab="list" class="' + (tab === 'list' ? 'on' : '') + '">רשימה</button>' +

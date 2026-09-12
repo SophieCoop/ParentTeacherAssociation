@@ -1,75 +1,78 @@
 /* ============================================================
-   תאריכים — ימי הולדת ואירועי הגן
+   תאריכים — האירוע הבא, וכל התאריכים מקובצים לפי חודש
    ============================================================ */
 var Views = (typeof Views === 'undefined') ? {} : Views;
 
 Views.dates = (function () {
 
-  /* ---------- רשימות ---------- */
-  function listAll() {
-    var items = Calc.allDates(Store.state).map(function (it) {
+  /* כל התאריכים — ימי הולדת, סעיפי תקציב, אירועים וסוף שנה —
+     כשלכל אחד המופע הקרוב שלו, ממוינים מהקרוב לרחוק */
+  function items() {
+    return Calc.allDates(Store.state).map(function (it) {
       return Object.assign({}, it, { next: Calc.nextOccurrence(it) });
     }).filter(function (it) { return it.next; })
       .sort(function (a, b) { return a.next - b.next; });
-
-    if (!items.length) return UI.empty({ icon: '📅', title: 'אין תאריכים', text: 'הוסיפו ימי הולדת לילדים או אירועים לגן.', action: { act: 'date-add', label: '+ הוספת תאריך' } });
-
-    var add = '<button class="btn ghost" data-action="date-add" style="margin-bottom:14px">+ הוספת תאריך</button>';
-    return add + items.map(function (it) {
-      return '<div class="row">' +
-        '<div class="r-ico" style="background:' + UI.toneVar(it.tone) + '">' + it.icon + '</div>' +
-        '<div class="r-body"><div class="r-name">' + UI.esc(it.title) + '</div>' +
-        '<div class="r-sub">' + UI.relativeDays(it.next) + '</div></div>' +
-        '<div class="r-end"><b class="nowrap">' + it.next.getDate() + '.' + (it.next.getMonth() + 1) + '</b></div>' +
-        '</div>';
-    }).join('');
   }
 
-  function listBirthdays() {
-    var st = Store.state;
-    var all = st.children.filter(function (c) { return c.birthDate; })
-      .map(function (c) { return { name: c.name, date: c.birthDate, who: 'ילד/ה', tone: UI.toneFor(c.name), face: UI.faceFor(c.name) }; })
-      .concat(st.staff.filter(function (t) { return t.birthDate; })
-        .map(function (t) { return { name: t.name, date: t.birthDate, who: 'צוות', tone: 'purple', face: '👩‍🏫' }; }));
+  function monthKey(d) { return d.getFullYear() + '-' + d.getMonth(); }
+  function monthLabel(d) { return UI.MONTHS[d.getMonth()] + ' ' + d.getFullYear(); }
 
-    if (!all.length) return UI.empty({ icon: '🎂', title: 'אין ימי הולדת', text: 'הוסיפו תאריכי לידה בכרטיסי הילדים והצוות.' });
-
-    all.forEach(function (x) { x.next = Calc.nextOccurrence({ date: x.date, type: 'birthday' }); });
-    all.sort(function (a, b) { return a.next - b.next; });
-
-    var budget = Calc.budgetByCategory(Store.state)['cat-bday'] || 0;
-    var perKid = st.children.length ? budget / st.children.length : 0;
-
-    var html = '';
-    if (budget) {
-      html += '<div class="note"><div class="n-ico">🎁</div><div><b>תקציב מתנות יום הולדת</b>' +
-        UI.money(budget) + ' לשנה · כ-' + UI.money(perKid) + ' למתנה לילד</div></div>';
-    }
-
-    return html + all.map(function (x) {
-      return '<div class="row">' +
-        '<div class="avatar" style="background:' + UI.toneVar(x.tone) + '">' + x.face + '</div>' +
-        '<div class="r-body"><div class="r-name">' + UI.esc(x.name) + '</div>' +
-        '<div class="r-sub">' + x.who + ' · ' + UI.dateShort(x.date) + ' · ' + UI.ageText(x.date) + '</div></div>' +
-        '<div class="r-end"><span class="badge ' + (UI.daysUntil(x.next) <= 14 ? 'warn' : 'neutral') + '">' +
-        UI.relativeDays(x.next) + '</span></div></div>';
-    }).join('');
+  function tint(tone) {
+    return '--tint:' + UI.toneVar(tone) + ';--tint-ink:' + UI.toneInk(tone);
   }
 
-  function listEvents() {
-    var st = Store.state;
-    var html = '<button class="btn ghost" data-action="date-add" style="margin-bottom:14px">+ הוספת תאריך</button>';
-    if (!st.events.length) {
-      return html + UI.empty({ icon: '🎪', title: 'אין אירועים', text: 'טיולים, מסיבות, ישיבות ועד וחגים.', action: { act: 'date-add', label: '+ הוספת אירוע' } });
-    }
-    return html + st.events.slice().sort(function (a, b) { return (a.date || '').localeCompare(b.date || ''); })
-      .map(function (e) {
-        return '<div class="row" data-action="date-edit" data-id="' + e.id + '">' +
-          '<div class="r-ico" style="background:' + UI.toneVar(e.tone || 'blue') + '">' + (e.icon || '📅') + '</div>' +
-          '<div class="r-body"><div class="r-name">' + UI.esc(e.title) + '</div>' +
-          '<div class="r-sub">' + UI.dateShort(e.date) + (e.note ? ' · ' + UI.esc(e.note) : '') + '</div></div>' +
-          '<div class="r-end"><b class="nowrap small">' + UI.dateDayMonth(e.date) + '</b></div></div>';
-      }).join('');
+  /* סעיף תקציב מקבל את איור הקטגוריה שלו; שאר התאריכים — את האמוג׳י */
+  function dateIcon(it) {
+    return it.catId ? UI.catIcon(Store.category(it.catId)) : it.icon;
+  }
+
+  function badge(it) {
+    return '<span class="d-badge" style="' + tint(it.tone) + '">' +
+      '<b>' + it.next.getDate() + '</b>' +
+      '<i>' + UI.MONTHS_SHORT[it.next.getMonth()] + '</i></span>';
+  }
+
+  /* אירועי הגן ניתנים לעריכה; ימי הולדת וסעיפי תקציב מגיעים ממקום אחר */
+  function editable(it) {
+    return it.type === 'event' && it.refId;
+  }
+
+  function dateRow(it) {
+    var act = editable(it)
+      ? ' data-action="date-edit" data-id="' + it.refId + '" style="cursor:pointer"'
+      : '';
+    return '<div class="drow"' + act + '>' +
+      '<span class="d-ico" style="background:' + UI.toneVar(it.tone) + '">' + dateIcon(it) + '</span>' +
+      '<span class="d-body">' +
+        '<span class="d-name">' + UI.esc(it.title) + '</span>' +
+        '<span class="d-sub">' + UI.relativeDays(it.next) +
+          (it.kind ? ' · ' + UI.esc(it.kind) : '') + '</span>' +
+      '</span>' +
+      badge(it) +
+      '</div>';
+  }
+
+  function nextUp(it) {
+    return '<div class="next-up" style="' + tint(it.tone) + '">' +
+      '<span class="d-ico lg" style="background:rgba(255,255,255,.7)">' + dateIcon(it) + '</span>' +
+      '<span class="d-body">' +
+        '<span class="nu-label">האירוע הבא</span>' +
+        '<span class="d-name">' + UI.esc(it.title) + '</span>' +
+        '<span class="d-sub">' + UI.relativeDays(it.next) + ' · ' + monthLabel(it.next) + '</span>' +
+      '</span>' +
+      badge(it) +
+      '</div>';
+  }
+
+  function monthGroup(key, label, list, open) {
+    return '<div class="mgroup">' +
+      '<button class="mgroup-head" data-action="date-month" data-id="' + key + '" ' +
+        'aria-expanded="' + (open ? 'true' : 'false') + '">' +
+        '<span class="mg-name">' + UI.esc(label) + '</span>' +
+        '<span class="mg-chev' + (open ? '' : ' closed') + '">' + UI.svgIcon('chevron', 16) + '</span>' +
+      '</button>' +
+      (open ? '<div class="mgroup-body">' + list.map(dateRow).join('') + '</div>' : '') +
+      '</div>';
   }
 
   function dateForm(ev) {
@@ -103,29 +106,48 @@ Views.dates = (function () {
   }
 
   function render() {
-    var tab = App.vs('dateTab', 'all');
     var html = UI.pageHead({ title: 'תאריכים מיוחדים',
-      subtitle: 'חגים מהתקציב, ימי הולדת, סוף השנה ואירועי הגן',
-      icon: '📅', tone: 'blue', back: 'home' });
-    html += '<div class="segment">' +
-      '<button data-action="date-tab" data-tab="events" class="' + (tab === 'events' ? 'on' : '') + '">אירועים</button>' +
-      '<button data-action="date-tab" data-tab="birthdays" class="' + (tab === 'birthdays' ? 'on' : '') + '">ימי הולדת</button>' +
-      '<button data-action="date-tab" data-tab="all" class="' + (tab === 'all' ? 'on' : '') + '">כל התאריכים</button>' +
-      '</div>';
-    html += '<div class="section-title"><span>' +
-      (tab === 'events' ? 'אירועי הגן' : tab === 'birthdays' ? 'ימי הולדת' : 'כל התאריכים') + '</span></div>';
-    if (tab === 'events') html += listEvents();
-    else if (tab === 'birthdays') html += listBirthdays();
-    else html += listAll();
+      subtitle: 'חגים, ימי הולדת, סוף שנה ואירועי הגן',
+      art: 'dates', tone: 'blue', back: 'home',
+      action: { act: 'date-add', label: 'הוספת תאריך', icon: '+' } });
+
+    var list = items();
+    if (!list.length) {
+      return html + UI.empty({ art: 'dates', title: 'אין תאריכים',
+        text: 'הוסיפו ימי הולדת לילדים או אירועים לגן.',
+        action: { act: 'date-add', label: '+ הוספת תאריך' } });
+    }
+
+    html += nextUp(list[0]);
+
+    var closed = App.vs('dateClosed', {});
+    var order = [], groups = {};
+    list.forEach(function (it) {
+      var k = monthKey(it.next);
+      if (!groups[k]) { groups[k] = { label: monthLabel(it.next), list: [] }; order.push(k); }
+      groups[k].list.push(it);
+    });
+
+    html += order.map(function (k) {
+      return monthGroup(k, groups[k].label, groups[k].list, !closed[k]);
+    }).join('');
+
     return html;
   }
 
   return {
     render: render,
+    badge: badge,
+    dateIcon: dateIcon,
     actions: {
-      'date-tab': function (el) { App.setVs('dateTab', el.getAttribute('data-tab')); App.render(); },
       'date-add': function () { dateForm(null); },
-      'date-edit': function (el) { dateForm(Store.find('events', el.getAttribute('data-id'))); }
+      'date-edit': function (el) { dateForm(Store.find('events', el.getAttribute('data-id'))); },
+      'date-month': function (el) {
+        var k = el.getAttribute('data-id');
+        var closed = App.vs('dateClosed', {});
+        closed[k] = !closed[k];
+        App.render();
+      }
     }
   };
 })();

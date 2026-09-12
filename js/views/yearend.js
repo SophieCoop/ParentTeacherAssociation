@@ -15,7 +15,7 @@ Views.yearend = (function () {
     var html = UI.pageHead({
       title: 'סטטוס סוף שנה',
       subtitle: 'חישוב ההחזר להורים',
-      icon: '🎈', tone: 'pink', back: 'expenses'
+      art: 'yearend', tone: 'pink', back: 'expenses'
     });
 
     html += '<div class="note"><div class="n-ico">💗</div><div><b>חישוב החזר להורים</b>' +
@@ -36,7 +36,7 @@ Views.yearend = (function () {
       '</div></div>';
 
     if (!st.children.length) {
-      return html + UI.empty({ icon: '🧒', title: 'אין ילדים ברשימה', text: 'הוסיפו ילדים כדי לחשב החזרים.' });
+      return html + UI.empty({ art: 'children', title: 'אין ילדים ברשימה', text: 'הוסיפו ילדים כדי לחשב החזרים.' });
     }
 
     if (rf.pot === 0) {

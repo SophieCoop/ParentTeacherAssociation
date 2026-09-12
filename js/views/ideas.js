@@ -44,7 +44,7 @@ Views.ideas = (function () {
 
     /* כותרת */
     html += '<div class="idea-head">' +
-      '<span class="r-ico" style="background:' + UI.toneVar(cat ? cat.tone : 'purple') + '">' + (cat ? cat.icon : '💡') + '</span>' +
+      '<span class="r-ico" style="background:' + UI.toneVar(cat ? cat.tone : 'purple') + '">' + (cat ? UI.catIcon(cat) : '💡') + '</span>' +
       '<h3>' + UI.esc(idea.title || 'רעיון חדש') +
         (idea.chosen ? ' <span class="badge ok">נבחר ✓</span>' : '') + '</h3>' +
       '<button class="iconbtn plain" data-action="idea-edit" data-id="' + idea.id + '" aria-label="עריכה">✏️</button>' +
@@ -399,7 +399,7 @@ Views.ideas = (function () {
     var html = UI.pageHead({
       title: 'רעיונות למתנות',
       subtitle: 'סיעור מוחות — משווים אפשרויות ובוחרים',
-      icon: '💡', tone: 'purple', back: 'home'
+      art: 'ideas', tone: 'purple', back: 'home'
     });
 
     html += '<div class="flex-between" style="margin-bottom:14px">' +
@@ -409,7 +409,7 @@ Views.ideas = (function () {
 
     if (!ideas.length) {
       return html + UI.empty({
-        icon: '💡', title: 'בואו נעשה סיעור מוחות',
+        art: 'ideas', title: 'בואו נעשה סיעור מוחות',
         text: 'כל רעיון הוא ריבוע נפרד: בוחרים קטגוריה וקהל יעד, מוסיפים שורות הוצאה — והמערכת מחשבת כמה זה יוצא לכל ילד ולכל הורה.',
         action: { act: 'idea-add', label: '+ הרעיון הראשון' }
       });

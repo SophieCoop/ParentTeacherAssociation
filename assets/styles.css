@@ -37,7 +37,7 @@
   --shadow:0 6px 20px rgba(126,110,160,.08);
   --shadow-lg:0 14px 40px rgba(126,110,160,.16);
 
-  --nav-h:74px;
+  --nav-h:84px;
 }
 
 *{box-sizing:border-box}
@@ -98,6 +98,16 @@ ul{margin:0;padding:0;list-style:none}
   display:grid;place-items:center;
   background:#fff;border-radius:16px;
   font-size:24px;box-shadow:var(--shadow);
+}
+/* איור במקום אמוג׳י — ממלא את רוב הריבוע הלבן */
+.pagehead .ph-icon.has-art{padding:5px}
+img.art{display:block;width:100%;height:100%;object-fit:contain}
+/* איור קטגוריה: בתוך עיגול/ריבוע אייקון, או בתוך שורת טקסט (צ׳יפ, טבלה, שורת משנה) */
+.r-ico img.cat-art{width:26px;height:26px}
+.d-ico img.cat-art{width:30px;height:30px}
+.d-ico.lg img.cat-art{width:34px;height:34px}
+.chip img.cat-art, td img.cat-art, .r-sub img.cat-art{
+  display:inline-block;width:18px;height:18px;vertical-align:-4px;
 }
 .pagehead .ph-icon.app-icon{
   width:60px;height:60px;padding:0;overflow:hidden;background:transparent;
@@ -189,6 +199,7 @@ ul{margin:0;padding:0;list-style:none}
 }
 .btn:active{transform:translateY(1px);filter:brightness(.97)}
 .btn.ghost{background:#fff;color:var(--primary-dark);box-shadow:var(--shadow);border:1px solid var(--line)}
+.btn img.art{width:24px;height:24px;flex:none}
 .btn.soft{background:var(--primary-soft);color:var(--primary-dark);box-shadow:none}
 .btn.wa{background:#3FB27F;box-shadow:0 6px 16px rgba(63,178,127,.3)}
 .btn.danger{background:#fff;color:var(--danger);border:1px solid #F3D8DD;box-shadow:none}
@@ -247,6 +258,7 @@ textarea.input{min-height:78px;resize:vertical}
   width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
   font-size:17px;background:var(--primary-soft);flex:none;
 }
+.row .r-ico.has-art{padding:4px}
 .row .r-body{flex:1;min-width:0}
 .row .r-name{font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row .r-sub{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -383,13 +395,18 @@ textarea.input{min-height:78px;resize:vertical}
   position:fixed;inset-inline:0;bottom:0;z-index:40;
   background:rgba(255,255,255,.94);backdrop-filter:blur(12px);
   border-top:1px solid var(--line);
-  display:flex;padding:8px 6px calc(8px + env(safe-area-inset-bottom));
+  /* מרווח תחתון מובטח בכל מכשיר: לפחות 18px, ובאייפון עם פס הבית —
+     מעל הפס עם עוד קצת אוויר, כך שהאייקונים לא ייצמדו לתחתית המסך */
+  display:flex;align-items:center;
+  padding:10px 6px max(18px, calc(env(safe-area-inset-bottom) + 8px));
 }
 .tabbar button{
   flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
   font-size:10.5px;color:var(--muted);padding:4px 2px;border-radius:12px;font-weight:600;
 }
-.tabbar button .tb-ico{font-size:18px;line-height:1}
+.tabbar button .tb-ico{font-size:18px;line-height:1;width:26px;height:26px;display:grid;place-items:center}
+.tabbar button .tb-ico img.art{filter:saturate(.55) opacity(.75);transition:filter .15s ease}
+.tabbar button.on .tb-ico img.art{filter:none}
 .tabbar button.on{color:var(--primary-dark)}
 .tabbar button.on .tb-ico{transform:translateY(-1px)}
 
@@ -433,6 +450,7 @@ textarea.input{min-height:78px;resize:vertical}
   background:#fff;border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:14px;
 }
 .empty .e-ico{font-size:34px;margin-bottom:8px}
+.empty .e-ico img.art{width:76px;height:76px;margin:0 auto}
 .empty b{display:block;color:var(--ink);font-size:14.5px;margin-bottom:4px}
 .empty p{margin:0 0 14px;font-size:12.5px}
 
@@ -441,6 +459,7 @@ textarea.input{min-height:78px;resize:vertical}
   box-shadow:var(--shadow);margin-bottom:14px;font-size:12.5px;color:var(--ink-2);
 }
 .note .n-ico{font-size:18px;flex:none}
+.note .n-ico img.art{width:26px;height:26px}
 .note b{display:block;color:var(--ink);font-size:13.5px;margin-bottom:2px}
 
 /* ===================== אשף הקמה ===================== */
@@ -544,9 +563,10 @@ table.tbl tr td:first-child{font-weight:600}
 .exp-prog .bar{flex:1;margin-top:0}
 .exp-prog .ep-pct{font-weight:800;font-size:13px;color:var(--ink-2);flex:none}
 
-/* שלושת כרטיסי הקהל */
-.aud-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:6px}
+/* כרטיסי הקהל — רוחב של שליש לכל כרטיס, וכשיש פחות משלושה הם ממורכזים */
+.aud-grid{display:flex;justify-content:center;gap:10px;margin-bottom:6px}
 .aud-card{
+  flex:0 1 calc((100% - 20px) / 3);
   background:var(--tint);border-radius:var(--r);box-shadow:var(--shadow);
   padding:14px 6px 13px;color:var(--ink);
   display:flex;flex-direction:column;align-items:center;gap:2px;
@@ -598,6 +618,66 @@ table.tbl tr td:first-child{font-weight:600}
 }
 .exp-add:active .ea-btn{transform:translateY(2px)}
 .exp-add .ea-lab{font-size:13px;font-weight:700;color:var(--ink-2)}
+
+/* ===================== עמוד התאריכים ===================== */
+/* תג תאריך, גוף וכותרת — משותפים לכרטיס "האירוע הבא" ולשורות שבחודשים */
+.d-badge{
+  flex:none;width:54px;border-radius:var(--r-sm);background:var(--tint);
+  color:var(--tint-ink);text-align:center;padding:7px 2px 6px;line-height:1.1;
+}
+.d-badge b{display:block;font-size:19px;font-weight:800}
+.d-badge i{display:block;font-size:11px;font-style:normal;opacity:.85;margin-top:1px}
+.d-body{flex:1;min-width:0;display:block}
+.d-name{
+  display:block;font-weight:700;font-size:15px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.d-sub{
+  display:block;font-size:12.5px;color:var(--muted);margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.d-ico{
+  flex:none;width:46px;height:46px;border-radius:50%;
+  display:grid;place-items:center;font-size:21px;
+}
+.d-ico.lg{width:52px;height:52px;font-size:24px}
+
+/* האירוע הבא */
+.next-up{
+  display:flex;align-items:center;gap:12px;
+  background:var(--tint);border-radius:var(--r);padding:12px 14px;margin-bottom:16px;
+}
+.next-up .d-badge{background:#fff}
+.next-up .nu-label{
+  display:block;font-size:11.5px;font-weight:700;color:var(--tint-ink);
+  letter-spacing:.2px;margin-bottom:1px;
+}
+
+/* עמוד הבית — אירועים קרובים בכרטיס אחד */
+.home-events{padding:14px 14px 4px}
+.home-events .he-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px}
+.home-events .he-head h2{font-size:16px}
+.home-events .he-all{gap:4px}
+.home-events .he-all .svg-ico{opacity:.8}
+.home-events .drow{padding:11px 2px}
+
+/* קבוצת חודש — כותרת מתקפלת והשורות שתחתיה */
+.mgroup{margin-bottom:14px}
+.mgroup-head{
+  display:flex;align-items:center;gap:10px;width:100%;
+  background:#E9EEF9;border-radius:var(--r);padding:11px 15px;
+  color:var(--ink);text-align:start;
+}
+.mgroup-head .mg-name{flex:1;font-weight:700;font-size:14.5px}
+.mgroup-head .mg-chev{color:var(--ink-2);opacity:.6;display:grid;place-items:center}
+.mgroup-head .mg-chev .svg-ico{transform:rotate(90deg);transition:transform .2s ease}
+.mgroup-head .mg-chev.closed .svg-ico{transform:rotate(-90deg)}
+.mgroup-body{
+  background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);
+  margin:6px 0 0;padding:2px 0;
+}
+.drow{display:flex;align-items:center;gap:12px;padding:11px 14px}
+.drow + .drow{border-top:1px solid var(--line)}
 
 /* ===================== מסך רחב ===================== */
 @media (min-width:900px){
