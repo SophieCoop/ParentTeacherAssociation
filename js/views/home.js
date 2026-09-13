@@ -40,9 +40,9 @@ Views.home = (function () {
 
     /* אריחי ניווט */
     html += '<div class="tiles">' +
-      tile('budget', 't-pink', 'budget', 'תקציב', UI.money(ov.budget)) +
+      tile('budget', 't-pink', 'budget', 'תקציב', money(ov.budget)) +
       tile('collection', 't-green', 'collection', 'גבייה', col.pct + '% נגבו') +
-      tile('expenses', 't-yellow', 'expenses', 'הוצאות', UI.money(ov.spent)) +
+      tile('expenses', 't-yellow', 'expenses', 'הוצאות', money(ov.spent)) +
       tile('ideas', 't-purple', 'ideas', 'רעיונות', (st.ideas.length || 0) + ' רעיונות') +
       tile('children', 't-blue', 'children', 'ילדי הגן', st.children.length + ' ילדים') +
       tile('staff', 't-mint', 'staff', 'צוות הגן', st.staff.length + ' אנשי צוות') +
@@ -55,7 +55,7 @@ Views.home = (function () {
       '<button class="btn sm soft" data-action="nav" data-view="collection">לפירוט</button></div>';
     html += '<button class="card tappable" data-action="nav" data-view="collection" ' +
       'aria-label="פירוט מצב הגבייה">' +
-      '<div class="flex-between"><span class="small muted">נגבה ' + UI.money(col.paid) + ' מתוך ' + UI.money(col.due) + '</span>' +
+      '<div class="flex-between"><span class="small muted">נגבה ' + money(col.paid) + ' מתוך ' + money(col.due) + '</span>' +
       '<b>' + col.pct + '%</b></div>' +
       UI.bar(col.paid, col.due, col.pct >= 100 ? 'ok' : '') +
       '<div class="flex wrap mt" style="gap:8px">' +
@@ -99,6 +99,12 @@ Views.home = (function () {
     return html;
   }
 
+  /* בעמוד הבית מוצגים שקלים שלמים, מעוגלים כלפי מטה, כדי שהמבט
+     המהיר יישאר נקי. הסכומים המלאים, עם האגורות, מופיעים בשאר העמודים. */
+  function money(n) {
+    return UI.money(n, { floor: true });
+  }
+
   /* כרטיס הקופה — היתרה הזמינה מתוך כל מה שנאסף מההורים,
      שיעור הניצול שלה, וכמה הורים טרם שילמו */
   function potHTML(ov, col) {
@@ -112,8 +118,8 @@ Views.home = (function () {
       '<div class="pot-top">' +
         '<div class="pot-main">' +
           '<div class="pot-label">נותר בקופה</div>' +
-          '<div class="pot-value ' + (ov.cashLeft >= 0 ? 'pos' : 'neg') + '">' + UI.money(ov.cashLeft) + '</div>' +
-          '<div class="pot-sub">מתוך ' + UI.money(ov.collected) + ' שנאסף</div>' +
+          '<div class="pot-value ' + (ov.cashLeft >= 0 ? 'pos' : 'neg') + '">' + money(ov.cashLeft) + '</div>' +
+          '<div class="pot-sub">מתוך ' + money(ov.collected) + ' שנאסף</div>' +
         '</div>' +
         '<div class="pot-art">' + UI.art('piggy') + '</div>' +
       '</div>' +
@@ -127,7 +133,7 @@ Views.home = (function () {
             ? '<span class="pf-ico">🌱</span><span class="pf-text"><b class="lead">טרם נוספו ילדים</b></span>'
             : waiting === 0
               ? '<span class="pf-ico ok">✔</span><span class="pf-text"><b class="lead pos">כל ההורים שילמו!</b></span>'
-              : '<span class="pf-ico warn">⏳</span><span class="pf-text"><b>' + UI.money(col.remaining) + '</b>' +
+              : '<span class="pf-ico warn">⏳</span><span class="pf-text"><b>' + money(col.remaining) + '</b>' +
                 '<small>נותר לגבות</small></span>') +
         '</span>' +
         '<i class="pf-div"></i>' +
