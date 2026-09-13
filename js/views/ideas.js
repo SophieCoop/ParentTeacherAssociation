@@ -27,6 +27,7 @@ Views.ideas = (function () {
 
   /* שם הדרגה ביחיד או ברבים, לפי כמה אנשי צוות יש בה */
   function levelName(levelId, count) {
+    if (levelId === 'shared') return 'פריט משותף לכל הצוות';
     if (levelId === 'all') return 'כל הצוות';
     if (levelId === 'edu') return 'כל הצוות החינוכי';
     var lv = Store.staffLevel(levelId);
@@ -244,13 +245,34 @@ Views.ideas = (function () {
         '<div class="sm-head">\ud83d\udc65 <b>הרכב צוות הגן</b></div>' +
         '<div class="sm-grid">' +
           mix.map(function (x) {
-            return '<div class="sm-cell"><span class="sm-name">' +
-              UI.esc(levelName(x.level.id, x.count)) + '</span>' +
-              '<b class="sm-num">' + x.count + '</b></div>';
+            var name = levelName(x.level.id, x.count);
+            return '<button type="button" class="sm-cell" data-mix="' + x.level.id + '" ' +
+              'aria-label="הצגת השמות — ' + UI.esc(name) + '">' +
+              '<span class="sm-name">' + UI.esc(name) + '</span>' +
+              '<b class="sm-num">' + x.count + '</b></button>';
           }).join('') +
         '</div>' +
-        '<p class="sm-hint">המספרים נלקחים מלשונית "צוות הגן" ומתעדכנים אוטומטית</p>' +
+        '<p class="sm-hint">לחיצה על דרגה מציגה את השמות. המספרים מלשונית "צוות הגן"</p>' +
         '</div>';
+    }
+
+    /* לחיצה על ריבוע הכמות פותחת את רשימת השמות שבאותה דרגה */
+    function staffListModal(levelId) {
+      var lv = Store.staffLevel(levelId);
+      var list = (Store.state.staff || []).filter(function (t) { return t.level === levelId; });
+      UI.modal({
+        title: levelName(levelId, list.length),
+        subtitle: list.length + (list.length === 1 ? ' איש/ת צוות' : ' אנשי צוות'),
+        body: list.length
+          ? list.map(function (t) {
+              return '<div class="row tinted" style="background:' + UI.toneVar(lv.tone) + '33">' +
+                '<div class="avatar" style="background:' + UI.toneVar(lv.tone) + '">' + lv.icon + '</div>' +
+                '<div class="r-body"><div class="r-name">' + UI.esc(t.name) + '</div>' +
+                '<div class="r-sub">' + UI.esc(t.role || lv.name) + '</div></div>' +
+                '</div>';
+            }).join('')
+          : '<p class="small muted mb0">אין אנשי צוות בדרגה הזו.</p>'
+      });
     }
 
     /* אפשרויות "למי?" — כל הצוות, וכל דרגה שיש בה אנשי צוות */
@@ -264,6 +286,8 @@ Views.ideas = (function () {
       }
       opts.push({ id: 'all', label: 'כל הצוות (' + (st.staff || []).length + ')' });
       opts.push({ id: 'edu', label: 'כל הצוות החינוכי (' + Calc.staffAtLevel(st, 'edu') + ')' });
+      /* רכישה אחת משותפת — הסכום אינו מוכפל במספר האנשים */
+      opts.push({ id: 'shared', label: 'פריט משותף (×1)' });
       staffMix().forEach(function (x) {
         opts.push({ id: x.level.id, label: levelName(x.level.id, x.count) + ' (' + x.count + ')' });
       });
@@ -367,6 +391,12 @@ Views.ideas = (function () {
                       : '<p class="small muted" style="margin:0 0 8px">עוד לא נוספו שורות הוצאה.</p>') +
         '<button type="button" class="btn soft sm" data-ln-add="1" style="width:100%">+ הוספת שורה</button>' +
         totalCardHTML();
+
+      Array.prototype.forEach.call(box.querySelectorAll('[data-mix]'), function (btn) {
+        btn.addEventListener('click', function () {
+          staffListModal(btn.getAttribute('data-mix'));
+        });
+      });
 
       Array.prototype.forEach.call(box.querySelectorAll('[data-ln]'), function (inp) {
         var handler = function () {
