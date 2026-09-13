@@ -537,20 +537,32 @@ var Calc = (function () {
 
   /* ---------- רעיונות (סיעור מוחות) ---------- */
   /* שורת רעיון: כמות × סכום. שורות ישנות ללא כמות נחשבות כיחידה אחת. */
-  function lineQty(l) {
-    if (!l || l.qty === undefined || l.qty === null || l.qty === '') return 1;
+  /* כמה אנשי צוות יש בדרגה מסוימת. 'all' הוא כל הצוות. */
+  function staffAtLevel(state, levelId) {
+    var staff = (state && state.staff) || [];
+    if (!levelId) return 0;
+    if (levelId === 'all') return staff.length;
+    return staff.filter(function (t) { return t.level === levelId; }).length;
+  }
+
+  /* כמות השורה. שורה שהוצמדה לדרגת צוות סופרת את אנשי הצוות
+     שבאותה דרגה, כך שהמספר מתעדכן מאליו כשמשתנה הרכב הצוות. */
+  function lineQty(l, state) {
+    if (!l) return 1;
+    if (l.levelId) return staffAtLevel(state, l.levelId);
+    if (l.qty === undefined || l.qty === null || l.qty === '') return 1;
     return num(l.qty);
   }
-  function lineTotal(l) {
-    return round2(lineQty(l) * num(l && l.amount));
+  function lineTotal(l, state) {
+    return round2(lineQty(l, state) * num(l && l.amount));
   }
-  function ideaTotal(idea) {
-    return round2((idea.lines || []).reduce(function (s, l) { return s + lineTotal(l); }, 0));
+  function ideaTotal(idea, state) {
+    return round2((idea.lines || []).reduce(function (s, l) { return s + lineTotal(l, state); }, 0));
   }
 
   /* חלוקת עלות הרעיון לפי קהל היעד — כמה יוצא לכל ילד / איש צוות */
   function ideaSplit(state, idea) {
-    var total = ideaTotal(idea);
+    var total = ideaTotal(idea, state);
     var aud = idea.audiences && idea.audiences.length ? idea.audiences : ['children'];
     var childCount = (state.children || []).length;
     var staffCount = (state.staff || []).length;
@@ -599,7 +611,7 @@ var Calc = (function () {
       spent = expensesByCategory(state)[idea.categoryId] || 0;
     }
     var left = planned - spent;
-    var total = ideaTotal(idea);
+    var total = ideaTotal(idea, state);
     return {
       item: item,
       planned: round2(planned),
@@ -698,6 +710,7 @@ var Calc = (function () {
     collectionSummary: collectionSummary, byMethod: byMethod,
     overview: overview, refunds: refunds,
     ideaTotal: ideaTotal, lineTotal: lineTotal, lineQty: lineQty,
+    staffAtLevel: staffAtLevel,
     ideaSplit: ideaSplit, ideaVsBudget: ideaVsBudget,
     allDates: allDates, nextOccurrence: nextOccurrence, upcoming: upcoming
   };

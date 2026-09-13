@@ -35,13 +35,13 @@ var Store = (function () {
   /* ---------- דרגות בהיררכיית הצוות ---------- */
   /* המזהים קבועים ואין לשנותם — רשומות צוות קיימות מפנות אליהם */
   var STAFF_LEVELS = [
-    { id: 'manager',    name: 'מנהלת',              icon: '👩‍💼', tone: 'peach',  weight: 4 },
-    { id: 'lead',       name: 'גננת',               icon: '👩‍🏫', tone: 'purple', weight: 3 },
-    { id: 'assistant',  name: 'סייעת',              icon: '🧑‍🍼', tone: 'pink',   weight: 2 },
-    { id: 'aide',       name: 'מטפלת / עוזרת',      icon: '🤱',   tone: 'green',  weight: 2 },
-    { id: 'paramedic',  name: 'מטפל/ת פרא-רפואי',   icon: '🩺',   tone: 'mint',   weight: 2 },
-    { id: 'external',   name: 'מורה לחוג',          icon: '🎵',   tone: 'blue',   weight: 1 },
-    { id: 'volunteer',  name: 'מתנדב/ת',            icon: '🤝',   tone: 'yellow', weight: 1 }
+    { id: 'manager',    name: 'מנהלת',              icon: '👩‍💼', tone: 'peach',  weight: 4, plural: 'מנהלות' },
+    { id: 'lead',       name: 'גננת',               icon: '👩‍🏫', tone: 'purple', weight: 3, plural: 'גננות' },
+    { id: 'assistant',  name: 'סייעת',              icon: '🧑‍🍼', tone: 'pink',   weight: 2, plural: 'סייעות' },
+    { id: 'aide',       name: 'מטפלת / עוזרת',      icon: '🤱',   tone: 'green',  weight: 2, plural: 'מטפלות / עוזרות' },
+    { id: 'paramedic',  name: 'מטפל/ת פרא-רפואי',   icon: '🩺',   tone: 'mint',   weight: 2, plural: 'מטפלי פרא-רפואי' },
+    { id: 'external',   name: 'מורה לחוג',          icon: '🎵',   tone: 'blue',   weight: 1, plural: 'מורים לחוגים' },
+    { id: 'volunteer',  name: 'מתנדב/ת',            icon: '🤝',   tone: 'yellow', weight: 1, plural: 'מתנדבים' }
   ];
 
   /* ---------- הצעות לשדה התפקיד (טקסט חופשי) ---------- */
