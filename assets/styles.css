@@ -714,6 +714,23 @@ table.tbl tr td:first-child{font-weight:600}
 .card.sumcat{padding:0;overflow:hidden}
 .sumcat-head{display:block;width:100%;padding:13px 14px;text-align:start;color:var(--ink)}
 .sumcat .sc-end{display:flex;align-items:center;gap:6px;flex:none}
+/* האיקון של הקטגוריה — אריח גדול בגובה שתי שורות הטקסט שלידו */
+.sumcat .r-ico{
+  width:54px;height:54px;flex:none;border-radius:17px;
+  display:grid;place-items:center;font-size:27px;
+}
+.sumcat .r-ico img.cat-art{width:42px;height:42px}
+@media (max-width:370px){
+  .sumcat .r-ico{width:46px;height:46px;border-radius:15px;font-size:23px}
+  .sumcat .r-ico img.cat-art{width:36px;height:36px}
+}
+/* בלי זה שם קטגוריה ארוך דוחף את הסכום והחץ אל מחוץ לשורה */
+.sumcat-head .flex{min-width:0}
+.sumcat-head .flex > div{min-width:0}
+.sumcat .r-name{font-weight:600;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* השם מקוצר בשלוש נקודות, אבל שורת המשנה נשברת ולא נחתכת —
+   הסכום שהוצא הוא מידע, ועדיף שורה שנייה על פני הסתרה */
+.sumcat .r-sub{font-size:12px;color:var(--muted)}
 .sumcat .sc-chev{color:var(--muted);display:grid;place-items:center}
 .sumcat .sc-chev .svg-ico{transition:transform .2s ease}
 .sumcat.open .sc-chev .svg-ico{transform:rotate(-90deg)}
