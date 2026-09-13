@@ -556,6 +556,12 @@ var Calc = (function () {
      שבאותה דרגה, כך שהמספר מתעדכן מאליו כשמשתנה הרכב הצוות. */
   function lineQty(l, state) {
     if (!l) return 1;
+    /* פריט משותף — רכישה אחת, בלי קשר למספר הנמענים */
+    if (l.shared || l.levelId === 'shared') return 1;
+    /* בחירה מפורשת של אנשי צוות ושל שמות חופשיים */
+    if (l.staffIds || l.names) {
+      return ((l.staffIds || []).length + (l.names || []).length);
+    }
     if (l.levelId) return staffAtLevel(state, l.levelId);
     if (l.qty === undefined || l.qty === null || l.qty === '') return 1;
     return num(l.qty);

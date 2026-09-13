@@ -42,6 +42,90 @@ Views.ideas = (function () {
     }).filter(function (x) { return x.count > 0; });
   }
 
+  /* ---------- למי מיועדת שורת ההוצאה ---------- */
+  /* שורה מצביעה על אנשי צוות מסוימים (staffIds) ועל שמות חופשיים (names).
+     שורה שנשמרה לפני השינוי, עם levelId בלבד, ממשיכה לעבוד כפי שהיא,
+     ומתורגמת לבחירה מפורשת רק ברגע שנפתח חלון הבחירה. */
+  function linePicked(l) { return !!(l && (l.staffIds || l.names)); }
+  function lineIds(l)    { return (l && l.staffIds) || []; }
+  function lineNames(l)  { return (l && l.names) || []; }
+
+  function staffById(id) {
+    return (Store.state.staff || []).filter(function (t) { return t.id === id; })[0];
+  }
+  function idsOfLevel(levelId) {
+    var st = Store.state;
+    if (levelId === 'all') return (st.staff || []).map(function (t) { return t.id; });
+    if (levelId === 'edu') {
+      var edu = Store.eduLevelIds();
+      return (st.staff || []).filter(function (t) { return edu.indexOf(t.level) > -1; })
+                             .map(function (t) { return t.id; });
+    }
+    return (st.staff || []).filter(function (t) { return t.level === levelId; })
+                           .map(function (t) { return t.id; });
+  }
+
+  /* תרגום שורה ישנה לבחירה מפורשת, כדי שחלון הבחירה ייפתח על המצב הקיים */
+  function ensurePicked(l) {
+    if (linePicked(l)) return;
+    if (l.levelId === 'shared') { l.shared = true; l.staffIds = idsOfLevel('all'); }
+    else if (l.levelId)         { l.staffIds = idsOfLevel(l.levelId); }
+    else                        { l.staffIds = []; }
+    l.names = [];
+  }
+
+  function sameSet(a, b) {
+    return a.length === b.length && a.every(function (x) { return b.indexOf(x) > -1; });
+  }
+  /* "כל ה" משתלב רק בשם רבים של מילה אחת. "מטפלי פרא-רפואי" נשאר כפי שהוא. */
+  function allOfLabel(level) {
+    var pl = level.plural || level.name;
+    return pl.indexOf(' ') > -1 ? pl : ('כל ה' + pl);
+  }
+  function peopleWord(n) {
+    return n + (n === 1 ? ' איש/ת צוות' : ' אנשי צוות');
+  }
+  /* אם הבחירה היא בדיוק קבוצה מוכרת, מתארים אותה בשמה במקום למנות שמות */
+  function groupLabelFor(ids) {
+    if (!ids.length) return null;
+    if (sameSet(ids, idsOfLevel('all'))) return 'כל הצוות';
+    if (sameSet(ids, idsOfLevel('edu'))) return 'כל הצוות החינוכי';
+    var out = null;
+    staffMix().forEach(function (x) {
+      if (sameSet(ids, idsOfLevel(x.level.id))) out = allOfLabel(x.level);
+    });
+    return out;
+  }
+
+  /* הטקסט שמופיע על כפתור "למי?" בשורה */
+  function whoLabel(l) {
+    var tail = l.shared ? ' · פריט משותף' : '';
+    if (!linePicked(l)) {
+      if (l.levelId === 'shared') return 'פריט משותף לכל הצוות';
+      if (!l.levelId) return 'בחרו למי';
+      var k = Calc.staffAtLevel(Store.state, l.levelId);
+      return levelName(l.levelId, k) + ' · ' + peopleWord(k);
+    }
+    var ids = lineIds(l), names = lineNames(l), n = ids.length + names.length;
+    if (!n) return 'בחרו למי';
+    if (!names.length) {
+      var g = groupLabelFor(ids);
+      if (g) return g + ' · ' + peopleWord(n) + tail;
+    }
+    if (n === 1) {
+      if (names.length) return names[0] + ' (שם חופשי)';
+      var t = staffById(ids[0]);
+      return (t ? t.name : 'איש צוות') + tail;
+    }
+    var first = ids.length ? (staffById(ids[0]) || {}).name : names[0];
+    return (first || 'נבחרים') + ' + ' + (n - 1) + ' נוספים' + tail;
+  }
+
+  /* האם השורה מתוארת בשם חופשי יחיד — משנה את האייקון על הכפתור */
+  function whoIsCustom(l) {
+    return linePicked(l) && lineNames(l).length === 1 && !lineIds(l).length;
+  }
+
   function audienceLabel(id) {
     var au = Store.audience(id);
     var n = audienceSize(id);
@@ -223,6 +307,11 @@ Views.ideas = (function () {
       return Calc.lineTotal(staff ? l : { qty: l.qty, amount: l.amount }, Store.state);
     }
 
+    /* יציאה מקהל יעד של צוות מקבעת את הכמות שהבחירה הניבה */
+    function freezeQty(l) {
+      l.qty = Calc.lineQty(l, Store.state) || 1;
+    }
+
     function linesTotal(staff) {
       return lines.reduce(function (s, l) { return s + lineSum(l, staff); }, 0);
     }
@@ -256,6 +345,230 @@ Views.ideas = (function () {
         '</div>';
     }
 
+    /* חלון בחירת אנשי הצוות של שורת ההוצאה */
+    function peoplePicker(i, root) {
+      var l = lines[i];
+      ensurePicked(l);
+
+      var sel    = lineIds(l).slice();
+      var extra  = lineNames(l).slice();
+      var shared = !!l.shared;
+      var closed = {};
+      var query  = '';
+
+      UI.modal({
+        title: 'בחרו אנשי צוות',
+        subtitle: 'סמנו למי מיועדת המתנה',
+        body:
+          '<div class="pk-top">' +
+            '<input class="input pk-search" type="search" placeholder="חיפוש בשם…" aria-label="חיפוש בשם">' +
+            '<button type="button" class="btn sm soft pk-clear">נקה הכל</button>' +
+          '</div>' +
+          '<label class="pk-shared">' +
+            '<input type="checkbox" class="pk-shared-in"' + (shared ? ' checked' : '') + '>' +
+            '<span><b>פריט אחד משותף</b><small>רכישה אחת לכל הנבחרים, בלי הכפלה במספרם</small></span>' +
+          '</label>' +
+          '<div class="pk-list"></div>' +
+          '<div class="pk-foot">' +
+            '<button type="button" class="btn soft sm pk-add">✏️ + הוספת שם חופשי</button>' +
+            '<button type="button" class="btn pk-ok">אישור</button>' +
+          '</div>',
+
+        onMount: function (body, close) {
+          var list = body.querySelector('.pk-list');
+
+          function count() { return sel.length + extra.length; }
+
+          function updateFoot() {
+            body.querySelector('.pk-ok').textContent =
+              count() ? 'אישור (' + count() + ' נבחרו)' : 'אישור';
+          }
+
+          function matches(t) {
+            return !query || (t.name || '').toLowerCase().indexOf(query) > -1;
+          }
+
+          function drawList() {
+            var st = Store.state;
+            var html = '';
+
+            staffMix().forEach(function (x) {
+              var people = (st.staff || []).filter(function (t) { return t.level === x.level.id; });
+              var shown = people.filter(matches);
+              if (!shown.length) return;
+              var ids = people.map(function (t) { return t.id; });
+              var allOn = ids.every(function (id) { return sel.indexOf(id) > -1; });
+              var isClosed = !!closed[x.level.id];
+
+              html += '<div class="pk-group">' +
+                '<div class="pk-ghead">' +
+                  '<button type="button" class="pk-gtog' + (isClosed ? ' closed' : '') + '" ' +
+                    'data-tog="' + x.level.id + '" aria-label="קיפול הקבוצה">' +
+                    UI.svgIcon('chevron', 14) + '</button>' +
+                  '<span class="pk-gname">' + x.level.icon + ' ' +
+                    UI.esc(levelName(x.level.id, people.length)) + ' (' + people.length + ')</span>' +
+                  '<label class="pk-gall"><span>בחרו הכל</span>' +
+                    '<input type="checkbox" data-gall="' + x.level.id + '"' + (allOn ? ' checked' : '') + '>' +
+                  '</label>' +
+                '</div>' +
+                (isClosed ? '' : '<div class="pk-rows">' + shown.map(function (t) {
+                  return '<label class="pk-row">' +
+                    '<input type="checkbox" data-id="' + t.id + '"' +
+                      (sel.indexOf(t.id) > -1 ? ' checked' : '') + '>' +
+                    '<span class="avatar" style="background:' + UI.toneVar(x.level.tone) + '">' +
+                      x.level.icon + '</span>' +
+                    '<span class="pk-body"><span class="pk-name">' + UI.esc(t.name) + '</span>' +
+                      '<span class="pk-role">' + UI.esc(t.role || x.level.name) + '</span></span>' +
+                    '</label>';
+                }).join('') + '</div>') +
+                '</div>';
+            });
+
+            /* אנשי צוות שהדרגה שלהם אינה מוכרת — אחרת הם ייעלמו מהבחירה */
+            var known = Store.STAFF_LEVELS.map(function (lv) { return lv.id; });
+            var orphans = (st.staff || []).filter(function (t) { return known.indexOf(t.level) < 0; });
+            var shownOrphans = orphans.filter(matches);
+            if (shownOrphans.length) {
+              var oIds = orphans.map(function (t) { return t.id; });
+              var oAll = oIds.every(function (id) { return sel.indexOf(id) > -1; });
+              html += '<div class="pk-group"><div class="pk-ghead">' +
+                '<span class="pk-gname">👤 שאר הצוות (' + orphans.length + ')</span>' +
+                '<label class="pk-gall"><span>בחרו הכל</span>' +
+                  '<input type="checkbox" data-gother="1"' + (oAll ? ' checked' : '') + '></label>' +
+                '</div><div class="pk-rows">' + shownOrphans.map(function (t) {
+                  return '<label class="pk-row">' +
+                    '<input type="checkbox" data-id="' + t.id + '"' +
+                      (sel.indexOf(t.id) > -1 ? ' checked' : '') + '>' +
+                    '<span class="avatar">👤</span>' +
+                    '<span class="pk-body"><span class="pk-name">' + UI.esc(t.name) + '</span>' +
+                      '<span class="pk-role">' + UI.esc(t.role || 'צוות') + '</span></span>' +
+                    '</label>';
+                }).join('') + '</div></div>';
+            }
+
+            var shownExtra = extra.filter(function (n) {
+              return !query || n.toLowerCase().indexOf(query) > -1;
+            });
+            if (shownExtra.length) {
+              html += '<div class="pk-group"><div class="pk-ghead">' +
+                '<span class="pk-gname">✏️ שמות חופשיים (' + extra.length + ')</span></div>' +
+                '<div class="pk-rows">' + shownExtra.map(function (n) {
+                  return '<div class="pk-row static">' +
+                    '<button type="button" class="iconbtn del" data-rm="' + UI.esc(n) + '" ' +
+                      'aria-label="הסרת השם">✕</button>' +
+                    '<span class="avatar" style="background:var(--purple)">✏️</span>' +
+                    '<span class="pk-body"><span class="pk-name">' + UI.esc(n) + '</span>' +
+                      '<span class="pk-role">שם חופשי</span></span>' +
+                    '</div>';
+                }).join('') + '</div></div>';
+            }
+
+            if (!html) {
+              html = '<p class="small muted" style="text-align:center;margin:18px 0">' +
+                (query ? 'אין תוצאות לחיפוש.' : 'עוד לא נוספו אנשי צוות בלשונית "צוות הגן".') + '</p>';
+            }
+            list.innerHTML = html;
+            wireList();
+            updateFoot();
+          }
+
+          function wireList() {
+            Array.prototype.forEach.call(list.querySelectorAll('[data-id]'), function (cb) {
+              cb.addEventListener('change', function () {
+                var id = cb.getAttribute('data-id');
+                var at = sel.indexOf(id);
+                if (cb.checked && at < 0) sel.push(id);
+                if (!cb.checked && at > -1) sel.splice(at, 1);
+                drawList();
+              });
+            });
+            Array.prototype.forEach.call(list.querySelectorAll('[data-gall]'), function (cb) {
+              cb.addEventListener('change', function () {
+                var ids = idsOfLevel(cb.getAttribute('data-gall'));
+                ids.forEach(function (id) {
+                  var at = sel.indexOf(id);
+                  if (cb.checked && at < 0) sel.push(id);
+                  if (!cb.checked && at > -1) sel.splice(at, 1);
+                });
+                drawList();
+              });
+            });
+            var other = list.querySelector('[data-gother]');
+            if (other) other.addEventListener('change', function () {
+              var known = Store.STAFF_LEVELS.map(function (lv) { return lv.id; });
+              (Store.state.staff || []).forEach(function (t) {
+                if (known.indexOf(t.level) > -1) return;
+                var at = sel.indexOf(t.id);
+                if (other.checked && at < 0) sel.push(t.id);
+                if (!other.checked && at > -1) sel.splice(at, 1);
+              });
+              drawList();
+            });
+            Array.prototype.forEach.call(list.querySelectorAll('[data-tog]'), function (btn) {
+              btn.addEventListener('click', function () {
+                var id = btn.getAttribute('data-tog');
+                closed[id] = !closed[id];
+                drawList();
+              });
+            });
+            Array.prototype.forEach.call(list.querySelectorAll('[data-rm]'), function (btn) {
+              btn.addEventListener('click', function () {
+                var n = btn.getAttribute('data-rm');
+                var at = extra.indexOf(n);
+                if (at > -1) extra.splice(at, 1);
+                drawList();
+              });
+            });
+          }
+
+          body.querySelector('.pk-search').addEventListener('input', function (e) {
+            query = (e.target.value || '').toLowerCase().trim();
+            drawList();
+          });
+          body.querySelector('.pk-clear').addEventListener('click', function () {
+            sel = []; extra = [];
+            drawList();
+          });
+          body.querySelector('.pk-shared-in').addEventListener('change', function (e) {
+            shared = e.target.checked;
+          });
+          body.querySelector('.pk-add').addEventListener('click', function () {
+            addNameModal(function (name) {
+              if (extra.indexOf(name) < 0) extra.push(name);
+              drawList();
+            });
+          });
+          body.querySelector('.pk-ok').addEventListener('click', function () {
+            l.staffIds = sel.slice();
+            l.names = extra.slice();
+            l.shared = shared;
+            l.levelId = '';          // הבחירה המפורשת מחליפה את הקיצור הישן
+            close();
+            drawLines(root);
+            refreshTotal(root);
+          });
+
+          drawList();
+        }
+      });
+    }
+
+    /* הוספת שם של מי שאינו ברשימת הצוות */
+    function addNameModal(onAdd) {
+      UI.formModal({
+        title: 'הוספת שם חופשי',
+        subtitle: 'שם של מי שאינו ברשימת הצוות — למשל גננת מחליפה או ספק חיצוני',
+        submitLabel: 'הוסף',
+        fields: [{ name: 'pname', label: 'שם', value: '', required: true,
+                   placeholder: 'הקלידו שם…' }],
+        onSubmit: function (v) {
+          var name = (v.pname || '').trim();
+          if (!name) return false;
+          onAdd(name);
+        }
+      });
+    }
+
     /* לחיצה על ריבוע הכמות פותחת את רשימת השמות שבאותה דרגה */
     function staffListModal(levelId) {
       var lv = Store.staffLevel(levelId);
@@ -275,28 +588,6 @@ Views.ideas = (function () {
       });
     }
 
-    /* אפשרויות "למי?" — כל הצוות, וכל דרגה שיש בה אנשי צוות */
-    function levelOptions(l) {
-      var st = Store.state;
-      var opts = [];
-      /* שורה שנוצרה לפני שהשורות הוצמדו לדרגות — מציגים את הכמות שלה
-         כמו שהיא, ולא משנים אותה מאחורי הגב */
-      if (!l.levelId) {
-        opts.push({ id: '', label: 'כמות קבועה (' + Calc.lineQty({ qty: l.qty }) + ')' });
-      }
-      opts.push({ id: 'all', label: 'כל הצוות (' + (st.staff || []).length + ')' });
-      opts.push({ id: 'edu', label: 'כל הצוות החינוכי (' + Calc.staffAtLevel(st, 'edu') + ')' });
-      /* רכישה אחת משותפת — הסכום אינו מוכפל במספר האנשים */
-      opts.push({ id: 'shared', label: 'פריט משותף (×1)' });
-      staffMix().forEach(function (x) {
-        opts.push({ id: x.level.id, label: levelName(x.level.id, x.count) + ' (' + x.count + ')' });
-      });
-      return opts.map(function (o) {
-        return '<option value="' + o.id + '"' + (o.id === (l.levelId || '') ? ' selected' : '') + '>' +
-          UI.esc(o.label) + '</option>';
-      }).join('');
-    }
-
     function linesTableHTML() {
       return '<div class="line-tbl"><table><thead><tr>' +
           '<th>מוצר / שירות</th><th>למי?</th>' +
@@ -306,8 +597,11 @@ Views.ideas = (function () {
           return '<tr>' +
             '<td><input class="input" data-ln="label" data-i="' + i + '" ' +
               'placeholder="מוצר / שירות" value="' + UI.esc(l.label || '') + '"></td>' +
-            '<td><select class="input" data-ln="levelId" data-i="' + i + '" aria-label="למי?">' +
-              levelOptions(l) + '</select></td>' +
+            '<td><button type="button" class="who-btn" data-who="' + i + '" aria-label="בחירת מקבלי המתנה">' +
+              '<span class="who-ico">' + (whoIsCustom(l) ? '✏️' : '👥') + '</span>' +
+              '<span class="who-txt">' + UI.esc(whoLabel(l)) + '</span>' +
+              '<span class="who-chev">' + UI.svgIcon('chevron', 13) + '</span>' +
+              '</button></td>' +
             '<td><input class="input end" data-ln="amount" data-i="' + i + '" type="number" ' +
               'inputmode="decimal" min="0" placeholder="0" aria-label="מחיר לאדם" ' +
               'value="' + UI.esc(l.amount === '' || l.amount === undefined ? '' : l.amount) + '"></td>' +
@@ -392,6 +686,12 @@ Views.ideas = (function () {
         '<button type="button" class="btn soft sm" data-ln-add="1" style="width:100%">+ הוספת שורה</button>' +
         totalCardHTML();
 
+      Array.prototype.forEach.call(box.querySelectorAll('[data-who]'), function (btn) {
+        btn.addEventListener('click', function () {
+          peoplePicker(parseInt(btn.getAttribute('data-who'), 10), root);
+        });
+      });
+
       Array.prototype.forEach.call(box.querySelectorAll('[data-mix]'), function (btn) {
         btn.addEventListener('click', function () {
           staffListModal(btn.getAttribute('data-mix'));
@@ -421,8 +721,10 @@ Views.ideas = (function () {
       });
       var add = box.querySelector('[data-ln-add]');
       if (add) add.addEventListener('click', function () {
-        lines.push({ id: Store.uid('ln'), label: '', qty: 1,
-                     levelId: staff ? 'all' : '', amount: '' });
+        lines.push(staff
+          ? { id: Store.uid('ln'), label: '', qty: 1, levelId: '',
+              staffIds: idsOfLevel('all'), names: [], shared: false, amount: '' }
+          : { id: Store.uid('ln'), label: '', qty: 1, levelId: '', amount: '' });
         drawLines(root);
         refreshTotal(root);
         var inputs = box.querySelectorAll('[data-ln="label"]');
@@ -466,7 +768,7 @@ Views.ideas = (function () {
              הכמות נפתחת על המספר הנכון. הדרגה עצמה נשמרת למקרה שחוזרים. */
           if (!staffMode(root)) {
             lines.forEach(function (l) {
-              if (l.levelId) l.qty = Calc.lineQty(l, Store.state);
+              if (l.levelId || linePicked(l)) freezeQty(l);
             });
           }
           drawLines(root);
@@ -482,10 +784,17 @@ Views.ideas = (function () {
         });
         var forStaff = (v.audiences || []).indexOf('staff') > -1;
         clean = clean.map(function (l) {
-          return { id: l.id, label: l.label,
-                   qty: (l.qty === '' || l.qty === undefined) ? 1 : Calc.num(l.qty),
-                   levelId: forStaff ? (l.levelId || '') : '',
-                   amount: l.amount };
+          var out = { id: l.id, label: l.label,
+                      qty: (l.qty === '' || l.qty === undefined) ? 1 : Calc.num(l.qty),
+                      levelId: forStaff ? (l.levelId || '') : '',
+                      amount: l.amount };
+          /* הבחירה נשמרת רק ברעיון שמיועד לצוות */
+          if (forStaff && linePicked(l)) {
+            out.staffIds = lineIds(l).slice();
+            out.names = lineNames(l).slice();
+            out.shared = !!l.shared;
+          }
+          return out;
         });
         var bi = Calc.budgetItem(Store.state, v.budgetItemId);
         var data = {
