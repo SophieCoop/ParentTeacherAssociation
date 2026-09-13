@@ -35,23 +35,8 @@ Views.home = (function () {
         '</div></div></div>';
     }
 
-    /* סיכום כספי */
-    html += '<div class="summary">' +
-      '<div class="sum-top">' +
-        '<div><div class="sum-label">תקציב שנתי מתוכנן</div>' +
-        '<div class="sum-value">' + UI.money(ov.budget) + '</div>' +
-        '<div class="small ' + (ov.budgetLeft >= 0 ? 'pos' : 'neg') + '">נותר לניצול: ' + UI.money(ov.budgetLeft) + '</div></div>' +
-        UI.donut([
-          { value: ov.spent, color: UI.toneHex('pink') },
-          { value: Math.max(0, ov.budgetLeft), color: '#EFEAF3' }
-        ], ov.usePct + '%', 'נוצל') +
-      '</div>' +
-      '<div class="stat-grid">' +
-        '<div class="stat"><div class="s-val">' + UI.money(ov.collected) + '</div><div class="s-lab">נגבה מההורים</div></div>' +
-        '<div class="stat"><div class="s-val">' + UI.money(ov.spent) + '</div><div class="s-lab">הוצאות בפועל</div></div>' +
-        '<div class="stat"><div class="s-val ' + (ov.cashLeft >= 0 ? 'pos' : 'neg') + '">' + UI.money(ov.cashLeft) + '</div><div class="s-lab">בקופה</div></div>' +
-      '</div>' +
-      '</div>';
+    /* הקופה — כמה נותר מתוך כל מה שנאסף, ומי עדיין לא שילם */
+    html += potHTML(ov, col);
 
     /* אריחי ניווט */
     html += '<div class="tiles">' +
@@ -112,6 +97,82 @@ Views.home = (function () {
       '</div></div>';
 
     return html;
+  }
+
+  /* קופת חסכון — איור קטן בקווי העיצוב של שאר האפליקציה */
+  function piggySVG() {
+    return '<svg class="pig" viewBox="0 0 72 64" width="72" height="64" ' +
+      'aria-hidden="true" focusable="false">' +
+      /* נצנוצים סביב המטבע */
+      '<g stroke="#EDB94A" stroke-width="2.4" stroke-linecap="round">' +
+        '<path d="M40 8.5 L36.5 6"/><path d="M50 2.5 L50 5.5"/><path d="M60.5 8.5 L63.5 6.5"/>' +
+      '</g>' +
+      /* מטבע נופל לתוך הקופה */
+      '<circle cx="50" cy="14" r="8.5" fill="#F3C75E"/>' +
+      '<circle cx="50" cy="14" r="6" fill="#EDB94A"/>' +
+      '<text x="50" y="18.4" text-anchor="middle" font-size="9.5" font-weight="800" ' +
+        'fill="#A9761B" font-family="Heebo, Arial, sans-serif">₪</text>' +
+      /* רגליים */
+      '<rect x="22" y="46" width="9" height="13" rx="4" fill="#EE9CB8"/>' +
+      '<rect x="44" y="46" width="9" height="13" rx="4" fill="#EE9CB8"/>' +
+      /* זנב */
+      '<path d="M61 33c5-1 4 5 0 4.5" fill="none" stroke="#EE9CB8" ' +
+        'stroke-width="3" stroke-linecap="round"/>' +
+      /* גוף */
+      '<ellipse cx="38" cy="36" rx="23" ry="17" fill="#F4AEC6"/>' +
+      /* אוזן */
+      '<path d="M30 22c-2-7-1-9 2-8 3 1 6 4 7 7z" fill="#EE9CB8"/>' +
+      /* חריץ למטבעות */
+      '<rect x="42" y="23" width="15" height="4" rx="2" fill="#D98AA9" ' +
+        'transform="rotate(-12 49.5 25)"/>' +
+      /* חוטם */
+      '<ellipse cx="16" cy="38" rx="8.5" ry="7.5" fill="#EE9CB8"/>' +
+      '<ellipse cx="13" cy="38" rx="1.6" ry="2.4" fill="#C9718F"/>' +
+      '<ellipse cx="19" cy="38" rx="1.6" ry="2.4" fill="#C9718F"/>' +
+      /* עין וסומק */
+      '<circle cx="27" cy="31" r="2" fill="#7E4D61"/>' +
+      '<ellipse cx="27" cy="38" rx="3.5" ry="2.2" fill="#EE9CB8" opacity=".75"/>' +
+      '</svg>';
+  }
+
+  /* כרטיס הקופה — היתרה הזמינה מתוך כל מה שנאסף מההורים,
+     שיעור הניצול שלה, וכמה הורים טרם שילמו */
+  function potHTML(ov, col) {
+    /* האחוז נמדד מול מה שנאסף בפועל, כך שהסרגל מתאר בדיוק את שני המספרים שלמעלה */
+    var usePct = ov.collected > 0 ? Math.min(100, Math.round((ov.spent / ov.collected) * 100)) : 0;
+    var level = usePct >= 100 ? 'over' : (usePct >= 75 ? 'warn' : '');
+    var waiting = col.noneCount;
+    var hasKids = (col.rows || []).length > 0;
+
+    return '<div class="summary pot">' +
+      '<div class="pot-top">' +
+        '<div class="pot-main">' +
+          '<div class="pot-label">נותר בקופה</div>' +
+          '<div class="pot-value ' + (ov.cashLeft >= 0 ? 'pos' : 'neg') + '">' + UI.money(ov.cashLeft) + '</div>' +
+          '<div class="pot-sub">מתוך ' + UI.money(ov.collected) + ' שנאסף</div>' +
+        '</div>' +
+        '<div class="pot-art">' + piggySVG() + '</div>' +
+      '</div>' +
+      '<div class="pot-bar">' +
+        UI.bar(ov.spent, ov.collected, level) +
+        '<span class="pot-pct ' + (level ? 'is-' + level : '') + '"><b>' + usePct + '%</b> נוצל</span>' +
+      '</div>' +
+      '<button class="pot-foot" data-action="nav" data-view="collection" aria-label="למצב הגבייה">' +
+        '<span class="pf-cell">' +
+          (!hasKids
+            ? '<span class="pf-ico">🌱</span><span class="pf-text"><b class="lead">טרם נוספו ילדים</b></span>'
+            : waiting === 0
+              ? '<span class="pf-ico ok">✔</span><span class="pf-text"><b class="lead pos">כל ההורים שילמו!</b></span>'
+              : '<span class="pf-ico warn">⏳</span><span class="pf-text"><b>' + UI.money(col.remaining) + '</b>' +
+                '<small>נותר לגבות</small></span>') +
+        '</span>' +
+        '<i class="pf-div"></i>' +
+        '<span class="pf-cell">' +
+          '<span class="pf-ico kids">' + UI.svgIcon('children', 24) + '</span>' +
+          '<span class="pf-text"><b>' + waiting + '</b><small>הורים טרם שילמו</small></span>' +
+        '</span>' +
+      '</button>' +
+      '</div>';
   }
 
   /* אריח ניווט — הטקסט מימין והאיור לצידו, כמו בעיצוב */
