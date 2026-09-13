@@ -1,5 +1,8 @@
 /* ============================================================
-   אשף ההקמה — מסך פתיחה ו-4 שלבים (אפשר לדלג על כל שלב)
+   אשף ההקמה — מסך פתיחה וחמישה שלבים (אפשר לדלג על כל אחד)
+   ------------------------------------------------------------
+   החשבון הוא השלב הראשון: מרגע שהוא נפתח, כל מה שנכנס בשלבים
+   הבאים נשמר בענן תוך כדי ההקמה, ואין שלב שמירה נפרד בסוף.
    ============================================================ */
 var Views = (typeof Views === 'undefined') ? {} : Views;
 
@@ -15,8 +18,13 @@ Views.onboarding = (function () {
      ============================================================ */
   var cloud = { mode: 'form', email: '', password: '', busyText: '', error: '' };
 
-  /* השלב האחרון קיים רק כשמוגדר ענן להתחבר אליו */
-  function lastStep() { return (window.Cloud && Cloud.enabled()) ? 5 : 4; }
+  /* סדר השלבים. שלב החשבון קיים רק כשמוגדר ענן להתחבר אליו. */
+  function stepList() {
+    var list = (window.Cloud && Cloud.enabled()) ? [stepAccount] : [];
+    return list.concat([stepGan, stepChildren, stepStaff, stepBudget]);
+  }
+  function lastStep() { return stepList().length; }
+  function accountStep() { return (window.Cloud && Cloud.enabled()) ? 1 : 0; }
 
   function paint() { App.render(); }
 
@@ -93,10 +101,10 @@ Views.onboarding = (function () {
       '</div>';
   }
 
-  /* ---------- שלב 1: פרטי הגן ---------- */
-  function step1() {
+  /* ---------- פרטי הגן ---------- */
+  function stepGan(n) {
     var g = Store.state.gan, s = Store.state.settings;
-    return head(1, 'פרטי הגן', 'בואו נתחיל עם הפרטים של הגן שלנו') +
+    return head(n, 'פרטי הגן', 'בואו נתחיל עם הפרטים של הגן שלנו') +
       '<div class="card">' +
         '<div class="field"><label>שם הגן</label>' +
           '<input class="input" data-input="wiz-gan" data-key="name" value="' + UI.esc(g.name) + '" placeholder="גן צבעוני"></div>' +
@@ -122,13 +130,13 @@ Views.onboarding = (function () {
             '<input class="input" type="email" data-input="wiz-gan" data-key="email" value="' + UI.esc(g.email) + '" placeholder="dana@example.com"></div>' +
         '</div>' +
       '</div>' +
-      footer(1);
+      footer(n);
   }
 
-  /* ---------- שלב 2: ילדי הגן ---------- */
-  function step2() {
+  /* ---------- ילדי הגן ---------- */
+  function stepChildren(n) {
     var kids = Store.state.children;
-    return head(2, 'ילדי הגן', 'אפשר להוסיף עכשיו או בהמשך, מתוך לשונית "ילדי הגן"') +
+    return head(n, 'ילדי הגן', 'אפשר להוסיף עכשיו או בהמשך, מתוך לשונית "ילדי הגן"') +
       '<div class="card">' +
         '<div class="flex-between"><div><b>' + kids.length + ' ילדים</b>' +
         '<div class="small muted">רשומים כרגע</div></div>' +
@@ -140,13 +148,13 @@ Views.onboarding = (function () {
           '<div class="r-sub">' + (c.birthDate ? UI.dateShort(c.birthDate) : 'ללא תאריך לידה') + '</div></div>' +
           '<button class="iconbtn plain" data-action="child-edit" data-id="' + c.id + '">✏️</button></div>';
       }).join('') : UI.empty({ art: 'children', title: 'עוד אין ילדים ברשימה', text: 'אפשר להוסיף עכשיו, או לדלג ולהוסיף אחר כך.', action: { act: 'child-add', label: '+ הוספת ילד ראשון' } })) +
-      footer(2);
+      footer(n);
   }
 
-  /* ---------- שלב 3: צוות הגן ---------- */
-  function step3() {
+  /* ---------- צוות הגן ---------- */
+  function stepStaff(n) {
     var staff = Store.state.staff;
-    return head(3, 'צוות הגן', 'שמות הצוות והיררכיה — אופציונלי, עוזר בחישוב מתנות') +
+    return head(n, 'צוות הגן', 'שמות הצוות והיררכיה — אופציונלי, עוזר בחישוב מתנות') +
       '<div class="card">' +
         '<div class="flex-between"><div><b>' + staff.length + ' אנשי צוות</b>' +
         '<div class="small muted">רשומים כרגע</div></div>' +
@@ -159,14 +167,14 @@ Views.onboarding = (function () {
           '<div class="r-sub">' + UI.esc(t.role || lv.name) + '</div></div>' +
           '<button class="iconbtn plain" data-action="staff-edit" data-id="' + t.id + '">✏️</button></div>';
       }).join('') : UI.empty({ art: 'staff', title: 'עוד לא הוספתם צוות', text: 'השלב הזה אופציונלי לגמרי.', action: { act: 'staff-add', label: '+ הוספת איש צוות' } })) +
-      footer(3);
+      footer(n);
   }
 
-  /* ---------- שלב 4: תכנון תקציב ---------- */
-  function step4() {
+  /* ---------- תכנון תקציב (השלב האחרון) ---------- */
+  function stepBudget(n) {
     var items = Store.state.budgetItems;
     var total = Calc.budgetTotal(Store.state);
-    return head(4, 'תכנון תקציב', 'סעיפי ההוצאה המתוכננים לשנה — אפשר לעדכן בכל רגע') +
+    return head(n, 'תכנון תקציב', 'סעיפי ההוצאה המתוכננים לשנה — אפשר לעדכן בכל רגע') +
       '<div class="summary"><div class="sum-top"><div>' +
         '<div class="sum-label">סה״כ תקציב מתוכנן</div>' +
         '<div class="sum-value">' + UI.money(total) + '</div></div>' +
@@ -178,18 +186,19 @@ Views.onboarding = (function () {
           '<div class="r-sub">' + UI.esc(cat.name) + (b.date ? ' · ' + UI.dateShort(b.date) : '') + '</div></div>' +
           '<div class="r-end"><div class="r-amount">' + UI.money(Calc.itemAmount(Store.state, b)) + '</div></div></div>';
       }).join('') : UI.empty({ art: 'budget', title: 'עוד אין סעיפי תקציב', text: 'כמו מתנות ליום הולדת, כיבוד, חוגים ועוד.', action: { act: 'budget-add', label: '+ הוספת סעיף תקציב' } })) +
-      footer(4, lastStep() === 4 ? 'סיימנו — כניסה לאפליקציה' : 'המשך');
+      footer(n, 'סיימנו — כניסה לאפליקציה');
   }
 
   /* ============================================================
-     שלב 5: שמירה בענן
+     שלב 1: פתיחת חשבון
      ------------------------------------------------------------
-     השלב יושב בסוף בכוונה: רק כאן כבר יש נתונים אמיתיים להעלות,
-     וגם אם אישור המייל משתהה — ההקמה עצמה כבר מאחורינו.
+     השלב לא ממתין לאישור המייל. אם הפרויקט דורש אישור, המייל נשלח
+     וההקמה ממשיכה מיד; האישור מזוהה ברקע, ומה שהוזן בינתיים עולה
+     לענן ברגע שהוא מגיע.
      ============================================================ */
 
-  /* בדיקת אישור המייל רצה ברקע: בכל חזרה אל הלשונית, ובנוסף כל 20
-     שניות למשך חמש דקות. המרווח רחב בכוונה — כדי לא להיתקל בהגבלת
+  /* זיהוי האישור ברקע: בכל חזרה אל הלשונית, ובנוסף כל 20 שניות
+     למשך חמש דקות. המרווח רחב בכוונה — כדי לא להיתקל בהגבלת
      הקצב של שרת ההתחברות. */
   var watchTimer = null, watchFrom = 0, lastCheck = 0;
 
@@ -216,15 +225,15 @@ Views.onboarding = (function () {
   function onVisible() { if (!document.hidden) check(false); }
 
   function check(manual) {
-    if (cloud.mode !== 'waiting') return;
+    if (cloud.mode !== 'sent') return;
     var now = Date.now();
     if (!manual && now - lastCheck < 6000) return;   // מרווח מזערי בין בדיקות
     lastCheck = now;
     if (manual) { cloud.mode = 'busy'; cloud.busyText = 'בודקים את האישור…'; paint(); }
 
-    Cloud.signIn(cloud.email, cloud.password).then(succeed, function (err) {
+    Cloud.signIn(cloud.email, cloud.password).then(function () { succeed(); }, function (err) {
       if (cloud.mode === 'done') return;
-      cloud.mode = 'waiting';
+      cloud.mode = 'sent';
       if (!manual) return;
       var msg = (err && err.message) || '';
       cloud.error = /לאשר את המייל/.test(msg) ? 'עוד לא אישרתם — הקישור מחכה במייל שנשלח' : msg;
@@ -236,12 +245,22 @@ Views.onboarding = (function () {
     stopWatch();
     cloud.mode = 'done';
     cloud.error = '';
+
+    // האישור הגיע אחרי שכבר המשכנו הלאה — די בהודעה קצרה
+    if (step() !== accountStep() || Store.state.setupDone) {
+      UI.toast('החשבון אושר ✓ הנתונים נשמרים בענן');
+      App.render();
+      return;
+    }
+
     paint();
-    // רגע של הצלחה לפני שהמסך מתחלף
+    // רגע של הצלחה לפני המעבר לשלב הבא
     setTimeout(function () {
-      if (cloud.mode !== 'done' || Store.state.setupDone) return;
-      finish(true);
-    }, 1600);
+      if (cloud.mode !== 'done') return;
+      // נמשכו נתונים מהענן של חשבון קיים — ההקמה כבר מאחורינו
+      if (Store.state.setupDone) { App.setVs('forceWizard', false); App.render(); return; }
+      advance();
+    }, 1400);
   }
 
   function signup() {
@@ -257,8 +276,17 @@ Views.onboarding = (function () {
     paint();
 
     Cloud.signUp(email, pass).then(function (res) {
-      // אין טוקן בתשובה — הפרויקט דורש אישור מייל, וממתינים לו
-      if (res && res.confirmed === false) { cloud.mode = 'waiting'; paint(); startWatch(); return; }
+      // אין טוקן בתשובה — הפרויקט דורש אישור מייל. לא עוצרים בשבילו:
+      // ממשיכים בהקמה, והאישור מזוהה ברקע.
+      if (res && res.confirmed === false) {
+        cloud.mode = 'sent';
+        paint();
+        startWatch();
+        setTimeout(function () {
+          if (cloud.mode === 'sent' && step() === accountStep()) advance();
+        }, 3000);
+        return;
+      }
       succeed();
     }, function (err) {
       var msg = (err && err.message) || 'פתיחת החשבון נכשלה';
@@ -285,19 +313,19 @@ Views.onboarding = (function () {
            UI.esc(cloud.error) + '</div></div>';
   }
 
-  function step5() {
+  function stepAccount(n) {
     // אין חזרה אחורה אחרי שהפנייה לשרת יצאה לדרך
     var busyNow = cloud.mode !== 'form' || Cloud.signedIn();
-    var top = head(5, 'שמירה בענן', 'שלב אחרון — כדי שהנתונים לא יישארו רק במכשיר הזה', busyNow);
+    var top = head(n, 'פתיחת חשבון', 'כדי שכל מה שתזינו יישמר בענן ויהיה זמין בטלפון ובמחשב', busyNow);
 
     /* כבר מחוברים לחשבון — אין מה לפתוח */
     if (cloud.mode !== 'done' && Cloud.signedIn()) {
       return top +
         '<div class="card"><div class="state-box">' +
           '<div class="state-ico">✓</div><b>החשבון מחובר</b>' +
-          '<p>' + UI.esc(Cloud.info().email || '') + '</p>' +
+          '<p>' + UI.esc(Cloud.info().email || '') + '<br>מכאן כל שינוי נשמר בענן אוטומטית</p>' +
         '</div></div>' +
-        '<div class="mt"><button class="btn" data-action="wiz-next">סיום — כניסה לאפליקציה</button></div>';
+        '<div class="mt"><button class="btn" data-action="wiz-next">המשך להקמה</button></div>';
     }
 
     if (cloud.mode === 'busy') {
@@ -309,22 +337,19 @@ Views.onboarding = (function () {
         '</div></div>';
     }
 
-    if (cloud.mode === 'waiting') {
+    /* המייל נשלח — ממשיכים הלאה, לא ממתינים לו */
+    if (cloud.mode === 'sent') {
       return top +
         '<div class="card"><div class="state-box" role="status" aria-live="polite">' +
-          '<div class="spinner"></div>' +
-          '<b>ממתינים לאישור המייל</b>' +
-          '<p>שלחנו מייל אישור אל<br><span class="mail">' + UI.esc(cloud.email) + '</span><br>' +
-          'צריך ללחוץ על הקישור שבו כדי להפעיל את החשבון.</p>' +
-        '</div></div>' +
-        '<div class="note"><div class="n-ico">💡</div><div>' +
-          '<b>הקישור ייפתח בעמוד ריק — זה תקין.</b>' +
-          'האישור מתבצע בלחיצה עצמה. אחרי הלחיצה חוזרים לכאן, והמסך יתעדכן לבד.' +
+          '<div class="state-ico info">📬</div>' +
+          '<b>המייל בדרך</b>' +
+          '<p>שלחנו אישור אל<br><span class="mail">' + UI.esc(cloud.email) + '</span><br>' +
+          'אפשר להמשיך בהקמה כרגיל — נזהה את האישור לבד, וכל מה שהוזן בינתיים יעלה לענן.</p>' +
         '</div></div>' +
         errorNote() +
         '<div class="mt">' +
-          '<button class="btn ghost" data-action="wiz-cloud-check">כבר אישרתי — בדיקה עכשיו</button>' +
-          '<button class="btn soft" style="margin-top:9px" data-action="wiz-skip">לדלג — אפשר להשלים אחר כך</button>' +
+          '<button class="btn" data-action="wiz-next">המשך להקמה</button>' +
+          '<button class="btn soft" style="margin-top:9px" data-action="wiz-cloud-check">כבר אישרתי — בדיקה עכשיו</button>' +
         '</div>';
     }
 
@@ -332,28 +357,17 @@ Views.onboarding = (function () {
       return top +
         '<div class="card"><div class="state-box" role="status" aria-live="polite">' +
           '<div class="state-ico">✓</div>' +
-          '<b>ההרשמה הושלמה בהצלחה 🎉</b>' +
-          '<p>הנתונים נשמרו בענן ויסתנכרנו בכל מכשיר שתתחברו בו</p>' +
+          '<b>החשבון נפתח 🎉</b>' +
+          '<p>מכאן כל שינוי נשמר בענן אוטומטית</p>' +
         '</div></div>';
     }
 
     /* ברירת המחדל — הטופס */
-    var st = Store.state, counts = [];
-    function count(list, one, many) {
-      var n = (list || []).length;
-      if (n) counts.push(n === 1 ? one : n + ' ' + many);
-    }
-    count(st.children,    'ילד אחד',        'ילדים');
-    count(st.staff,       'איש צוות אחד',   'אנשי צוות');
-    count(st.budgetItems, 'סעיף תקציב אחד', 'סעיפי תקציב');
-
     return top +
       '<div class="card">' +
         '<p class="small muted" style="margin:0 0 14px">' +
-          (counts.length
-            ? 'מה שהזנתם — ' + UI.esc(counts.join(' · ')) + ' — שמור כרגע במכשיר הזה בלבד. '
-            : 'הנתונים נשמרים כרגע במכשיר הזה בלבד. ') +
-          'חשבון שומר עותק בענן, ומאפשר לפתוח את אותם נתונים גם בטלפון וגם במחשב.' +
+          'החשבון נפתח עכשיו, וכל מה שתזינו בשלבים הבאים נשמר בענן תוך כדי. ' +
+          'כך הנתונים מגובים מהרגע הראשון, ואפשר להמשיך לעבוד מכל מכשיר.' +
         '</p>' +
         '<div class="field"><label for="cloud-email">אימייל</label>' +
           '<input class="input" id="cloud-email" type="email" inputmode="email" autocomplete="email" ' +
@@ -365,9 +379,9 @@ Views.onboarding = (function () {
         errorNote(';margin:14px 0 0') +
       '</div>' +
       '<div class="mt">' +
-        '<button class="btn" data-action="wiz-cloud-signup">פתיחת חשבון ושמירה בענן</button>' +
+        '<button class="btn" data-action="wiz-cloud-signup">פתיחת חשבון והמשך</button>' +
         '<button class="btn ghost" style="margin-top:9px" data-action="acc-signin">כבר יש לי חשבון — התחברות</button>' +
-        '<button class="btn soft" style="margin-top:9px" data-action="wiz-skip">לא עכשיו — לדלג</button>' +
+        '<button class="btn soft" style="margin-top:9px" data-action="wiz-skip">דילוג — בלי חשבון</button>' +
       '</div>' +
       '<div class="hint" style="text-align:center">אפשר לפתוח חשבון בכל רגע גם מההגדרות ⚙️</div>';
   }
@@ -375,33 +389,29 @@ Views.onboarding = (function () {
   function render() {
     var n = step();
     if (n === 0) return splash();
-    if (n === 1) return step1();
-    if (n === 2) return step2();
-    if (n === 3) return step3();
-    if (n === 5) return step5();
-    return step4();
+    var list = stepList();
+    var i = Math.min(Math.max(n, 1), list.length);
+    return list[i - 1](i);
   }
 
-  function finish(registered) {
+  function finish() {
     stopWatch();
     Store.state.setupDone = true;
     Store.save();
     App.setVs('forceWizard', false);
     App.setVs('wizStep', 0);
     App.setView('home');
-    // בלי חשבון לא נרשם דבר בשום מקום — והטקסט לא יתיימר שכן
-    UI.toast(registered ? 'ההרשמה הושלמה בהצלחה 🎉' : 'ההקמה הושלמה 🎉');
+    // בלי חשבון לא נשמר דבר מחוץ למכשיר — והטקסט לא יתיימר שכן
+    UI.toast((window.Cloud && Cloud.signedIn())
+      ? 'הכול מוכן 🎉 הנתונים נשמרים בענן'
+      : 'ההקמה הושלמה 🎉');
   }
 
   /* מעבר לשלב הבא, או סיום אם זה היה האחרון */
   function advance() {
     var n = step();
-    if (n >= lastStep()) return finish(!!(window.Cloud && Cloud.signedIn()));
-    var next = n + 1;
-    // בשלב הענן ההתחברות מדליקה signedIn, ובלי הסימון הזה מסך ההקמה
-    // היה נעלם באמצע הדרך (ראו את תנאי הניתוב ב-App.render)
-    if (next === 5) App.setVs('forceWizard', true);
-    App.setVs('wizStep', next);
+    if (n >= lastStep()) return finish();
+    App.setVs('wizStep', n + 1);
     App.render();
   }
 
@@ -413,7 +423,14 @@ Views.onboarding = (function () {
   return {
     render: render,
     actions: {
-      'wiz-start': function () { resetCloud(); App.setVs('wizStep', 1); App.render(); },
+      'wiz-start': function () {
+        resetCloud();
+        // פתיחת החשבון בשלב הראשון מדליקה signedIn, ובלי הסימון הזה
+        // מסך ההקמה היה נעלם באמצע (ראו את תנאי הניתוב ב-App.render)
+        App.setVs('forceWizard', true);
+        App.setVs('wizStep', 1);
+        App.render();
+      },
       'run-wizard': function () {
         resetCloud();
         App.setVs('forceWizard', true);
