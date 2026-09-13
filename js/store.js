@@ -39,7 +39,7 @@ var Store = (function () {
     { id: 'lead',       name: 'גננת',               icon: '👩‍🏫', tone: 'purple', weight: 3, plural: 'גננות', edu: true },
     { id: 'assistant',  name: 'סייעת',              icon: '🧑‍🍼', tone: 'pink',   weight: 2, plural: 'סייעות', edu: true },
     { id: 'aide',       name: 'מטפלת / עוזרת',      icon: '🤱',   tone: 'green',  weight: 2, plural: 'מטפלות / עוזרות', edu: true },
-    { id: 'paramedic',  name: 'מטפל/ת פרא-רפואי',   icon: '🩺',   tone: 'mint',   weight: 2, plural: 'מטפלי פרא-רפואי', edu: false },
+    { id: 'paramedic',  name: 'מטפל/ת פרא-רפואי',   icon: '🩺',   tone: 'mint',   weight: 2, plural: 'מטפלי פרא-רפואי', edu: true },
     { id: 'external',   name: 'מורה לחוג',          icon: '🎵',   tone: 'blue',   weight: 1, plural: 'מורים לחוגים', edu: false },
     { id: 'volunteer',  name: 'מתנדב/ת',            icon: '🤝',   tone: 'yellow', weight: 1, plural: 'מתנדבים', edu: false }
   ];
@@ -356,7 +356,7 @@ var Store = (function () {
       return a || { id: id, name: id, icon: '•', tone: 'purple' };
     },
     /* הצוות החינוכי — מי שעובד עם הילדים ביום-יום ונמצא בצוות הקבוע של הגן.
-       מטפלים פרא-רפואיים, מורים לחוגים ומתנדבים אינם נכללים. */
+       מורים לחוגים ומתנדבים אינם נכללים. */
     eduLevelIds: function () {
       return STAFF_LEVELS.filter(function (l) { return l.edu; })
                          .map(function (l) { return l.id; });
