@@ -68,16 +68,22 @@ Views.budget = (function () {
 
   /* הרשימה מחולקת לפי קהל היעד, עם קו הפרדה וסכום ביניים לכל קבוצה */
   var GROUPS = [
-    { id: 'children',  icon: '🧒',    name: 'מתנות לילדים' },
-    { id: 'staff_edu', icon: '👩‍🏫',  name: 'מתנות לצוות החינוכי' },
-    { id: '',          icon: '💰',    name: 'סעיפים כלליים' }
+    { id: 'children',  icon: '🧒',    name: 'מתנות לילדים',
+      desc: 'ימי הולדת, מתנות אישיות ואירועים לילדים' },
+    { id: 'staff_edu', icon: '👩‍🏫',  name: 'מתנות לצוות החינוכי',
+      desc: 'מתנות ואירועים לצוות הגן' },
+    { id: '',          icon: '💰',    name: 'סעיפים כלליים',
+      desc: 'הוצאות שאינן מתחלקות לפי נפש' }
   ];
 
   function groupHead(group, sum, count) {
     return '<div class="group-head">' +
-      '<span class="g-label">' + group.icon + ' ' + UI.esc(group.name) + '</span>' +
-      '<span class="g-line"></span>' +
-      '<span class="g-sum">' + count + (count === 1 ? ' סעיף' : ' סעיפים') + ' · ' + UI.money(sum) + '</span>' +
+      '<div class="gh-top">' +
+        '<span class="g-label">' + group.icon + ' ' + UI.esc(group.name) + '</span>' +
+        '<span class="g-line"></span>' +
+        '<span class="g-sum">' + count + (count === 1 ? ' סעיף' : ' סעיפים') + ' · ' + UI.money(sum) + '</span>' +
+      '</div>' +
+      (group.desc ? '<div class="g-desc">' + UI.esc(group.desc) + '</div>' : '') +
       '</div>';
   }
 
@@ -99,14 +105,17 @@ Views.budget = (function () {
       }
       per = bits.join(' ');
     }
-    return '<div class="row" data-action="budget-edit" data-id="' + b.id + '" style="background:' + UI.toneVar(cat.tone) + '55">' +
-      '<div class="r-ico" style="background:#fff">' + UI.catIcon(cat) + '</div>' +
-      '<div class="r-body">' +
-        '<div class="r-name">' + UI.esc(b.title || cat.name) + '</div>' +
-        '<div class="r-sub" style="white-space:normal">' + (per ? per + ' · ' : '') + UI.esc(cat.name) +
-          (b.date ? ' · 🗓 ' + UI.dateShort(b.date) : '') + '</div>' +
-      '</div>' +
-      '<div class="r-end"><div class="r-amount">' + UI.money(amount) + '</div></div>' +
+    return '<div class="bitem">' +
+      '<button class="bi-main" data-action="budget-edit" data-id="' + b.id + '">' +
+        '<span class="bi-ico" style="background:' + UI.toneVar(cat.tone) + '">' + UI.catIcon(cat) + '</span>' +
+        '<span class="bi-body">' +
+          '<span class="bi-name">' + UI.esc(b.title || cat.name) + '</span>' +
+          (b.date ? '<span class="bi-date">🗓 ' + UI.dateShort(b.date) + '</span>' : '') +
+          '<span class="bi-sub">' + (per ? per + ' · ' : '') + UI.esc(cat.name) + '</span>' +
+        '</span>' +
+        '<span class="bi-end"><b class="bi-amount">' + UI.money(amount) + '</b>' +
+          '<span class="bi-chev">' + UI.svgIcon('chevron', 16) + '</span></span>' +
+      '</button>' +
       '</div>';
   }
 
@@ -201,9 +210,9 @@ Views.budget = (function () {
         }), UI.money(total).replace(' ₪', ''), '₪ סה״כ') +
       '</div>' +
       '<div class="stat-grid">' +
-        '<div class="stat"><div class="s-val">' + UI.money(spent) + '</div><div class="s-lab">הוצא בפועל</div></div>' +
-        '<div class="stat"><div class="s-val ' + (total - spent >= 0 ? 'pos' : 'neg') + '">' + UI.money(total - spent) + '</div><div class="s-lab">נותר</div></div>' +
-        '<div class="stat"><div class="s-val">' + UI.money(perFull) + '</div><div class="s-lab">לילד מלא</div></div>' +
+        '<div class="stat tone-pink"><div class="s-val">' + UI.money(spent) + '</div><div class="s-lab">הוצא בפועל</div></div>' +
+        '<div class="stat tone-green"><div class="s-val ' + (total - spent >= 0 ? 'pos' : 'neg') + '">' + UI.money(total - spent) + '</div><div class="s-lab">נותר</div></div>' +
+        '<div class="stat tone-purple"><div class="s-val">' + UI.money(perFull) + '</div><div class="s-lab">לילד מלא</div></div>' +
       '</div></div>';
 
     html += '<div class="note"><div class="n-ico">' + UI.art('budget') + '</div><div><b>כמה כל הורה משלם?</b>' +
