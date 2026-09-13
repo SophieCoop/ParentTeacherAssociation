@@ -201,9 +201,9 @@ Views.budget = (function () {
         }), UI.money(total).replace(' ₪', ''), '₪ סה״כ') +
       '</div>' +
       '<div class="stat-grid">' +
-        '<div class="stat"><div class="s-val">' + UI.money(spent) + '</div><div class="s-lab">הוצא בפועל</div></div>' +
-        '<div class="stat"><div class="s-val ' + (total - spent >= 0 ? 'pos' : 'neg') + '">' + UI.money(total - spent) + '</div><div class="s-lab">נותר</div></div>' +
-        '<div class="stat"><div class="s-val">' + UI.money(perFull) + '</div><div class="s-lab">לילד מלא</div></div>' +
+        '<div class="stat tone-pink"><div class="s-val">' + UI.money(spent) + '</div><div class="s-lab">הוצא בפועל</div></div>' +
+        '<div class="stat tone-green"><div class="s-val ' + (total - spent >= 0 ? 'pos' : 'neg') + '">' + UI.money(total - spent) + '</div><div class="s-lab">נותר</div></div>' +
+        '<div class="stat tone-purple"><div class="s-val">' + UI.money(perFull) + '</div><div class="s-lab">לילד מלא</div></div>' +
       '</div></div>';
 
     html += '<div class="note"><div class="n-ico">' + UI.art('budget') + '</div><div><b>כמה כל הורה משלם?</b>' +

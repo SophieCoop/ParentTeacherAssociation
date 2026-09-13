@@ -295,6 +295,11 @@ textarea.input{min-height:78px;resize:vertical}
 .stat{background:#fff;border-radius:var(--r-sm);padding:11px 8px;text-align:center;border:1px solid var(--line)}
 .stat .s-val{font-weight:800;font-size:15px}
 .stat .s-lab{font-size:11px;color:var(--muted);margin-top:1px}
+/* ריבוע סיכום בגוון של המדד — בשימוש הסיכום שבתכנון התקציב */
+.stat.tone-pink{background:var(--pink);border-color:transparent}
+.stat.tone-green{background:var(--green);border-color:transparent}
+.stat.tone-purple{background:var(--purple);border-color:transparent}
+.stat[class*="tone-"] .s-lab{color:var(--ink-2)}
 
 .bar{height:10px;border-radius:20px;background:#F1EDF6;overflow:hidden;margin-top:10px}
 .bar > i{display:block;height:100%;border-radius:20px;background:linear-gradient(90deg,var(--primary),#B9AEEC);transition:width .4s ease}
