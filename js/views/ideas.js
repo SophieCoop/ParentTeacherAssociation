@@ -102,14 +102,15 @@ Views.ideas = (function () {
   function whoLabel(l) {
     var tail = l.shared ? ' · פריט משותף' : '';
     if (!linePicked(l)) {
-      if (l.levelId === 'shared') return 'פריט משותף לכל הצוות';
+      if (l.levelId === 'shared') return 'פריט אחד';
       if (!l.levelId) return 'בחרו למי';
       var k = Calc.staffAtLevel(Store.state, l.levelId);
       return levelName(l.levelId, k) + ' (' + k + ')';
     }
 
     var ids = lineIds(l), names = lineNames(l), n = ids.length + names.length;
-    if (!n) return 'בחרו למי';
+    /* פריט אחד משותף מתומחר בפני עצמו — המחיר אינו תלוי במי סומן */
+    if (!n) return l.shared ? 'פריט אחד' : 'בחרו למי';
 
     /* בחירה שמכסה בדיוק קבוצה מוכרת מתוארת בשמה, ולא דרגה-דרגה */
     if (!names.length) {
@@ -290,9 +291,15 @@ Views.ideas = (function () {
 
     /* שורות ההוצאה נערכות בתוך הטופס, כדי שאפשר יהיה להזין רעיון שלם בבת אחת */
     var lines = (idea.lines || []).map(function (l) {
-      return { id: l.id || Store.uid('ln'), label: l.label,
-               qty: (l.qty === undefined || l.qty === null || l.qty === '') ? 1 : l.qty,
-               levelId: l.levelId || '', amount: l.amount };
+      var out = { id: l.id || Store.uid('ln'), label: l.label,
+                  qty: (l.qty === undefined || l.qty === null || l.qty === '') ? 1 : l.qty,
+                  levelId: l.levelId || '', shared: !!l.shared, amount: l.amount };
+      /* בחירת האנשים שנשמרה נטענת כמו שהיא, כדי שעריכה לא תאבד אותה */
+      if (l.staffIds || l.names) {
+        out.staffIds = (l.staffIds || []).slice();
+        out.names = (l.names || []).slice();
+      }
+      return out;
     });
 
     /* קהל היעד שמסומן כרגע בטופס. כשהצוות מסומן, שורות ההוצאה
