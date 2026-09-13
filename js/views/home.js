@@ -35,29 +35,14 @@ Views.home = (function () {
         '</div></div></div>';
     }
 
-    /* סיכום כספי */
-    html += '<div class="summary">' +
-      '<div class="sum-top">' +
-        '<div><div class="sum-label">תקציב שנתי מתוכנן</div>' +
-        '<div class="sum-value">' + UI.money(ov.budget) + '</div>' +
-        '<div class="small ' + (ov.budgetLeft >= 0 ? 'pos' : 'neg') + '">נותר לניצול: ' + UI.money(ov.budgetLeft) + '</div></div>' +
-        UI.donut([
-          { value: ov.spent, color: UI.toneHex('pink') },
-          { value: Math.max(0, ov.budgetLeft), color: '#EFEAF3' }
-        ], ov.usePct + '%', 'נוצל') +
-      '</div>' +
-      '<div class="stat-grid">' +
-        '<div class="stat"><div class="s-val">' + UI.money(ov.collected) + '</div><div class="s-lab">נגבה מההורים</div></div>' +
-        '<div class="stat"><div class="s-val">' + UI.money(ov.spent) + '</div><div class="s-lab">הוצאות בפועל</div></div>' +
-        '<div class="stat"><div class="s-val ' + (ov.cashLeft >= 0 ? 'pos' : 'neg') + '">' + UI.money(ov.cashLeft) + '</div><div class="s-lab">בקופה</div></div>' +
-      '</div>' +
-      '</div>';
+    /* הקופה — כמה נותר מתוך כל מה שנאסף, ומי עדיין לא שילם */
+    html += potHTML(ov, col);
 
     /* אריחי ניווט */
     html += '<div class="tiles">' +
-      tile('budget', 't-pink', 'budget', 'תקציב', UI.money(ov.budget)) +
+      tile('budget', 't-pink', 'budget', 'תקציב', money(ov.budget)) +
       tile('collection', 't-green', 'collection', 'גבייה', col.pct + '% נגבו') +
-      tile('expenses', 't-yellow', 'expenses', 'הוצאות', UI.money(ov.spent)) +
+      tile('expenses', 't-yellow', 'expenses', 'הוצאות', money(ov.spent)) +
       tile('ideas', 't-purple', 'ideas', 'רעיונות', (st.ideas.length || 0) + ' רעיונות') +
       tile('children', 't-blue', 'children', 'ילדי הגן', st.children.length + ' ילדים') +
       tile('staff', 't-mint', 'staff', 'צוות הגן', st.staff.length + ' אנשי צוות') +
@@ -70,7 +55,7 @@ Views.home = (function () {
       '<button class="btn sm soft" data-action="nav" data-view="collection">לפירוט</button></div>';
     html += '<button class="card tappable" data-action="nav" data-view="collection" ' +
       'aria-label="פירוט מצב הגבייה">' +
-      '<div class="flex-between"><span class="small muted">נגבה ' + UI.money(col.paid) + ' מתוך ' + UI.money(col.due) + '</span>' +
+      '<div class="flex-between"><span class="small muted">נגבה ' + money(col.paid) + ' מתוך ' + money(col.due) + '</span>' +
       '<b>' + col.pct + '%</b></div>' +
       UI.bar(col.paid, col.due, col.pct >= 100 ? 'ok' : '') +
       '<div class="flex wrap mt" style="gap:8px">' +
@@ -112,6 +97,52 @@ Views.home = (function () {
       '</div></div>';
 
     return html;
+  }
+
+  /* בעמוד הבית מוצגים שקלים שלמים, מעוגלים כלפי מטה, כדי שהמבט
+     המהיר יישאר נקי. הסכומים המלאים, עם האגורות, מופיעים בשאר העמודים. */
+  function money(n) {
+    return UI.money(n, { floor: true });
+  }
+
+  /* כרטיס הקופה — היתרה הזמינה מתוך כל מה שנאסף מההורים,
+     שיעור הניצול שלה, וכמה הורים טרם שילמו */
+  function potHTML(ov, col) {
+    /* האחוז נמדד מול מה שנאסף בפועל, כך שהסרגל מתאר בדיוק את שני המספרים שלמעלה */
+    var usePct = ov.collected > 0 ? Math.min(100, Math.round((ov.spent / ov.collected) * 100)) : 0;
+    var level = usePct >= 100 ? 'over' : (usePct >= 75 ? 'warn' : '');
+    var waiting = col.noneCount;
+    var hasKids = (col.rows || []).length > 0;
+
+    return '<div class="summary pot">' +
+      '<div class="pot-top">' +
+        '<div class="pot-main">' +
+          '<div class="pot-label">נותר בקופה</div>' +
+          '<div class="pot-value ' + (ov.cashLeft >= 0 ? 'pos' : 'neg') + '">' + money(ov.cashLeft) + '</div>' +
+          '<div class="pot-sub">מתוך ' + money(ov.collected) + ' שנאסף</div>' +
+        '</div>' +
+        '<div class="pot-art">' + UI.art('piggy') + '</div>' +
+      '</div>' +
+      '<div class="pot-bar">' +
+        UI.bar(ov.spent, ov.collected, level) +
+        '<span class="pot-pct ' + (level ? 'is-' + level : '') + '"><b>' + usePct + '%</b> נוצל</span>' +
+      '</div>' +
+      '<button class="pot-foot" data-action="nav" data-view="collection" aria-label="למצב הגבייה">' +
+        '<span class="pf-cell">' +
+          (!hasKids
+            ? '<span class="pf-ico">🌱</span><span class="pf-text"><b class="lead">טרם נוספו ילדים</b></span>'
+            : waiting === 0
+              ? '<span class="pf-ico ok">✔</span><span class="pf-text"><b class="lead pos">כל ההורים שילמו!</b></span>'
+              : '<span class="pf-ico warn">⏳</span><span class="pf-text"><b>' + money(col.remaining) + '</b>' +
+                '<small>נותר לגבות</small></span>') +
+        '</span>' +
+        '<i class="pf-div"></i>' +
+        '<span class="pf-cell">' +
+          '<span class="pf-ico kids">' + UI.svgIcon('children', 24) + '</span>' +
+          '<span class="pf-text"><b>' + waiting + '</b><small>הורים טרם שילמו</small></span>' +
+        '</span>' +
+      '</button>' +
+      '</div>';
   }
 
   /* אריח ניווט — הטקסט מימין והאיור לצידו, כמו בעיצוב */

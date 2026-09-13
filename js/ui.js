@@ -10,8 +10,11 @@ var UI = (function () {
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
+  /* opts.floor — עיגול כלפי מטה לשקל שלם. משמש בתצוגה בלבד ובמקום
+     אחד — עמוד הבית. החישובים עצמם ממשיכים לעבוד על הסכום המלא. */
   function money(n, opts) {
     var v = Calc.num(n);
+    if (opts && opts.floor) v = Math.floor(v);
     var neg = v < 0;
     var abs = Math.abs(v);
     var str = abs % 1 === 0 ? abs.toLocaleString('he-IL')
@@ -386,7 +389,7 @@ var UI = (function () {
 
   /* איורי האפליקציה — אותם שמונה איורים של אריחי הבית, בכל מקום שמייצג
      את אותו אזור. הגודל נקבע ב-CSS לפי ההקשר (ניווט, כותרת, מצב ריק). */
-  var ARTS = ['budget', 'collection', 'expenses', 'ideas', 'children', 'staff', 'dates', 'yearend'];
+  var ARTS = ['budget', 'collection', 'expenses', 'ideas', 'children', 'staff', 'dates', 'yearend', 'piggy'];
 
   function art(name) {
     if (ARTS.indexOf(name) < 0) return '';
