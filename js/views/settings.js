@@ -5,6 +5,9 @@ var Views = (typeof Views === 'undefined') ? {} : Views;
 
 Views.settings = (function () {
 
+  /* נתוני דוגמה מוצעים רק כשאין חשבון שאפשר לדרוס */
+  function demoAllowed() { return !(window.Cloud && Cloud.signedIn()); }
+
   function render() {
     var st = Store.state;
     var html = UI.pageHead({ title: 'הגדרות', subtitle: 'פרטי הגן וגיבוי נתונים', icon: '⚙️', tone: 'mint', back: 'home' });
@@ -56,9 +59,15 @@ Views.settings = (function () {
         '<div class="stat"><div class="s-val">' + st.expenses.length + '</div><div class="s-lab">הוצאות</div></div>' +
       '</div></div>';
 
+    /* נתוני הדוגמה מחליפים את המצב כולו, והמצב כולו נדחף לענן —
+       כך שלמי שמחובר לחשבון הכפתור הזה מוחק את הנתונים האמיתיים
+       מכל המכשירים. הוא נועד להתרשמות ראשונית, לא למי שכבר עובד. */
     html += '<div class="card">' +
       '<div class="card-title"><h2>אזור מסוכן</h2></div>' +
-      '<button class="btn danger" data-action="set-demo" style="margin-bottom:9px">🌸 טעינת נתוני דוגמה</button>' +
+      (demoAllowed()
+        ? '<button class="btn danger" data-action="set-demo" style="margin-bottom:9px">🌸 טעינת נתוני דוגמה</button>'
+        : '<div class="hint" style="margin:0 0 12px">נתוני הדוגמה אינם זמינים כשמחוברים לחשבון — הם היו מחליפים ' +
+          'את הנתונים האמיתיים גם בענן וגם בכל מכשיר אחר שמחובר אליו.</div>') +
       '<button class="btn danger" data-action="set-reset">🗑 מחיקת כל הנתונים</button>' +
       '</div>';
 
@@ -126,6 +135,8 @@ Views.settings = (function () {
         });
       },
       'set-demo': function () {
+        // שמירת ביטחון: הכפתור מוסתר, אבל הפעולה עצמה גלובלית
+        if (!demoAllowed()) { UI.toast('אי אפשר לטעון נתוני דוגמה כשמחוברים לחשבון'); return; }
         UI.confirmBox('טעינת נתוני דוגמה?', 'הנתונים הקיימים יוחלפו בנתוני דוגמה.', function () {
           Store.loadDemo();
           App.setView('home');
