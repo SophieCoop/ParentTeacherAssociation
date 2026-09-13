@@ -339,9 +339,13 @@ Views.onboarding = (function () {
 
     /* ברירת המחדל — הטופס */
     var st = Store.state, counts = [];
-    if ((st.children || []).length)    counts.push(st.children.length + ' ילדים');
-    if ((st.staff || []).length)       counts.push(st.staff.length + ' אנשי צוות');
-    if ((st.budgetItems || []).length) counts.push(st.budgetItems.length + ' סעיפי תקציב');
+    function count(list, one, many) {
+      var n = (list || []).length;
+      if (n) counts.push(n === 1 ? one : n + ' ' + many);
+    }
+    count(st.children,    'ילד אחד',        'ילדים');
+    count(st.staff,       'איש צוות אחד',   'אנשי צוות');
+    count(st.budgetItems, 'סעיף תקציב אחד', 'סעיפי תקציב');
 
     return top +
       '<div class="card">' +
