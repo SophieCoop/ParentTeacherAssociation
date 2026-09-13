@@ -102,14 +102,15 @@ Views.ideas = (function () {
   function whoLabel(l) {
     var tail = l.shared ? ' · פריט משותף' : '';
     if (!linePicked(l)) {
-      if (l.levelId === 'shared') return 'פריט משותף לכל הצוות';
+      if (l.levelId === 'shared') return 'פריט אחד';
       if (!l.levelId) return 'בחרו למי';
       var k = Calc.staffAtLevel(Store.state, l.levelId);
       return levelName(l.levelId, k) + ' (' + k + ')';
     }
 
     var ids = lineIds(l), names = lineNames(l), n = ids.length + names.length;
-    if (!n) return 'בחרו למי';
+    /* פריט אחד משותף מתומחר בפני עצמו — המחיר אינו תלוי במי סומן */
+    if (!n) return l.shared ? 'פריט אחד' : 'בחרו למי';
 
     /* בחירה שמכסה בדיוק קבוצה מוכרת מתוארת בשמה, ולא דרגה-דרגה */
     if (!names.length) {
@@ -290,9 +291,15 @@ Views.ideas = (function () {
 
     /* שורות ההוצאה נערכות בתוך הטופס, כדי שאפשר יהיה להזין רעיון שלם בבת אחת */
     var lines = (idea.lines || []).map(function (l) {
-      return { id: l.id || Store.uid('ln'), label: l.label,
-               qty: (l.qty === undefined || l.qty === null || l.qty === '') ? 1 : l.qty,
-               levelId: l.levelId || '', amount: l.amount };
+      var out = { id: l.id || Store.uid('ln'), label: l.label,
+                  qty: (l.qty === undefined || l.qty === null || l.qty === '') ? 1 : l.qty,
+                  levelId: l.levelId || '', shared: !!l.shared, amount: l.amount };
+      /* בחירת האנשים שנשמרה נטענת כמו שהיא, כדי שעריכה לא תאבד אותה */
+      if (l.staffIds || l.names) {
+        out.staffIds = (l.staffIds || []).slice();
+        out.names = (l.names || []).slice();
+      }
+      return out;
     });
 
     /* קהל היעד שמסומן כרגע בטופס. כשהצוות מסומן, שורות ההוצאה
@@ -600,16 +607,16 @@ Views.ideas = (function () {
         '</tr></thead><tbody>' +
         lines.map(function (l, i) {
           return '<tr>' +
-            '<td><input class="input" data-ln="label" data-i="' + i + '" ' +
+            '<td data-lab="מוצר / שירות"><input class="input" data-ln="label" data-i="' + i + '" ' +
               'placeholder="מוצר / שירות" value="' + UI.esc(l.label || '') + '"></td>' +
-            '<td><button type="button" class="who-btn" data-who="' + i + '" aria-label="בחירת מקבלי המתנה">' +
+            '<td data-lab="למי?"><button type="button" class="who-btn" data-who="' + i + '" aria-label="בחירת מקבלי המתנה">' +
               '<span class="who-txt">' + UI.esc(whoLabel(l)) + '</span>' +
               '<span class="who-chev">' + UI.svgIcon('chevron', 13) + '</span>' +
               '</button></td>' +
-            '<td><input class="input end" data-ln="amount" data-i="' + i + '" type="number" ' +
+            '<td data-lab="מחיר לאדם"><input class="input end" data-ln="amount" data-i="' + i + '" type="number" ' +
               'inputmode="decimal" min="0" placeholder="0" aria-label="מחיר לאדם" ' +
               'value="' + UI.esc(l.amount === '' || l.amount === undefined ? '' : l.amount) + '"></td>' +
-            '<td class="end"><b data-ln-sum="' + i + '">' + UI.money(lineSum(l, true)) + '</b></td>' +
+            '<td class="end" data-lab="סה״כ"><b data-ln-sum="' + i + '">' + UI.money(lineSum(l, true)) + '</b></td>' +
             '<td><button type="button" class="iconbtn del" data-ln-del="' + i + '" ' +
               'aria-label="מחיקת שורה">✕</button></td>' +
             '</tr>';

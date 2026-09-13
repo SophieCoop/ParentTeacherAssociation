@@ -906,9 +906,25 @@ table.tbl tr td:first-child{font-weight:600}
     flex-direction:column;gap:4px;border:1px solid var(--line);border-radius:24px;
     padding:12px 10px;box-shadow:var(--shadow);backdrop-filter:none;background:#fff;
   }
-  .tabbar button{flex-direction:row;justify-content:flex-start;gap:10px;font-size:14px;padding:11px 12px}
-  .tabbar button .tb-ico{font-size:18px}
-  .tabbar button.on{background:var(--primary-soft)}
+  /* align-items:center מהכלל מכווץ את הכפתורים לרוחב התוכן בפריסת עמודה.
+     stretch מחזיר לכל כפתור את מלוא רוחב התפריט. */
+  .tabbar{align-items:stretch}
+  .tabbar button{
+    flex:none;width:100%;flex-direction:row;justify-content:flex-start;
+    gap:11px;font-size:14.5px;font-weight:600;padding:8px 10px;border-radius:16px;
+  }
+  .tabbar button .tb-ico{
+    width:42px;height:42px;border-radius:13px;font-size:18px;flex:none;
+    background:var(--primary-soft);
+  }
+  .tabbar button .tb-ico img.art{width:30px;height:30px;filter:none}
+  .tabbar button[data-view="budget"] .tb-ico{background:var(--pink)}
+  .tabbar button[data-view="collection"] .tb-ico{background:var(--green)}
+  .tabbar button[data-view="expenses"] .tb-ico{background:var(--yellow)}
+  .tabbar button[data-view="ideas"] .tb-ico{background:var(--purple)}
+  .tabbar button[data-view="dates"] .tb-ico{background:var(--peach)}
+  .tabbar button.on{background:var(--primary-soft);color:var(--primary-dark);font-weight:700}
+  .tabbar button.on .tb-ico{transform:none}
   .toast-root{bottom:24px}
   .tiles{grid-template-columns:repeat(4,1fr)}
   .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
@@ -921,4 +937,56 @@ table.tbl tr td:first-child{font-weight:600}
 @media print{
   .tabbar,.btn,.iconbtn{display:none !important}
   body::before{display:none}
+}
+
+/* ===================== מסך מגע: בלי זום בהקלדה ===================== */
+/* ספארי ב-iOS מגדיל את העמוד כשממקדים שדה שהגופן שלו קטן מ-16px, והעמוד
+   נשאר מוגדל וזז לצדדים. גופן 16px בשדות מונע את ההגדלה מלכתחילה, בלי
+   לחסום זום ידני של המשתמש. הריווח מצטמצם כדי שהשדות יישארו באותו רוחב. */
+@media (pointer: coarse) {
+  .input, select.input, textarea.input,
+  .line-tbl .input, .line-card .lc-top .input, .line-card .lc-calc .input,
+  .period .p-dates .input, .pk-top .pk-search {
+    font-size:16px;
+  }
+  .line-tbl .input{padding:7px 6px}
+  .line-card .lc-calc .input{padding:6px 4px}
+  .line-card .lc-top .input{padding:7px 9px}
+  .period .p-dates .input{padding:7px 7px}
+  .pk-top .pk-search{padding:8px 10px}
+  /* הטבלה צריכה להיכנס ברוחב המסך גם עם גופן 16px, כדי שלא תידרש גרירה */
+  /* פריסה קבועה מכריחה את העמודות להיכנס ברוחב המסך,
+     במקום להימתח לפי התוכן ולדרוש גרירה */
+  .line-tbl table{min-width:0;table-layout:fixed;width:100%}
+  .line-tbl td{padding:6px 2px}
+  .line-tbl th{padding:0 2px 7px}
+  .line-tbl .iconbtn{width:24px;height:24px;font-size:11px}
+}
+
+/* במסך טלפון, חמש עמודות עם גופן 16px נדחסות עד שהטקסט נחתך.
+   לכן כל שורה נפרשת לכרטיס בשתי שורות, ושורת הכותרת מתורגמת
+   לכיתוב קטן מעל כל שדה. */
+@media (pointer: coarse) and (max-width: 430px) {
+  .line-tbl{overflow-x:visible}
+  .line-tbl table,.line-tbl tbody,.line-tbl tr,.line-tbl td{display:block;width:auto}
+  .line-tbl thead{display:none}
+  .line-tbl tr{
+    display:grid;grid-template-columns:1fr 92px auto;
+    grid-template-areas:"name name del" "who price sum";
+    gap:8px;align-items:end;
+    background:#FAF8FD;border-radius:14px;padding:10px;margin-bottom:9px;
+  }
+  .line-tbl td{padding:0;border-top:none}
+  /* width:auto חוזר בכל שורה, כדי לגבור על אחוזי העמודות של הטבלה */
+  .line-tbl td:nth-child(1){grid-area:name;width:auto}
+  .line-tbl td:nth-child(2){grid-area:who;width:auto}
+  .line-tbl td:nth-child(3){grid-area:price;width:auto}
+  .line-tbl td:nth-child(4){grid-area:sum;width:auto;align-self:center;padding-bottom:9px}
+  .line-tbl td:last-child{grid-area:del;width:auto;align-self:center}
+  .line-tbl td[data-lab]:not(:nth-child(1))::before{
+    content:attr(data-lab);display:block;
+    font-size:10.5px;color:var(--muted);margin-bottom:3px;
+  }
+  .line-tbl td:nth-child(4)::before{text-align:start}
+  .line-tbl .who-btn{padding:9px 8px}
 }
