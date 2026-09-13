@@ -25,6 +25,22 @@ Views.ideas = (function () {
     return names.length ? 'לכל ' + names.join('/') : 'לכל אחד';
   }
 
+  /* שם הדרגה ביחיד או ברבים, לפי כמה אנשי צוות יש בה */
+  function levelName(levelId, count) {
+    if (levelId === 'all') return 'כל הצוות';
+    if (levelId === 'edu') return 'כל הצוות החינוכי';
+    var lv = Store.staffLevel(levelId);
+    return (count === 1 || !lv.plural) ? lv.name : lv.plural;
+  }
+
+  /* הדרגות שיש בהן אנשי צוות בפועל, לפי סדר ההייררכיה */
+  function staffMix() {
+    var st = Store.state;
+    return Store.STAFF_LEVELS.map(function (lv) {
+      return { level: lv, count: Calc.staffAtLevel(st, lv.id) };
+    }).filter(function (x) { return x.count > 0; });
+  }
+
   function audienceLabel(id) {
     var au = Store.audience(id);
     var n = audienceSize(id);
@@ -69,8 +85,8 @@ Views.ideas = (function () {
       html += idea.lines.map(function (l) {
         return '<div class="idea-line">' +
           '<span class="il-name">' + UI.esc(l.label || 'סעיף') + '</span>' +
-          '<span class="il-calc">' + Calc.lineQty(l) + ' \u00d7 ' + UI.money(l.amount) + '</span>' +
-          '<b class="il-sum">' + UI.money(Calc.lineTotal(l)) + '</b>' +
+          '<span class="il-calc">' + Calc.lineQty(l, st) + ' \u00d7 ' + UI.money(l.amount) + '</span>' +
+          '<b class="il-sum">' + UI.money(Calc.lineTotal(l, st)) + '</b>' +
           '</div>';
       }).join('');
     }
@@ -186,84 +202,181 @@ Views.ideas = (function () {
     var lines = (idea.lines || []).map(function (l) {
       return { id: l.id || Store.uid('ln'), label: l.label,
                qty: (l.qty === undefined || l.qty === null || l.qty === '') ? 1 : l.qty,
-               amount: l.amount };
+               levelId: l.levelId || '', amount: l.amount };
     });
 
-    function linesTotal() {
-      return lines.reduce(function (s, l) { return s + Calc.lineTotal(l); }, 0);
+    /* קהל היעד שמסומן כרגע בטופס. כשהצוות מסומן, שורות ההוצאה
+       מוצגות כטבלה שבה בוחרים למי מיועדת כל שורה, והכמות נגזרת מהרכב הצוות. */
+    function pickedAudiences(root) {
+      var el = root && root.querySelector('#f-audiences');
+      if (!el) return idea.audiences || [];
+      return el.value ? el.value.split(',') : [];
+    }
+    function staffMode(root) {
+      return pickedAudiences(root).indexOf('staff') > -1;
     }
 
+    /* דרגת הצוות נשמרת על השורה גם כשיוצאים מקהל היעד של צוות,
+       כדי שחזרה אליו לא תאבד את הבחירה — אבל החישוב מתעלם ממנה בינתיים. */
+    function lineSum(l, staff) {
+      return Calc.lineTotal(staff ? l : { qty: l.qty, amount: l.amount }, Store.state);
+    }
+
+    function linesTotal(staff) {
+      return lines.reduce(function (s, l) { return s + lineSum(l, staff); }, 0);
+    }
+
+    /* הסיכום יושב כולו בכרטיס התחתון, ולכן מספיק לצייר אותו מחדש */
     function refreshTotal(root) {
-      var total = linesTotal();
-      var el = root.querySelector('#lines-total');
-      if (el) el.textContent = UI.money(total);
+      drawTotalCard(root);
+    }
 
+    /* כרטיס הרכב הצוות — מנין נלקחות הכמויות בטבלה */
+    function staffMixHTML() {
+      var mix = staffMix();
+      if (!mix.length) {
+        return '<div class="note"><div class="n-ico">\ud83d\udc65</div><div>' +
+          '<b>עוד לא נוספו אנשי צוות</b>' +
+          'אפשר להוסיף אותם בלשונית "צוות הגן", ואז הכמויות יתמלאו כאן מעצמן.' +
+          '</div></div>';
+      }
+      return '<div class="staff-mix">' +
+        '<div class="sm-head">\ud83d\udc65 <b>הרכב צוות הגן</b></div>' +
+        '<div class="sm-grid">' +
+          mix.map(function (x) {
+            return '<div class="sm-cell"><span class="sm-name">' +
+              UI.esc(levelName(x.level.id, x.count)) + '</span>' +
+              '<b class="sm-num">' + x.count + '</b></div>';
+          }).join('') +
+        '</div>' +
+        '<p class="sm-hint">המספרים נלקחים מלשונית "צוות הגן" ומתעדכנים אוטומטית</p>' +
+        '</div>';
+    }
+
+    /* אפשרויות "למי?" — כל הצוות, וכל דרגה שיש בה אנשי צוות */
+    function levelOptions(l) {
+      var st = Store.state;
+      var opts = [];
+      /* שורה שנוצרה לפני שהשורות הוצמדו לדרגות — מציגים את הכמות שלה
+         כמו שהיא, ולא משנים אותה מאחורי הגב */
+      if (!l.levelId) {
+        opts.push({ id: '', label: 'כמות קבועה (' + Calc.lineQty({ qty: l.qty }) + ')' });
+      }
+      opts.push({ id: 'all', label: 'כל הצוות (' + (st.staff || []).length + ')' });
+      opts.push({ id: 'edu', label: 'כל הצוות החינוכי (' + Calc.staffAtLevel(st, 'edu') + ')' });
+      staffMix().forEach(function (x) {
+        opts.push({ id: x.level.id, label: levelName(x.level.id, x.count) + ' (' + x.count + ')' });
+      });
+      return opts.map(function (o) {
+        return '<option value="' + o.id + '"' + (o.id === (l.levelId || '') ? ' selected' : '') + '>' +
+          UI.esc(o.label) + '</option>';
+      }).join('');
+    }
+
+    function linesTableHTML() {
+      return '<div class="line-tbl"><table><thead><tr>' +
+          '<th>מוצר / שירות</th><th>למי?</th>' +
+          '<th class="end">מחיר לאדם</th><th class="end">סה״כ</th><th></th>' +
+        '</tr></thead><tbody>' +
+        lines.map(function (l, i) {
+          return '<tr>' +
+            '<td><input class="input" data-ln="label" data-i="' + i + '" ' +
+              'placeholder="מוצר / שירות" value="' + UI.esc(l.label || '') + '"></td>' +
+            '<td><select class="input" data-ln="levelId" data-i="' + i + '" aria-label="למי?">' +
+              levelOptions(l) + '</select></td>' +
+            '<td><input class="input end" data-ln="amount" data-i="' + i + '" type="number" ' +
+              'inputmode="decimal" min="0" placeholder="0" aria-label="מחיר לאדם" ' +
+              'value="' + UI.esc(l.amount === '' || l.amount === undefined ? '' : l.amount) + '"></td>' +
+            '<td class="end"><b data-ln-sum="' + i + '">' + UI.money(lineSum(l, true)) + '</b></td>' +
+            '<td><button type="button" class="iconbtn del" data-ln-del="' + i + '" ' +
+              'aria-label="מחיקת שורה">✕</button></td>' +
+            '</tr>';
+        }).join('') +
+        '</tbody></table></div>';
+    }
+
+    function lineCardsHTML() {
+      return lines.map(function (l, i) {
+        return '<div class="line-card">' +
+          '<div class="lc-top">' +
+            '<input class="input" data-ln="label" data-i="' + i + '" placeholder="שם המתנה" ' +
+              'value="' + UI.esc(l.label || '') + '">' +
+            '<button type="button" class="iconbtn del" data-ln-del="' + i + '" ' +
+              'aria-label="מחיקת שורה">✕</button>' +
+          '</div>' +
+          '<div class="lc-calc">' +
+            '<div class="lc-field">' +
+              '<span class="lc-lab">כמות</span>' +
+              '<input class="input" data-ln="qty" data-i="' + i + '" type="number" inputmode="numeric" min="0" ' +
+                'placeholder="1" value="' + UI.esc(l.qty === '' || l.qty === undefined ? '' : l.qty) + '" ' +
+                'aria-label="כמות">' +
+            '</div>' +
+            '<span>×</span>' +
+            '<input class="input" data-ln="amount" data-i="' + i + '" type="number" inputmode="decimal" min="0" ' +
+              'placeholder="0" value="' + UI.esc(l.amount === '' || l.amount === undefined ? '' : l.amount) + '" ' +
+              'aria-label="סכום ליחידה">' +
+            '<span>₪ =</span>' +
+            '<b data-ln-sum="' + i + '">' + UI.money(lineSum(l, false)) + '</b>' +
+          '</div>' +
+          '</div>';
+      }).join('');
+    }
+
+    /* סיכום הרעיון — הסכום מול סעיף התקציב שנבחר */
+    function totalCardHTML() {
+      return '<div class="idea-total" id="idea-total"></div>';
+    }
+
+    function drawTotalCard(root) {
+      var box = root.querySelector('#idea-total');
+      if (!box) return;
+      var total = linesTotal(staffMode(root));
       var sel = root.querySelector('#f-budgetItemId');
-      var rem = root.querySelector('#budget-left');
-      if (!sel || !rem) return;
+      var b = sel ? itemLeft(sel.value) : null;
+      var planned = b && b.planned ? b.planned : 0;
 
-      var b = itemLeft(sel.value);
-      if (!b || !b.planned) {
-        rem.parentNode.style.display = 'none';
+      var main = '<div class="it-main">' +
+        '<div class="it-lab">סה״כ הרעיון</div>' +
+        '<div class="it-val">' + UI.money(total) + '</div>' +
+        (planned ? '<div class="it-sub">מתוך ' + UI.money(planned) + '</div>' : '') +
+        '</div>';
+
+      if (!planned) {
+        box.innerHTML = main +
+          '<p class="it-hint">בחירת סעיף תקציב תציג כאן גם כמה ממנו הרעיון מנצל</p>';
         return;
       }
-      rem.parentNode.style.display = '';
-      var after = Calc.round2(b.left - total);
-      rem.textContent = after >= 0 ? UI.money(after) : 'חריגה של ' + UI.money(-after);
-      rem.className = after >= 0 ? 'pos' : 'neg';
-      var lbl = root.querySelector('#budget-left-label');
-      if (lbl) lbl.textContent = after >= 0 ? 'נותר בסעיף התקציב' : 'מעבר לסעיף התקציב';
+      var pct = Math.round((total / planned) * 100);
+      var over = total > planned;
+      box.innerHTML = main +
+        UI.donut([
+          { value: Math.min(total, planned), color: UI.toneHex(over ? 'pink' : 'purple') },
+          { value: Math.max(0, planned - total), color: '#EFEAF3' }
+        ], pct + '%', over ? 'חריגה מהתקציב' : 'מהתקציב בשימוש');
     }
 
     function drawLines(root) {
       var box = root.querySelector('#f-lines');
       if (!box) return;
+      var staff = staffMode(root);
 
       box.innerHTML =
+        (staff ? staffMixHTML() : '') +
         '<label>שורות ההוצאה</label>' +
-        (lines.length ? lines.map(function (l, i) {
-          return '<div class="line-card">' +
-            '<div class="lc-top">' +
-              '<input class="input" data-ln="label" data-i="' + i + '" placeholder="שם המתנה" ' +
-                'value="' + UI.esc(l.label || '') + '">' +
-              '<button type="button" class="iconbtn del" data-ln-del="' + i + '" ' +
-                'aria-label="מחיקת שורה">✕</button>' +
-            '</div>' +
-            '<div class="lc-calc">' +
-              '<div class="lc-field">' +
-                '<span class="lc-lab">כמות</span>' +
-                '<input class="input" data-ln="qty" data-i="' + i + '" type="number" inputmode="numeric" min="0" ' +
-                  'placeholder="1" value="' + UI.esc(l.qty === '' || l.qty === undefined ? '' : l.qty) + '" ' +
-                  'aria-label="כמות">' +
-              '</div>' +
-              '<span>×</span>' +
-              '<input class="input" data-ln="amount" data-i="' + i + '" type="number" inputmode="decimal" min="0" ' +
-                'placeholder="0" value="' + UI.esc(l.amount === '' || l.amount === undefined ? '' : l.amount) + '" ' +
-                'aria-label="סכום ליחידה">' +
-              '<span>₪ =</span>' +
-              '<b data-ln-sum="' + i + '">' + UI.money(Calc.lineTotal(l)) + '</b>' +
-            '</div>' +
-            '</div>';
-        }).join('') : '<p class="small muted" style="margin:0 0 8px">עוד לא נוספו שורות הוצאה.</p>') +
+        (lines.length ? (staff ? linesTableHTML() : lineCardsHTML())
+                      : '<p class="small muted" style="margin:0 0 8px">עוד לא נוספו שורות הוצאה.</p>') +
         '<button type="button" class="btn soft sm" data-ln-add="1" style="width:100%">+ הוספת שורה</button>' +
-        '<div class="flex-between" style="margin-top:10px">' +
-          '<span class="small muted">סה״כ הרעיון</span>' +
-          '<b id="lines-total" style="font-size:16px">' + UI.money(linesTotal()) + '</b>' +
-        '</div>' +
-        '<div class="flex-between" style="margin-top:4px">' +
-          '<span class="small muted" id="budget-left-label">נותר מתקציב הקטגוריה</span>' +
-          '<b id="budget-left" class="pos">—</b>' +
-        '</div>';
+        totalCardHTML();
 
       Array.prototype.forEach.call(box.querySelectorAll('[data-ln]'), function (inp) {
         var handler = function () {
           var i = parseInt(inp.getAttribute('data-i'), 10);
           if (!lines[i]) return;
           var key = inp.getAttribute('data-ln');
-          lines[i][key] = (key === 'label') ? inp.value
+          lines[i][key] = (key === 'label' || key === 'levelId') ? inp.value
                         : (inp.value === '' ? '' : Calc.num(inp.value));
           var sum = box.querySelector('[data-ln-sum="' + i + '"]');
-          if (sum) sum.textContent = UI.money(Calc.lineTotal(lines[i]));
+          if (sum) sum.textContent = UI.money(lineSum(lines[i], staff));
           refreshTotal(root);
         };
         inp.addEventListener('input', handler);
@@ -273,15 +386,20 @@ Views.ideas = (function () {
         btn.addEventListener('click', function () {
           lines.splice(parseInt(btn.getAttribute('data-ln-del'), 10), 1);
           drawLines(root);
+          refreshTotal(root);
         });
       });
       var add = box.querySelector('[data-ln-add]');
       if (add) add.addEventListener('click', function () {
-        lines.push({ id: Store.uid('ln'), label: '', qty: 1, amount: '' });
+        lines.push({ id: Store.uid('ln'), label: '', qty: 1,
+                     levelId: staff ? 'all' : '', amount: '' });
         drawLines(root);
+        refreshTotal(root);
         var inputs = box.querySelectorAll('[data-ln="label"]');
         if (inputs.length) inputs[inputs.length - 1].focus();
       });
+
+      drawTotalCard(root);
     }
 
     UI.formModal({
@@ -311,16 +429,32 @@ Views.ideas = (function () {
       },
 
       onFieldChange: function (name, value, root) {
-        if (name === 'budgetItemId') refreshTotal(root);
+        /* מעבר לקהל יעד של צוות מחליף את שורות ההוצאה בטבלה לפי דרגות,
+           ויציאה ממנו מחזירה לכמות חופשית */
+        if (name === 'audiences') {
+          /* יציאה מקהל יעד של צוות מקבעת את הכמות שהדרגה הניבה, כך שתיבת
+             הכמות נפתחת על המספר הנכון. הדרגה עצמה נשמרת למקרה שחוזרים. */
+          if (!staffMode(root)) {
+            lines.forEach(function (l) {
+              if (l.levelId) l.qty = Calc.lineQty(l, Store.state);
+            });
+          }
+          drawLines(root);
+          return;
+        }
+        refreshTotal(root);
       },
 
       onSubmit: function (v) {
         // שורה ריקה לגמרי אינה נשמרת
         var clean = lines.filter(function (l) {
           return (l.label && l.label.trim()) || Calc.num(l.amount) > 0;
-        }).map(function (l) {
+        });
+        var forStaff = (v.audiences || []).indexOf('staff') > -1;
+        clean = clean.map(function (l) {
           return { id: l.id, label: l.label,
                    qty: (l.qty === '' || l.qty === undefined) ? 1 : Calc.num(l.qty),
+                   levelId: forStaff ? (l.levelId || '') : '',
                    amount: l.amount };
         });
         var bi = Calc.budgetItem(Store.state, v.budgetItemId);
@@ -351,11 +485,13 @@ Views.ideas = (function () {
   /* פירוט שורות הרעיון כטקסט — משמש גם לשיתוף וגם להערות ההוצאה.
      prefix מאפשר תבליט בהערות, ובלעדיו הטקסט נקי לוואטסאפ. */
   function linesText(idea, prefix) {
+    var st = Store.state;
     return (idea.lines || []).map(function (l) {
-      var q = Calc.lineQty(l);
-      return (prefix || '') + (l.label || 'סעיף') + ' - ' +
-        (q !== 1 ? q + ' × ' + UI.money(l.amount) + ' = ' + UI.money(Calc.lineTotal(l))
-                 : UI.money(Calc.lineTotal(l)));
+      var q = Calc.lineQty(l, st);
+      var who = l.levelId ? ' (' + levelName(l.levelId, q) + ')' : '';
+      return (prefix || '') + (l.label || 'סעיף') + who + ' - ' +
+        (q !== 1 ? q + ' × ' + UI.money(l.amount) + ' = ' + UI.money(Calc.lineTotal(l, st))
+                 : UI.money(Calc.lineTotal(l, st)));
     }).join('\n');
   }
 
@@ -422,7 +558,7 @@ Views.ideas = (function () {
       html += '<div class="section-title"><span>השוואה מהירה</span></div>';
       html += '<div class="card"><div class="scroll-x"><table class="tbl">' +
         '<thead><tr><th>רעיון</th><th class="end">סה״כ</th><th class="end">לנפש</th><th class="end">להורה</th></tr></thead><tbody>' +
-        ideas.slice().sort(function (a, b) { return Calc.ideaTotal(a) - Calc.ideaTotal(b); }).map(function (i) {
+        ideas.slice().sort(function (a, b) { return Calc.ideaTotal(a, st) - Calc.ideaTotal(b, st); }).map(function (i) {
           var s = Calc.ideaSplit(st, i);
           return '<tr' + (i.chosen ? ' style="background:var(--green)"' : '') + '>' +
             '<td>' + (i.chosen ? '✓ ' : '') + UI.esc(i.title || 'רעיון') + '</td>' +
@@ -451,7 +587,7 @@ Views.ideas = (function () {
       'idea-choose': function (el) {
         var idea = Store.find('ideas', el.getAttribute('data-id'));
         if (!idea) return;
-        var total = Calc.ideaTotal(idea);
+        var total = Calc.ideaTotal(idea, Store.state);
         if (total <= 0) { UI.toast('צריך להוסיף שורות הוצאה לפני הבחירה'); return; }
         var vs = Calc.ideaVsBudget(Store.state, idea);
         UI.modal({
