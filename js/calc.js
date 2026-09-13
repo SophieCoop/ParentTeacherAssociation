@@ -552,6 +552,32 @@ var Calc = (function () {
     return staff.filter(function (t) { return t.level === levelId; }).length;
   }
 
+  /* רמת התקציב של דרגה. ברירת המחדל מוגדרת על הדרגה עצמה,
+     וניתן לדרוס אותה בהגדרות הגן. */
+  function levelWeight(state, levelId) {
+    var over = state && state.settings && state.settings.levelWeights;
+    if (over && over[levelId] !== undefined && over[levelId] !== null && over[levelId] !== '') {
+      return Math.max(0, num(over[levelId]));
+    }
+    return num(Store.staffLevel(levelId).weight) || 1;
+  }
+
+  /* סך "יחידות התקציב" של הצוות — רמת כל דרגה כפול מספר האנשים בה */
+  function staffWeightUnits(state) {
+    var total = 0;
+    (Store.STAFF_LEVELS || []).forEach(function (lv) {
+      total += levelWeight(state, lv.id) * staffAtLevel(state, lv.id);
+    });
+    return total;
+  }
+
+  /* החלק המומלץ של דרגה מתקציב הרעיון, כשבר בין 0 ל-1 */
+  function levelShare(state, levelId) {
+    var units = staffWeightUnits(state);
+    if (units <= 0) return 0;
+    return (levelWeight(state, levelId) * staffAtLevel(state, levelId)) / units;
+  }
+
   /* כמות השורה. שורה שהוצמדה לדרגת צוות סופרת את אנשי הצוות
      שבאותה דרגה, כך שהמספר מתעדכן מאליו כשמשתנה הרכב הצוות. */
   function lineQty(l, state) {
@@ -724,6 +750,7 @@ var Calc = (function () {
     overview: overview, refunds: refunds,
     ideaTotal: ideaTotal, lineTotal: lineTotal, lineQty: lineQty,
     staffAtLevel: staffAtLevel,
+    levelWeight: levelWeight, staffWeightUnits: staffWeightUnits, levelShare: levelShare,
     ideaSplit: ideaSplit, ideaVsBudget: ideaVsBudget,
     allDates: allDates, nextOccurrence: nextOccurrence, upcoming: upcoming
   };

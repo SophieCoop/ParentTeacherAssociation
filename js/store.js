@@ -68,7 +68,9 @@ var Store = (function () {
       version: 1,
       setupDone: false,
       gan: { name: '', address: '', yearLabel: yr.label, contactName: '', phone: '', email: '' },
-      settings: { yearStart: yr.start, yearEnd: yr.end, currency: '₪', roundShare: 10 },
+      settings: { yearStart: yr.start, yearEnd: yr.end, currency: '₪', roundShare: 10,
+                  /* רמת התקציב של כל דרגת צוות, כששונתה מברירת המחדל שב-STAFF_LEVELS */
+                  levelWeights: {} },
       children: [],
       staff: [],
       categories: DEFAULT_CATEGORIES.slice(),
