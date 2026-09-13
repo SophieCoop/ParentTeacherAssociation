@@ -116,15 +116,26 @@ Views.collection = (function () {
     var perFull = Calc.fullChildShare(st);
     var used = Store.PAY_METHODS.filter(function (m) { return methods[m.id]; });
 
+    /* התקציב המתוכנן וסך הגבייה הם אותו כסף משני כיוונים, ולכן
+       אין טעם להציג שני מספרים זהים. החיוב של כל ילד מעוגל לשקל שלם,
+       ולכן פער של עד חצי שקל לילד הוא רעש של עיגול. רק פער גדול מזה
+       הוא מידע — ואז מוצגת השורה יחד עם הסבר מאיפה הוא נובע. */
+    var budget = Calc.budgetTotal(st);
+    var gap = Calc.round2(sum.due - budget);
+    var slack = (st.children.length || 0) * 0.5 + 0.5;
+    var showGap = Math.abs(gap) > slack;
+
     var html = '<div class="card">' +
       '<div class="card-title"><h2>איך מחושב הסכום לכל הורה?</h2></div>' +
       '<table class="tbl slim"><tbody>' +
-        row('סה״כ תקציב מתוכנן', UI.money(Calc.budgetTotal(st))) +
+        row('סה״כ תקציב מתוכנן', UI.money(budget)) +
         row('ילד שהיה כל השנה משלם', '<b>' + UI.money(perFull) + '</b>') +
-        row('סה״כ לגבייה', UI.money(sum.due)) +
+        (showGap ? row('סה״כ לגבייה', UI.money(sum.due)) : '') +
         row('נגבה בפועל', '<span class="pos">' + UI.money(sum.paid) + '</span>') +
         row('נותר לגבייה', '<span class="' + (sum.remaining > 0 ? 'neg' : 'pos') + '">' + UI.money(sum.remaining) + '</span>') +
-      '</tbody></table></div>';
+      '</tbody></table>' +
+      (showGap ? gapNote(st, gap) : '') +
+      '</div>';
 
     html += '<div class="card">' +
       '<div class="card-title"><h2>פילוח לפי אמצעי תשלום</h2></div>' +
@@ -209,6 +220,27 @@ Views.collection = (function () {
       reset.textContent = 'עדכון ל-' + UI.money(live);
       reset.style.display = (amount !== live) ? '' : 'none';
     }
+  }
+
+  /* מאיפה נובע הפער בין התקציב המתוכנן לסך הגבייה */
+  function gapNote(st, gap) {
+    var manual = (st.children || []).filter(Calc.hasOverride);
+    var short = gap < 0;
+    var why;
+    if (!(st.children || []).length) {
+      why = 'עדיין לא נוספו ילדים, ולכן אין בין מי לחלק את התקציב.';
+    } else if (manual.length) {
+      why = 'אצל ' + (manual.length === 1 ? 'ילד אחד' : manual.length + ' ילדים') +
+        ' נקבע אחוז השתתפות ידנית, במקום החישוב לפי תאריך ההצטרפות: ' +
+        manual.map(function (c) { return UI.esc(c.name); }).join(', ') + '.';
+    } else {
+      why = 'כדאי לעבור על תאריכי סעיפי התקציב ועל תאריכי ההצטרפות של הילדים.';
+    }
+    return '<div class="note mt" style="background:var(--orange)"><div class="n-ico">⚠️</div><div>' +
+      '<b>' + (short ? 'הגבייה נמוכה מהתקציב ב-' : 'הגבייה גבוהה מהתקציב ב-') +
+        UI.money(Math.abs(gap)) + '</b>' + why +
+      (short ? ' ההפרש אינו מכוסה בגבייה וצריך לבוא ממקור אחר.' : '') +
+      '</div></div>';
   }
 
   function row(label, value) {
