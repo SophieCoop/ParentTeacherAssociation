@@ -99,42 +99,6 @@ Views.home = (function () {
     return html;
   }
 
-  /* קופת חסכון — איור קטן בקווי העיצוב של שאר האפליקציה */
-  function piggySVG() {
-    return '<svg class="pig" viewBox="0 0 72 64" width="72" height="64" ' +
-      'aria-hidden="true" focusable="false">' +
-      /* נצנוצים סביב המטבע */
-      '<g stroke="#EDB94A" stroke-width="2.4" stroke-linecap="round">' +
-        '<path d="M40 8.5 L36.5 6"/><path d="M50 2.5 L50 5.5"/><path d="M60.5 8.5 L63.5 6.5"/>' +
-      '</g>' +
-      /* מטבע נופל לתוך הקופה */
-      '<circle cx="50" cy="14" r="8.5" fill="#F3C75E"/>' +
-      '<circle cx="50" cy="14" r="6" fill="#EDB94A"/>' +
-      '<text x="50" y="18.4" text-anchor="middle" font-size="9.5" font-weight="800" ' +
-        'fill="#A9761B" font-family="Heebo, Arial, sans-serif">₪</text>' +
-      /* רגליים */
-      '<rect x="22" y="46" width="9" height="13" rx="4" fill="#EE9CB8"/>' +
-      '<rect x="44" y="46" width="9" height="13" rx="4" fill="#EE9CB8"/>' +
-      /* זנב */
-      '<path d="M61 33c5-1 4 5 0 4.5" fill="none" stroke="#EE9CB8" ' +
-        'stroke-width="3" stroke-linecap="round"/>' +
-      /* גוף */
-      '<ellipse cx="38" cy="36" rx="23" ry="17" fill="#F4AEC6"/>' +
-      /* אוזן */
-      '<path d="M30 22c-2-7-1-9 2-8 3 1 6 4 7 7z" fill="#EE9CB8"/>' +
-      /* חריץ למטבעות */
-      '<rect x="42" y="23" width="15" height="4" rx="2" fill="#D98AA9" ' +
-        'transform="rotate(-12 49.5 25)"/>' +
-      /* חוטם */
-      '<ellipse cx="16" cy="38" rx="8.5" ry="7.5" fill="#EE9CB8"/>' +
-      '<ellipse cx="13" cy="38" rx="1.6" ry="2.4" fill="#C9718F"/>' +
-      '<ellipse cx="19" cy="38" rx="1.6" ry="2.4" fill="#C9718F"/>' +
-      /* עין וסומק */
-      '<circle cx="27" cy="31" r="2" fill="#7E4D61"/>' +
-      '<ellipse cx="27" cy="38" rx="3.5" ry="2.2" fill="#EE9CB8" opacity=".75"/>' +
-      '</svg>';
-  }
-
   /* כרטיס הקופה — היתרה הזמינה מתוך כל מה שנאסף מההורים,
      שיעור הניצול שלה, וכמה הורים טרם שילמו */
   function potHTML(ov, col) {
@@ -151,7 +115,7 @@ Views.home = (function () {
           '<div class="pot-value ' + (ov.cashLeft >= 0 ? 'pos' : 'neg') + '">' + UI.money(ov.cashLeft) + '</div>' +
           '<div class="pot-sub">מתוך ' + UI.money(ov.collected) + ' שנאסף</div>' +
         '</div>' +
-        '<div class="pot-art">' + piggySVG() + '</div>' +
+        '<div class="pot-art">' + UI.art('piggy') + '</div>' +
       '</div>' +
       '<div class="pot-bar">' +
         UI.bar(ov.spent, ov.collected, level) +

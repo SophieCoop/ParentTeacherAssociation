@@ -386,7 +386,7 @@ var UI = (function () {
 
   /* איורי האפליקציה — אותם שמונה איורים של אריחי הבית, בכל מקום שמייצג
      את אותו אזור. הגודל נקבע ב-CSS לפי ההקשר (ניווט, כותרת, מצב ריק). */
-  var ARTS = ['budget', 'collection', 'expenses', 'ideas', 'children', 'staff', 'dates', 'yearend'];
+  var ARTS = ['budget', 'collection', 'expenses', 'ideas', 'children', 'staff', 'dates', 'yearend', 'piggy'];
 
   function art(name) {
     if (ARTS.indexOf(name) < 0) return '';

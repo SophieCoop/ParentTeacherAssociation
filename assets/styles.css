@@ -322,12 +322,7 @@ textarea.input{min-height:78px;resize:vertical}
 .pot-label{font-size:13.5px;color:var(--ink-2);font-weight:600}
 .pot-value{font-size:40px;font-weight:800;letter-spacing:-1.4px;line-height:1.12;white-space:nowrap}
 .pot-sub{font-size:13px;color:var(--muted);margin-top:1px}
-.pot-art{
-  width:104px;height:104px;flex:none;border-radius:50%;
-  display:grid;place-items:center;line-height:1;
-  background:radial-gradient(circle at 50% 42%, #EAF6F2, var(--mint));
-}
-.pot-art .pig{width:74px;height:66px;display:block}
+.pot-art{width:110px;height:106px;flex:none;display:grid;place-items:center}
 .pot-bar{display:flex;align-items:center;gap:10px;margin-top:14px}
 .pot-bar .bar{flex:1;margin-top:0}
 .pot-pct{font-size:12.5px;color:var(--muted);white-space:nowrap}
@@ -346,7 +341,7 @@ textarea.input{min-height:78px;resize:vertical}
   width:34px;height:34px;flex:none;border-radius:50%;
   display:grid;place-items:center;font-size:17px;background:var(--purple);
 }
-.pf-ico.ok{background:var(--ok);color:#fff;font-size:18px;font-weight:800}
+.pf-ico.ok{background:var(--green);color:var(--green-ink);font-size:19px;font-weight:800}
 .pf-ico.warn{background:var(--yellow)}
 .pf-ico.kids{background:var(--green);color:var(--green-ink)}
 .pf-text{display:flex;flex-direction:column;line-height:1.2;min-width:0;text-align:start}
@@ -355,8 +350,7 @@ textarea.input{min-height:78px;resize:vertical}
 .pf-text small{font-size:11.5px;color:var(--muted)}
 @media (max-width:370px){
   .pot-value{font-size:34px}
-  .pot-art{width:84px;height:84px}
-  .pot-art .pig{width:60px;height:54px}
+  .pot-art{width:92px;height:88px}
   .pf-ico{width:30px;height:30px;font-size:15px}
   .pf-text b{font-size:15px}
   .pf-text small{font-size:11px}
