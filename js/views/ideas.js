@@ -97,33 +97,38 @@ Views.ideas = (function () {
     return out;
   }
 
-  /* הטקסט שמופיע על כפתור "למי?" בשורה */
+  /* הטקסט שמופיע על כפתור "למי?" בשורה — שם הדרגה וכמה
+     נבחרו ממנה, בלי שמות פרטיים */
   function whoLabel(l) {
     var tail = l.shared ? ' · פריט משותף' : '';
     if (!linePicked(l)) {
       if (l.levelId === 'shared') return 'פריט משותף לכל הצוות';
       if (!l.levelId) return 'בחרו למי';
       var k = Calc.staffAtLevel(Store.state, l.levelId);
-      return levelName(l.levelId, k) + ' · ' + peopleWord(k);
+      return levelName(l.levelId, k) + ' (' + k + ')';
     }
+
     var ids = lineIds(l), names = lineNames(l), n = ids.length + names.length;
     if (!n) return 'בחרו למי';
-    if (!names.length) {
-      var g = groupLabelFor(ids);
-      if (g) return g + ' · ' + peopleWord(n) + tail;
-    }
-    if (n === 1) {
-      if (names.length) return names[0] + ' (שם חופשי)';
-      var t = staffById(ids[0]);
-      return (t ? t.name : 'איש צוות') + tail;
-    }
-    var first = ids.length ? (staffById(ids[0]) || {}).name : names[0];
-    return (first || 'נבחרים') + ' + ' + (n - 1) + ' נוספים' + tail;
-  }
 
-  /* האם השורה מתוארת בשם חופשי יחיד — משנה את האייקון על הכפתור */
-  function whoIsCustom(l) {
-    return linePicked(l) && lineNames(l).length === 1 && !lineIds(l).length;
+    /* בחירה שמכסה בדיוק קבוצה מוכרת מתוארת בשמה, ולא דרגה-דרגה */
+    if (!names.length) {
+      if (sameSet(ids, idsOfLevel('all'))) return 'כל הצוות (' + n + ')' + tail;
+      if (sameSet(ids, idsOfLevel('edu'))) return 'כל הצוות החינוכי (' + n + ')' + tail;
+    }
+
+    var parts = [];
+    staffMix().forEach(function (x) {
+      var c = idsOfLevel(x.level.id).filter(function (id) { return ids.indexOf(id) > -1; }).length;
+      if (c) parts.push(levelName(x.level.id, c) + ' (' + c + ')');
+    });
+    var known = Store.STAFF_LEVELS.map(function (lv) { return lv.id; });
+    var others = (Store.state.staff || []).filter(function (t) {
+      return known.indexOf(t.level) < 0 && ids.indexOf(t.id) > -1;
+    }).length;
+    if (others) parts.push('שאר הצוות (' + others + ')');
+    if (names.length) parts.push('שמות חופשיים (' + names.length + ')');
+    return parts.join(' · ') + tail;
   }
 
   function audienceLabel(id) {
@@ -598,7 +603,6 @@ Views.ideas = (function () {
             '<td><input class="input" data-ln="label" data-i="' + i + '" ' +
               'placeholder="מוצר / שירות" value="' + UI.esc(l.label || '') + '"></td>' +
             '<td><button type="button" class="who-btn" data-who="' + i + '" aria-label="בחירת מקבלי המתנה">' +
-              '<span class="who-ico">' + (whoIsCustom(l) ? '✏️' : '👥') + '</span>' +
               '<span class="who-txt">' + UI.esc(whoLabel(l)) + '</span>' +
               '<span class="who-chev">' + UI.svgIcon('chevron', 13) + '</span>' +
               '</button></td>' +
