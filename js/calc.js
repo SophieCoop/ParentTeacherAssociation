@@ -537,11 +537,13 @@ var Calc = (function () {
 
   /* ---------- רעיונות (סיעור מוחות) ---------- */
   /* שורת רעיון: כמות × סכום. שורות ישנות ללא כמות נחשבות כיחידה אחת. */
-  /* כמה אנשי צוות יש בדרגה מסוימת.
-     'all' — כל הצוות, 'edu' — הצוות החינוכי בלבד. */
+  /* כמה אנשי צוות יש בדרגה מסוימת. 'all' — כל הצוות,
+     'edu' — הצוות החינוכי בלבד, ו-'shared' — פריט אחד משותף שאינו
+     מוכפל במספר האנשים. */
   function staffAtLevel(state, levelId) {
     var staff = (state && state.staff) || [];
     if (!levelId) return 0;
+    if (levelId === 'shared') return 1;
     if (levelId === 'all') return staff.length;
     if (levelId === 'edu') {
       var ids = Store.eduLevelIds();
