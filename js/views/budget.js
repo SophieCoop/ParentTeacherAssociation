@@ -106,8 +106,6 @@ Views.budget = (function () {
       per = bits.join(' ');
     }
     return '<div class="bitem">' +
-      '<button class="bi-more" data-action="budget-menu" data-id="' + b.id + '" ' +
-        'aria-label="פעולות לסעיף">⋮</button>' +
       '<button class="bi-main" data-action="budget-edit" data-id="' + b.id + '">' +
         '<span class="bi-ico" style="background:' + UI.toneVar(cat.tone) + '">' + UI.catIcon(cat) + '</span>' +
         '<span class="bi-body">' +
@@ -119,33 +117,6 @@ Views.budget = (function () {
           '<span class="bi-chev">' + UI.svgIcon('chevron', 16) + '</span></span>' +
       '</button>' +
       '</div>';
-  }
-
-  /* תפריט הפעולות של כפתור שלוש הנקודות שבשורת הסעיף */
-  function itemMenu(item) {
-    if (!item) return;
-    var cat = Store.category(item.categoryId);
-    UI.modal({
-      title: item.title || cat.name,
-      subtitle: 'מה לעשות עם הסעיף?',
-      body: '<button class="btn soft js-edit">עריכת הסעיף</button>' +
-            '<button class="btn danger js-del mt">מחיקת הסעיף</button>',
-      onMount: function (body, close) {
-        body.querySelector('.js-edit').addEventListener('click', function () {
-          close();
-          itemForm(item);
-        });
-        body.querySelector('.js-del').addEventListener('click', function () {
-          close();
-          UI.confirmBox('למחוק את הסעיף?',
-            'הסעיף יימחק מתכנון התקציב לצמיתות.', function () {
-              Store.remove('budgetItems', item.id);
-              App.render();
-              UI.toast('הסעיף נמחק');
-            });
-        });
-      }
-    });
   }
 
   /* ניהול הקטגוריות — יושב בלשונית הקטגוריות, גם כשעוד אין סעיפים */
@@ -598,7 +569,6 @@ Views.budget = (function () {
         App.render();
       },
       'budget-edit': function (el) { itemForm(Store.find('budgetItems', el.getAttribute('data-id'))); },
-      'budget-menu': function (el) { itemMenu(Store.find('budgetItems', el.getAttribute('data-id'))); },
       'cat-add': function () { catForm(null); },
       'cat-edit': function (el) { catForm(Store.find('categories', el.getAttribute('data-id'))); },
       'bud-set': function (el) {

@@ -163,14 +163,9 @@ img.art{display:block;width:100%;height:100%;object-fit:contain}
   display:flex;align-items:center;background:#fff;border-radius:var(--r-sm);
   box-shadow:var(--shadow);margin-bottom:9px;overflow:hidden;
 }
-.bitem .bi-more{
-  flex:none;align-self:stretch;width:30px;color:var(--muted);
-  font-size:19px;line-height:1;display:grid;place-items:center;
-}
-.bitem .bi-more:active{background:var(--line)}
 .bitem .bi-main{
   flex:1;min-width:0;display:flex;align-items:center;gap:11px;
-  padding:11px 2px 11px 13px;text-align:start;color:var(--ink);
+  padding:11px 13px;text-align:start;color:var(--ink);
   transition:transform .12s ease;
 }
 .bitem .bi-main:active{transform:scale(.99)}
