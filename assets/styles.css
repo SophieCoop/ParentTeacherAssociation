@@ -922,3 +922,28 @@ table.tbl tr td:first-child{font-weight:600}
   .tabbar,.btn,.iconbtn{display:none !important}
   body::before{display:none}
 }
+
+/* ===================== מצבי טעינה והצלחה ===================== */
+.spinner{
+  width:46px;height:46px;border-radius:50%;
+  border:4px solid var(--primary-soft);border-top-color:var(--primary);
+  animation:rot .9s linear infinite;
+}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+.state-box{text-align:center;padding:24px 16px}
+.state-box .spinner,.state-box .state-ico{margin:0 auto 14px}
+.state-box .state-ico{
+  width:58px;height:58px;border-radius:50%;display:grid;place-items:center;
+  font-size:27px;background:var(--green);color:var(--green-ink);
+  animation:pop .36s cubic-bezier(.2,1.5,.5,1) both;
+}
+.state-box b{display:block;font-size:16px;color:var(--ink);margin-bottom:6px}
+.state-box p{margin:0;font-size:13px;color:var(--ink-2);line-height:1.65}
+.state-box .mail{font-weight:700;color:var(--ink);word-break:break-all}
+@keyframes pop{from{transform:scale(.4);opacity:0}to{transform:none;opacity:1}}
+
+@media (prefers-reduced-motion:reduce){
+  .spinner{animation-duration:2.6s}
+  .state-box .state-ico{animation:none}
+}
