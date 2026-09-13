@@ -31,9 +31,7 @@ var App = (function () {
   }
   function setVs(key, val) { viewState[key] = val; }
 
-  /* לבית אין איור משלו — הוא מקבל את סמל האפליקציה */
   function tabIcon(id) {
-    if (id === 'home') return '<img class="art" src="assets/icon-64.png" alt="" width="64" height="64">';
     return UI.art(id);
   }
 
