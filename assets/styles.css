@@ -590,14 +590,43 @@ table.tbl tr td:first-child{font-weight:600}
 /* ===== רעיון לצוות — הרכב הצוות, טבלת שורות וכרטיס סיכום ===== */
 .staff-mix{background:var(--primary-soft);border-radius:var(--r-sm);padding:12px;margin-bottom:14px}
 .staff-mix .sm-head{display:flex;align-items:center;gap:6px;font-size:13.5px;margin-bottom:9px}
-.staff-mix .sm-grid{display:flex;flex-wrap:wrap;gap:7px}
-.staff-mix .sm-cell{
-  flex:1 1 62px;background:#fff;border-radius:var(--r-xs);padding:7px 5px;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:1px;text-align:center;min-width:0;
+/* עמודה לכל דרגה — כולן בשורה אחת */
+.staff-mix .sm-grid{display:grid;gap:5px;grid-template-columns:repeat(var(--cols,4),minmax(0,1fr))}
+/* במסך צר אין מקום לכולן בשורה אחת בלי לחתוך את התוכן.
+   הרשת נשברת לשורות שווות, כך שדרגה אחרונה תופסת עמודה אחת ולא שורה שלמה. */
+@media (max-width:520px){
+  .staff-mix .sm-grid{grid-template-columns:repeat(auto-fit,minmax(74px,1fr))}
 }
-.staff-mix .sm-cell{cursor:pointer;transition:transform .12s ease}
-.staff-mix .sm-cell:active{transform:scale(.96)}
+.staff-mix .sm-cell{
+  background:#fff;border-radius:var(--r-xs);padding:6px 3px;min-width:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:space-between;
+  gap:4px;text-align:center;
+}
+.staff-mix .sm-top{
+  display:flex;flex-direction:column;align-items:center;gap:1px;width:100%;
+  color:var(--ink);transition:transform .12s ease;
+}
+.staff-mix .sm-top:active{transform:scale(.94)}
+/* רמת התקציב של הדרגה — משקל לחישוב היחס המומלץ */
+.staff-mix .sm-rank{width:100%;border-top:1px solid var(--line);padding-top:4px}
+.staff-mix .sm-rlab{display:block;font-size:9.5px;color:var(--muted);line-height:1.2}
+.staff-mix .sm-step{display:flex;align-items:center;justify-content:center;gap:2px;margin-top:2px}
+.staff-mix .sm-step button{
+  width:21px;height:21px;border-radius:7px;background:var(--primary-soft);
+  color:var(--primary-dark);font-size:13px;font-weight:700;line-height:1;
+  display:grid;place-items:center;flex:none;
+}
+.staff-mix .sm-step button:active{filter:brightness(.94)}
+.staff-mix .sm-step b{min-width:14px;font-size:13.5px;font-variant-numeric:tabular-nums}
+/* שם דרגה ארוך נשבר לשתי שורות. גובה קבוע לשם והצמדת הסרגל
+   לתחתית שומרים על המספרים והכפתורים באותו גובה בכל התאים. */
+.staff-mix .sm-name{
+  font-size:11px;line-height:1.2;min-height:2.4em;
+  display:flex;align-items:center;justify-content:center;
+}
+.staff-mix .sm-rank{margin-top:auto}
+.staff-mix .sm-num{font-size:15px}
+.staff-mix .sm-rlab{font-size:9px}
 .staff-mix .sm-name{font-size:11.5px;color:var(--ink-2);line-height:1.25}
 .staff-mix .sm-num{font-size:16px;font-variant-numeric:tabular-nums}
 .staff-mix .sm-hint{font-size:11px;color:var(--muted);margin:9px 0 0;text-align:center}
@@ -671,6 +700,39 @@ table.tbl tr td:first-child{font-weight:600}
 .pk-foot{display:flex;align-items:center;gap:9px;margin-top:12px}
 .pk-foot .pk-ok{flex:1}
 .pk-foot .pk-add{flex:none;white-space:nowrap}
+
+/* כרטיס תקציב הרעיון, בראש בלוק השורות */
+.ib-card{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  background:var(--primary-soft);border-radius:var(--r-sm);padding:11px 13px;margin-bottom:12px;
+}
+.ib-head{display:flex;align-items:center;gap:9px;flex:none}
+.ib-ico{width:38px;height:38px;flex:none;border-radius:50%;background:#fff;display:grid;place-items:center}
+.ib-ico img.art{width:24px;height:24px}
+.ib-lab{display:block;font-size:11.5px;color:var(--muted);line-height:1.2}
+.ib-val{font-size:21px;font-weight:800;color:var(--primary-dark);letter-spacing:-.4px}
+.ib-prog{flex:1;min-width:120px;border-inline-start:1px solid #fff;padding-inline-start:12px}
+.ib-prog .bar{margin-top:0}
+.ib-sub{font-size:11.5px;color:var(--ink-2);margin-top:5px;text-align:center}
+.ib-left{flex:none;text-align:center}
+.ib-left b{font-size:19px;font-weight:800}
+
+/* אחוז בפועל מול המומלץ */
+.pc{display:inline-flex;flex-direction:column;align-items:center;line-height:1.15;
+  padding:3px 7px;border-radius:9px;min-width:46px}
+.pc b{font-size:13.5px;font-variant-numeric:tabular-nums}
+.pc small{font-size:10px;color:var(--muted)}
+.pc.ok{background:var(--green)} .pc.ok b{color:var(--green-ink)}
+.pc.over{background:var(--pink)} .pc.over b{color:var(--pink-ink)}
+.pc.under{background:var(--primary-soft)} .pc.under b{color:var(--primary-dark)}
+.pc-none{color:var(--muted)}
+.line-tbl th small{display:block;font-weight:400;font-size:9.5px}
+
+.ln-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:4px}
+.ln-foot .btn{flex:none;width:auto}
+.ln-total{font-size:12.5px;color:var(--ink-2);white-space:nowrap}
+.ln-total b{font-size:16px;font-weight:800;margin-inline-start:5px}
+.ln-total small{font-size:11.5px;color:var(--muted);margin-inline-start:5px}
 
 .idea-total{
   display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
@@ -976,17 +1038,23 @@ table.tbl tr td:first-child{font-weight:600}
   .line-tbl thead{display:none}
   .line-tbl tr{
     display:grid;grid-template-columns:1fr 92px auto;
-    grid-template-areas:"name name del" "who price sum";
+    grid-template-areas:"name name del" "who price sum" "pct pct pct";
     gap:8px;align-items:end;
     background:#FAF8FD;border-radius:14px;padding:10px;margin-bottom:9px;
   }
+  .line-tbl td:nth-child(5){
+    grid-area:pct;width:auto;display:flex;align-items:center;gap:7px;
+    border-top:1px solid var(--line);padding-top:8px;
+  }
+  .line-tbl td:nth-child(5)::before{margin-bottom:0}
+  .line-tbl td:last-child{grid-area:del}
   .line-tbl td{padding:0;border-top:none}
   /* width:auto חוזר בכל שורה, כדי לגבור על אחוזי העמודות של הטבלה */
   .line-tbl td:nth-child(1){grid-area:name;width:auto}
   .line-tbl td:nth-child(2){grid-area:who;width:auto}
   .line-tbl td:nth-child(3){grid-area:price;width:auto}
   .line-tbl td:nth-child(4){grid-area:sum;width:auto;align-self:center;padding-bottom:9px}
-  .line-tbl td:last-child{grid-area:del;width:auto;align-self:center}
+  .line-tbl td:last-child{width:auto;align-self:center}
   .line-tbl td[data-lab]:not(:nth-child(1))::before{
     content:attr(data-lab);display:block;
     font-size:10.5px;color:var(--muted);margin-bottom:3px;

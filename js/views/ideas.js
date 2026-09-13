@@ -328,9 +328,49 @@ Views.ideas = (function () {
       return lines.reduce(function (s, l) { return s + lineSum(l, staff); }, 0);
     }
 
-    /* הסיכום יושב כולו בכרטיס התחתון, ולכן מספיק לצייר אותו מחדש */
+    /* שורת הסיכום שמתחת לשורות */
+    function totalText(root, total) {
+      var sel = root && root.querySelector('#f-budgetItemId');
+      var b = sel ? itemLeft(sel.value) : null;
+      return 'סה״כ הוצאות <b>' + UI.money(total) + '</b>' +
+        (b && b.planned ? '<small>(מתוך ' + UI.money(b.planned) + ')</small>'
+                        : '<small>בחירת סעיף תקציב תציג גם כמה ממנו נוצל</small>');
+    }
+
+    /* רענון הסכומים בלי לצייר מחדש את כל הבלוק */
     function refreshTotal(root) {
-      drawTotalCard(root);
+      var total = linesTotal(staffMode(root));
+      var el = root.querySelector('#lines-total');
+      if (el) el.innerHTML = totalText(root, total);
+      var box = root.querySelector('#f-lines');
+      if (!box) return;
+      var card = box.querySelector('.ib-card');
+      var fresh = budgetCardHTML(root, total);
+      if (card && fresh) card.outerHTML = fresh;
+      else if (card) card.remove();
+      else if (fresh) drawLines(root);
+    }
+
+    /* כרטיס תקציב הרעיון — כמה הסעיף נותן, כמה הרעיון מנצל ומה נותר */
+    function budgetCardHTML(root, total) {
+      var sel = root && root.querySelector('#f-budgetItemId');
+      var b = sel ? itemLeft(sel.value) : null;
+      if (!b || !b.planned) return '';
+      var left = Calc.round2(b.planned - total);
+      var pct = Math.min(100, Math.round((total / b.planned) * 100));
+      return '<div class="ib-card">' +
+        '<div class="ib-head">' +
+          '<span class="ib-ico">' + UI.art('collection') + '</span>' +
+          '<span class="ib-main"><span class="ib-lab">תקציב לרעיון</span>' +
+            '<b class="ib-val">' + UI.money(b.planned) + '</b></span>' +
+        '</div>' +
+        '<div class="ib-prog">' +
+          UI.bar(total, b.planned, total > b.planned ? 'over' : 'ok') +
+          '<div class="ib-sub">' + UI.money(total) + ' נוצלו מתוך ' + UI.money(b.planned) + '</div>' +
+        '</div>' +
+        '<div class="ib-left"><span class="ib-lab">' + (left >= 0 ? 'נותרו' : 'חריגה') + '</span>' +
+          '<b class="' + (left >= 0 ? 'pos' : 'neg') + '">' + UI.money(Math.abs(left)) + '</b></div>' +
+        '</div>';
     }
 
     /* כרטיס הרכב הצוות — מנין נלקחות הכמויות בטבלה */
@@ -344,16 +384,31 @@ Views.ideas = (function () {
       }
       return '<div class="staff-mix">' +
         '<div class="sm-head">\ud83d\udc65 <b>הרכב צוות הגן</b></div>' +
-        '<div class="sm-grid">' +
+        /* עמודה לכל דרגה, כך שכולן בשורה אחת ואין דרגה שנופלת לשורה משלה */
+        '<div class="sm-grid" style="--cols:' + mix.length + '">' +
           mix.map(function (x) {
             var name = levelName(x.level.id, x.count);
-            return '<button type="button" class="sm-cell" data-mix="' + x.level.id + '" ' +
-              'aria-label="הצגת השמות — ' + UI.esc(name) + '">' +
-              '<span class="sm-name">' + UI.esc(name) + '</span>' +
-              '<b class="sm-num">' + x.count + '</b></button>';
+            var w = Calc.levelWeight(Store.state, x.level.id);
+            return '<div class="sm-cell">' +
+              '<button type="button" class="sm-top" data-mix="' + x.level.id + '" ' +
+                'aria-label="הצגת השמות — ' + UI.esc(name) + '">' +
+                '<span class="sm-name">' + UI.esc(name) + '</span>' +
+                '<b class="sm-num">' + x.count + '</b></button>' +
+              '<div class="sm-rank">' +
+                '<span class="sm-rlab">רמת תקציב</span>' +
+                '<span class="sm-step">' +
+                  '<button type="button" data-w="' + x.level.id + '" data-d="-1" ' +
+                    'aria-label="הפחתת רמת התקציב">−</button>' +
+                  '<b>' + w + '</b>' +
+                  '<button type="button" data-w="' + x.level.id + '" data-d="1" ' +
+                    'aria-label="הגדלת רמת התקציב">+</button>' +
+                '</span>' +
+              '</div>' +
+              '</div>';
           }).join('') +
         '</div>' +
-        '<p class="sm-hint">לחיצה על דרגה מציגה את השמות. המספרים מלשונית "צוות הגן"</p>' +
+        '<p class="sm-hint">רמת התקציב משמשת רק לחישוב היחס המומלץ למתנה, ואינה משקפת הערכה אישית. ' +
+          'לחיצה על דרגה מציגה את השמות.</p>' +
         '</div>';
     }
 
@@ -600,10 +655,41 @@ Views.ideas = (function () {
       });
     }
 
-    function linesTableHTML() {
+    /* כמה אחוז מתקציב הרעיון השורה תופסת בפועל, מול החלק שמומלץ
+       לדרגות שנבחרו בה, לפי רמות התקציב ומספר האנשים בכל דרגה */
+    function pctCellHTML(l, root) {
+      var sel = root && root.querySelector('#f-budgetItemId');
+      var b = sel ? itemLeft(sel.value) : null;
+      if (!b || !b.planned) return '<span class="pc-none">—</span>';
+
+      var actual = Math.round((lineSum(l, true) / b.planned) * 100);
+      var rec = Math.round(recShare(l) * 100);
+      var cls = !rec ? '' : (actual > rec + 2 ? 'over' : (actual < rec - 2 ? 'under' : 'ok'));
+      return '<span class="pc ' + cls + '"><b>' + actual + '%</b>' +
+        (rec ? '<small>(' + rec + '%)</small>' : '') + '</span>';
+    }
+
+    /* החלק המומלץ של השורה — סכום החלקים של הדרגות שנבחרו בה.
+       שורה שנבחרו בה רק חלק מאנשי הדרגה מקבלת את החלק היחסי בלבד. */
+    function recShare(l) {
+      var st = Store.state;
+      if (l.shared) return 0;
+      var ids = lineIds(l);
+      if (!ids.length) return 0;
+      var sum = 0;
+      staffMix().forEach(function (x) {
+        var all = idsOfLevel(x.level.id);
+        var picked = all.filter(function (id) { return ids.indexOf(id) > -1; }).length;
+        if (picked) sum += Calc.levelShare(st, x.level.id) * (picked / all.length);
+      });
+      return sum;
+    }
+
+    function linesTableHTML(root) {
       return '<div class="line-tbl"><table><thead><tr>' +
           '<th>מוצר / שירות</th><th>למי?</th>' +
-          '<th class="end">מחיר לאדם</th><th class="end">סה״כ</th><th></th>' +
+          '<th class="end">מחיר לאדם</th><th class="end">סה״כ</th>' +
+          '<th class="end">% בפועל<small>(מומלץ)</small></th><th></th>' +
         '</tr></thead><tbody>' +
         lines.map(function (l, i) {
           return '<tr>' +
@@ -617,6 +703,7 @@ Views.ideas = (function () {
               'inputmode="decimal" min="0" placeholder="0" aria-label="מחיר לאדם" ' +
               'value="' + UI.esc(l.amount === '' || l.amount === undefined ? '' : l.amount) + '"></td>' +
             '<td class="end" data-lab="סה״כ"><b data-ln-sum="' + i + '">' + UI.money(lineSum(l, true)) + '</b></td>' +
+            '<td class="end" data-lab="% בפועל (מומלץ)" data-ln-pct="' + i + '">' + pctCellHTML(l, root) + '</td>' +
             '<td><button type="button" class="iconbtn del" data-ln-del="' + i + '" ' +
               'aria-label="מחיקת שורה">✕</button></td>' +
             '</tr>';
@@ -651,51 +738,32 @@ Views.ideas = (function () {
       }).join('');
     }
 
-    /* סיכום הרעיון — הסכום מול סעיף התקציב שנבחר */
-    function totalCardHTML() {
-      return '<div class="idea-total" id="idea-total"></div>';
-    }
-
-    function drawTotalCard(root) {
-      var box = root.querySelector('#idea-total');
-      if (!box) return;
-      var total = linesTotal(staffMode(root));
-      var sel = root.querySelector('#f-budgetItemId');
-      var b = sel ? itemLeft(sel.value) : null;
-      var planned = b && b.planned ? b.planned : 0;
-
-      var main = '<div class="it-main">' +
-        '<div class="it-lab">סה״כ הרעיון</div>' +
-        '<div class="it-val">' + UI.money(total) + '</div>' +
-        (planned ? '<div class="it-sub">מתוך ' + UI.money(planned) + '</div>' : '') +
-        '</div>';
-
-      if (!planned) {
-        box.innerHTML = main +
-          '<p class="it-hint">בחירת סעיף תקציב תציג כאן גם כמה ממנו הרעיון מנצל</p>';
-        return;
-      }
-      var pct = Math.round((total / planned) * 100);
-      var over = total > planned;
-      box.innerHTML = main +
-        UI.donut([
-          { value: Math.min(total, planned), color: UI.toneHex(over ? 'pink' : 'purple') },
-          { value: Math.max(0, planned - total), color: '#EFEAF3' }
-        ], pct + '%', over ? 'חריגה מהתקציב' : 'מהתקציב בשימוש');
-    }
-
     function drawLines(root) {
       var box = root.querySelector('#f-lines');
       if (!box) return;
       var staff = staffMode(root);
 
       box.innerHTML =
+        budgetCardHTML(root, linesTotal(staff)) +
         (staff ? staffMixHTML() : '') +
         '<label>שורות ההוצאה</label>' +
-        (lines.length ? (staff ? linesTableHTML() : lineCardsHTML())
+        (lines.length ? (staff ? linesTableHTML(root) : lineCardsHTML())
                       : '<p class="small muted" style="margin:0 0 8px">עוד לא נוספו שורות הוצאה.</p>') +
-        '<button type="button" class="btn soft sm" data-ln-add="1" style="width:100%">+ הוספת שורה</button>' +
-        totalCardHTML();
+        '<div class="ln-foot">' +
+          '<button type="button" class="btn soft sm" data-ln-add="1">+ הוספת שורה</button>' +
+          '<span class="ln-total" id="lines-total">' + totalText(root, linesTotal(staff)) + '</span>' +
+        '</div>';
+
+      Array.prototype.forEach.call(box.querySelectorAll('[data-w]'), function (btn) {
+        btn.addEventListener('click', function () {
+          var id = btn.getAttribute('data-w');
+          var next = Calc.levelWeight(Store.state, id) + Calc.num(btn.getAttribute('data-d'));
+          Store.state.settings.levelWeights = Store.state.settings.levelWeights || {};
+          Store.state.settings.levelWeights[id] = Math.max(0, Math.min(10, next));
+          Store.save();
+          drawLines(root);
+        });
+      });
 
       Array.prototype.forEach.call(box.querySelectorAll('[data-who]'), function (btn) {
         btn.addEventListener('click', function () {
@@ -718,6 +786,8 @@ Views.ideas = (function () {
                         : (inp.value === '' ? '' : Calc.num(inp.value));
           var sum = box.querySelector('[data-ln-sum="' + i + '"]');
           if (sum) sum.textContent = UI.money(lineSum(lines[i], staff));
+          var pc = box.querySelector('[data-ln-pct="' + i + '"]');
+          if (pc) pc.innerHTML = pctCellHTML(lines[i], root);
           refreshTotal(root);
         };
         inp.addEventListener('input', handler);
@@ -741,8 +811,6 @@ Views.ideas = (function () {
         var inputs = box.querySelectorAll('[data-ln="label"]');
         if (inputs.length) inputs[inputs.length - 1].focus();
       });
-
-      drawTotalCard(root);
     }
 
     UI.formModal({
