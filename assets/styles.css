@@ -926,6 +926,10 @@ table.tbl tr td:first-child{font-weight:600}
   .tabbar button.on{background:var(--primary-soft);color:var(--primary-dark);font-weight:700}
   .tabbar button.on .tb-ico{transform:none}
   .toast-root{bottom:24px}
+  /* במסך רחב הכרטיס מתארך, ו-flex:1 על גוש הטקסט מרחיק את החזיר
+     לקצה. הסכום והאיור ממורכזים יחד כיחידה אחת. */
+  .pot-top{justify-content:center;gap:20px}
+  .pot-main{flex:0 1 auto}
   .tiles{grid-template-columns:repeat(4,1fr)}
   .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
   .modal-back{align-items:center}
