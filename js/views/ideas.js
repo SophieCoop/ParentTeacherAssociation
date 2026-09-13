@@ -300,7 +300,7 @@ Views.ideas = (function () {
     function linesTableHTML() {
       return '<div class="line-tbl"><table><thead><tr>' +
           '<th>מוצר / שירות</th><th>למי?</th>' +
-          '<th class="end">מחיר</th><th class="end">סה״כ</th><th></th>' +
+          '<th class="end">מחיר לאדם</th><th class="end">סה״כ</th><th></th>' +
         '</tr></thead><tbody>' +
         lines.map(function (l, i) {
           return '<tr>' +
@@ -309,7 +309,7 @@ Views.ideas = (function () {
             '<td><select class="input" data-ln="levelId" data-i="' + i + '" aria-label="למי?">' +
               levelOptions(l) + '</select></td>' +
             '<td><input class="input end" data-ln="amount" data-i="' + i + '" type="number" ' +
-              'inputmode="decimal" min="0" placeholder="0" aria-label="מחיר" ' +
+              'inputmode="decimal" min="0" placeholder="0" aria-label="מחיר לאדם" ' +
               'value="' + UI.esc(l.amount === '' || l.amount === undefined ? '' : l.amount) + '"></td>' +
             '<td class="end"><b data-ln-sum="' + i + '">' + UI.money(lineSum(l, true)) + '</b></td>' +
             '<td><button type="button" class="iconbtn del" data-ln-del="' + i + '" ' +
