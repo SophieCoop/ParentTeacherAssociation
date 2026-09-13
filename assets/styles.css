@@ -150,11 +150,47 @@ img.art{display:block;width:100%;height:100%;object-fit:contain}
 .card-title .sub{font-size:12px;color:var(--muted);font-weight:400}
 
 /* כותרת קבוצה עם קו הפרדה — מפרידה בין קהלי היעד ברשימת התקציב */
-.group-head{display:flex;align-items:center;gap:10px;margin:22px 2px 10px}
+.group-head{margin:22px 2px 10px}
 .group-head:first-child{margin-top:4px}
+.group-head .gh-top{display:flex;align-items:center;gap:10px}
 .group-head .g-label{display:flex;align-items:center;gap:7px;font-weight:700;font-size:14.5px;white-space:nowrap}
 .group-head .g-line{flex:1;height:1px;background:var(--line)}
 .group-head .g-sum{font-size:12.5px;color:var(--muted);font-weight:700;white-space:nowrap}
+.group-head .g-desc{font-size:12px;color:var(--muted);margin-top:3px}
+
+/* שורת סעיף תקציב — כרטיס לבן עם אריח איקון בגוון הקטגוריה */
+.bitem{
+  display:flex;align-items:center;background:#fff;border-radius:var(--r-sm);
+  box-shadow:var(--shadow);margin-bottom:9px;overflow:hidden;
+}
+.bitem .bi-more{
+  flex:none;align-self:stretch;width:30px;color:var(--muted);
+  font-size:19px;line-height:1;display:grid;place-items:center;
+}
+.bitem .bi-more:active{background:var(--line)}
+.bitem .bi-main{
+  flex:1;min-width:0;display:flex;align-items:center;gap:11px;
+  padding:11px 2px 11px 13px;text-align:start;color:var(--ink);
+  transition:transform .12s ease;
+}
+.bitem .bi-main:active{transform:scale(.99)}
+.bitem .bi-ico{
+  width:46px;height:46px;flex:none;border-radius:15px;
+  display:grid;place-items:center;font-size:23px;
+}
+.bitem .bi-ico img.cat-art{width:34px;height:34px}
+.bitem .bi-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.bitem .bi-name{font-weight:700;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bitem .bi-date{font-size:12px;color:var(--muted)}
+.bitem .bi-sub{font-size:12px;color:var(--muted)}
+.bitem .bi-end{flex:none;display:flex;align-items:center;gap:3px}
+.bitem .bi-amount{font-weight:800;font-size:15.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.bitem .bi-chev{color:var(--muted);display:grid;place-items:center}
+@media (max-width:370px){
+  .bitem .bi-ico{width:40px;height:40px;border-radius:13px;font-size:20px}
+  .bitem .bi-ico img.cat-art{width:30px;height:30px}
+  .bitem .bi-amount{font-size:14.5px}
+}
 
 .section-title{
   display:flex;align-items:center;justify-content:space-between;
