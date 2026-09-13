@@ -607,16 +607,16 @@ Views.ideas = (function () {
         '</tr></thead><tbody>' +
         lines.map(function (l, i) {
           return '<tr>' +
-            '<td><input class="input" data-ln="label" data-i="' + i + '" ' +
+            '<td data-lab="מוצר / שירות"><input class="input" data-ln="label" data-i="' + i + '" ' +
               'placeholder="מוצר / שירות" value="' + UI.esc(l.label || '') + '"></td>' +
-            '<td><button type="button" class="who-btn" data-who="' + i + '" aria-label="בחירת מקבלי המתנה">' +
+            '<td data-lab="למי?"><button type="button" class="who-btn" data-who="' + i + '" aria-label="בחירת מקבלי המתנה">' +
               '<span class="who-txt">' + UI.esc(whoLabel(l)) + '</span>' +
               '<span class="who-chev">' + UI.svgIcon('chevron', 13) + '</span>' +
               '</button></td>' +
-            '<td><input class="input end" data-ln="amount" data-i="' + i + '" type="number" ' +
+            '<td data-lab="מחיר לאדם"><input class="input end" data-ln="amount" data-i="' + i + '" type="number" ' +
               'inputmode="decimal" min="0" placeholder="0" aria-label="מחיר לאדם" ' +
               'value="' + UI.esc(l.amount === '' || l.amount === undefined ? '' : l.amount) + '"></td>' +
-            '<td class="end"><b data-ln-sum="' + i + '">' + UI.money(lineSum(l, true)) + '</b></td>' +
+            '<td class="end" data-lab="סה״כ"><b data-ln-sum="' + i + '">' + UI.money(lineSum(l, true)) + '</b></td>' +
             '<td><button type="button" class="iconbtn del" data-ln-del="' + i + '" ' +
               'aria-label="מחיקת שורה">✕</button></td>' +
             '</tr>';
