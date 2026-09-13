@@ -28,6 +28,7 @@ Views.ideas = (function () {
   /* שם הדרגה ביחיד או ברבים, לפי כמה אנשי צוות יש בה */
   function levelName(levelId, count) {
     if (levelId === 'all') return 'כל הצוות';
+    if (levelId === 'edu') return 'כל הצוות החינוכי';
     var lv = Store.staffLevel(levelId);
     return (count === 1 || !lv.plural) ? lv.name : lv.plural;
   }
@@ -262,6 +263,7 @@ Views.ideas = (function () {
         opts.push({ id: '', label: 'כמות קבועה (' + Calc.lineQty({ qty: l.qty }) + ')' });
       }
       opts.push({ id: 'all', label: 'כל הצוות (' + (st.staff || []).length + ')' });
+      opts.push({ id: 'edu', label: 'כל הצוות החינוכי (' + Calc.staffAtLevel(st, 'edu') + ')' });
       staffMix().forEach(function (x) {
         opts.push({ id: x.level.id, label: levelName(x.level.id, x.count) + ' (' + x.count + ')' });
       });
