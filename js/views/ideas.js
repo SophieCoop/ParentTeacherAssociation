@@ -384,7 +384,8 @@ Views.ideas = (function () {
       }
       return '<div class="staff-mix">' +
         '<div class="sm-head">\ud83d\udc65 <b>הרכב צוות הגן</b></div>' +
-        '<div class="sm-grid">' +
+        /* עמודה לכל דרגה, כך שכולן בשורה אחת ואין דרגה שנופלת לשורה משלה */
+        '<div class="sm-grid" style="--cols:' + mix.length + '">' +
           mix.map(function (x) {
             var name = levelName(x.level.id, x.count);
             var w = Calc.levelWeight(Store.state, x.level.id);

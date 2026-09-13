@@ -590,10 +590,17 @@ table.tbl tr td:first-child{font-weight:600}
 /* ===== רעיון לצוות — הרכב הצוות, טבלת שורות וכרטיס סיכום ===== */
 .staff-mix{background:var(--primary-soft);border-radius:var(--r-sm);padding:12px;margin-bottom:14px}
 .staff-mix .sm-head{display:flex;align-items:center;gap:6px;font-size:13.5px;margin-bottom:9px}
-.staff-mix .sm-grid{display:flex;flex-wrap:wrap;gap:7px}
+/* עמודה לכל דרגה — כולן בשורה אחת */
+.staff-mix .sm-grid{display:grid;gap:5px;grid-template-columns:repeat(var(--cols,4),minmax(0,1fr))}
+/* במסך צר אין מקום לכולן בשורה אחת בלי לחתוך את התוכן.
+   הרשת נשברת לשורות שווות, כך שדרגה אחרונה תופסת עמודה אחת ולא שורה שלמה. */
+@media (max-width:520px){
+  .staff-mix .sm-grid{grid-template-columns:repeat(auto-fit,minmax(74px,1fr))}
+}
 .staff-mix .sm-cell{
-  flex:1 1 92px;background:#fff;border-radius:var(--r-xs);padding:7px 6px;
-  display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center;min-width:0;
+  background:#fff;border-radius:var(--r-xs);padding:6px 3px;min-width:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:space-between;
+  gap:4px;text-align:center;
 }
 .staff-mix .sm-top{
   display:flex;flex-direction:column;align-items:center;gap:1px;width:100%;
@@ -603,14 +610,23 @@ table.tbl tr td:first-child{font-weight:600}
 /* רמת התקציב של הדרגה — משקל לחישוב היחס המומלץ */
 .staff-mix .sm-rank{width:100%;border-top:1px solid var(--line);padding-top:4px}
 .staff-mix .sm-rlab{display:block;font-size:9.5px;color:var(--muted);line-height:1.2}
-.staff-mix .sm-step{display:flex;align-items:center;justify-content:center;gap:4px;margin-top:2px}
+.staff-mix .sm-step{display:flex;align-items:center;justify-content:center;gap:2px;margin-top:2px}
 .staff-mix .sm-step button{
-  width:22px;height:22px;border-radius:8px;background:var(--primary-soft);
-  color:var(--primary-dark);font-size:14px;font-weight:700;line-height:1;
+  width:21px;height:21px;border-radius:7px;background:var(--primary-soft);
+  color:var(--primary-dark);font-size:13px;font-weight:700;line-height:1;
   display:grid;place-items:center;flex:none;
 }
 .staff-mix .sm-step button:active{filter:brightness(.94)}
-.staff-mix .sm-step b{min-width:16px;font-size:14px;font-variant-numeric:tabular-nums}
+.staff-mix .sm-step b{min-width:14px;font-size:13.5px;font-variant-numeric:tabular-nums}
+/* שם דרגה ארוך נשבר לשתי שורות. גובה קבוע לשם והצמדת הסרגל
+   לתחתית שומרים על המספרים והכפתורים באותו גובה בכל התאים. */
+.staff-mix .sm-name{
+  font-size:11px;line-height:1.2;min-height:2.4em;
+  display:flex;align-items:center;justify-content:center;
+}
+.staff-mix .sm-rank{margin-top:auto}
+.staff-mix .sm-num{font-size:15px}
+.staff-mix .sm-rlab{font-size:9px}
 .staff-mix .sm-name{font-size:11.5px;color:var(--ink-2);line-height:1.25}
 .staff-mix .sm-num{font-size:16px;font-variant-numeric:tabular-nums}
 .staff-mix .sm-hint{font-size:11px;color:var(--muted);margin:9px 0 0;text-align:center}
