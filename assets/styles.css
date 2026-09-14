@@ -1121,10 +1121,11 @@ table.tbl tr td:first-child{font-weight:600}
 .ye-tbl td{padding:9px 8px;white-space:nowrap}
 /* שלוש עמודות ברוחב זהה. המספרים ממורכזים בתוך העמודה שלהם, יחד עם
    הכותרת שמעליהם — כך הם יושבים במרכז השטח שלהם ולא נסחפים אל הקצה. */
-/* פריסה קבועה — בלעדיה העמודה עם השמות נמתחת לפי התוכן והשלוש
-   מפסיקות להיות זהות */
-.ye-tbl{table-layout:fixed}
-.ye-tbl th{width:33.33%}
+/* עמודת השמות תופסת בדיוק את מה שהשם צריך, ומה שנשאר מתחלק שווה בשווה
+   בין שתי עמודות המספרים. 50% לכל אחת מהן מבקשות יותר מהנותר, ולכן
+   הדפדפן מקטין את שתיהן באותו יחס — כלומר חצי-חצי מהשארית. */
+.ye-tbl th:nth-child(2),.ye-tbl th:nth-child(3){width:50%}
+.ye-tbl td:first-child{white-space:nowrap;width:1px}
 /* table.tbl th.end מיישר לקצה, ובאותה עוצמת סלקטור — ולכן גם כאן
    table, כדי שהמרכוז יגבר עליו לפי סדר הופעה */
 table.ye-tbl th:nth-child(2),table.ye-tbl th:nth-child(3),
@@ -1134,11 +1135,7 @@ table.ye-tbl td:nth-child(2),table.ye-tbl td:nth-child(3){text-align:center}
 .ye-who{display:flex;align-items:center;gap:9px;min-width:0}
 .ye-who .avatar{width:32px;height:32px;font-size:15px}
 .ye-name{min-width:0}
-/* בעמודה של שליש מרוחב הטבלה, שם ארוך נחתך בנקודות ולא באמצע מילה */
-.ye-name b{
-  display:block;font-size:13.5px;line-height:1.3;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-}
+.ye-name b{display:block;font-size:13.5px;line-height:1.3;white-space:nowrap}
 /* שורת המשנה נשארת שורה אחת, כדי שכל השורות יישארו באותו גובה */
 .ye-name small{
   display:block;font-size:10.5px;color:var(--muted);font-weight:400;
