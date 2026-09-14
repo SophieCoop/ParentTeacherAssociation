@@ -23,15 +23,15 @@ Views.home = (function () {
       (Views.account.chipHTML() ? '<div style="margin-top:8px">' + Views.account.chipHTML() + '</div>' : '') +
       '</header>';
 
-    /* עדיין לא הוקם הגן — מציעים את אשף ההקמה במקום להסתיר אותו */
-    if (!st.setupDone) {
+    /* ההקמה נעצרה באמצע — מזכירים אותה כל עוד נשאר שלב לחזור אליו */
+    if (!st.setupDone || App.savedWizStep()) {
       html += '<div class="note"><div class="n-ico">🌱</div><div>' +
-        '<b>הגן עדיין לא הוקם</b>' +
-        'אפשר להריץ את אשף ההקמה — פרטי הגן, ילדים, צוות ותקציב. ' +
+        '<b>ההקמה של הגן לא הושלמה</b>' +
+        'ההקמה ממתינה מהשלב שבו עצרת — פרטי הגן, ילדים, צוות ותקציב. ' +
         'אם הנתונים כבר קיימים במכשיר אחר, ודאו שהוא מחובר ומסונכרן.' +
         '<div class="btn-row mt">' +
           '<button class="btn ghost" data-action="acc-sync">🔄 סנכרון עכשיו</button>' +
-          '<button class="btn" data-action="run-wizard">אשף ההקמה</button>' +
+          '<button class="btn" data-action="run-wizard">המשך בתהליך ההקמה</button>' +
         '</div></div></div>';
     }
 

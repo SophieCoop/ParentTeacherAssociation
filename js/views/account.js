@@ -205,6 +205,8 @@ Views.account = (function () {
 
     if (res.ok) {
       var isSignup = res.type === 'signup' || res.type === 'invite';
+      // אישור באמצע ההקמה — חוזרים לשלב שבו עצרנו, לא לעמוד הראשי
+      var inSetup = !Store.state.setupDone;
       UI.modal({
         title: isSignup ? 'החשבון אושר 🎉' : 'ההתחברות הושלמה ✓',
         subtitle: '',
@@ -213,9 +215,13 @@ Views.account = (function () {
             '<div class="state-ico">✓</div>' +
             '<b>' + (isSignup ? 'המייל אומת והחשבון פעיל' : 'זיהינו אותך') + '</b>' +
             '<p>' + (res.email ? '<span class="mail">' + UI.esc(res.email) + '</span><br>' : '') +
-            'מעכשיו כל שינוי נשמר בענן אוטומטית, ואפשר להמשיך לעבוד מהטלפון ומהמחשב.</p>' +
+            (inSetup
+              ? 'מכאן כל מה שתזיני בהמשך ההקמה נשמר בענן תוך כדי, וההקמה ממשיכה מהשלב שבו עצרת.'
+              : 'מעכשיו כל שינוי נשמר בענן אוטומטית, ואפשר להמשיך לעבוד מהטלפון ומהמחשב.') +
+            '</p>' +
           '</div>' +
-          '<button class="btn mt js-go">המשך לאפליקציה</button>',
+          '<button class="btn mt js-go">' +
+          (inSetup ? 'המשך בהקמה' : 'המשך לאפליקציה') + '</button>',
         onMount: function (root, close) {
           root.querySelector('.js-go').addEventListener('click', function () {
             close();
