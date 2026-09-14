@@ -69,6 +69,65 @@ Views.account = (function () {
   }
 
   /* ---------- טופס התחברות / הרשמה ---------- */
+  /* ---------- שליחת מייל האישור מחדש ---------- */
+  /* המייל לפעמים לא מגיע — נחסם, נופל לספאם או נמחק בטעות. כאן אפשר
+     לבקש אותו שוב בלי לפתוח חשבון חדש ובלי לזכור את הסיסמה */
+  function resendForm(email) {
+    UI.formModal({
+      title: 'שליחת מייל האישור מחדש',
+      subtitle: 'נשלח קישור אישור חדש. הקישור הקודם יפסיק לעבוד',
+      submitLabel: 'שליחה',
+      fields: [
+        { name: 'email', label: 'אימייל', type: 'email', required: true,
+          value: email || '', placeholder: 'dana@example.com',
+          hint: 'אותה כתובת שאיתה נפתח החשבון' }
+      ],
+      onSubmit: function (v, close) {
+        UI.toast('שולח…');
+        Cloud.resendConfirm(v.email).then(function () {
+          close();
+          UI.modal({
+            title: 'המייל נשלח 📬',
+            body: '<div class="state-box" role="status" aria-live="polite">' +
+                    '<div class="state-ico info">📬</div>' +
+                    '<b>שלחנו קישור חדש</b>' +
+                    '<p>אל <span class="mail">' + UI.esc(v.email) + '</span><br>' +
+                    'הקישור מחזיר ישר לאפליקציה ומאשר את החשבון.</p>' +
+                  '</div>' +
+                  '<div class="note"><div class="n-ico">💡</div><div>' +
+                  'לא רואים אותו? כדאי לבדוק בתיקיית הספאם או ב"קידומי מכירות", ' +
+                  'ולחפש את הכתובת ששלחה את המייל הקודם.' +
+                  '</div></div>'
+          });
+        }, function (err) {
+          UI.toast(err && err.message ? err.message : 'השליחה נכשלה');
+        });
+        return false;   // נסגר רק אחרי תשובת השרת
+      }
+    });
+  }
+
+  function notConfirmed(err) {
+    return !!err && (err.code === 'email_not_confirmed' ||
+                     /not confirmed|לאשר את המייל/i.test(err.message || ''));
+  }
+
+  /* הצעה לשלוח שוב — מוצגת כשההתחברות נכשלת כי החשבון עוד לא אושר */
+  function notConfirmedBox(email) {
+    UI.modal({
+      title: 'החשבון עוד לא אושר',
+      subtitle: 'צריך ללחוץ על הקישור שבמייל האישור',
+      body: '<p class="small">פתחנו את החשבון, אבל האישור במייל עדיין לא בוצע. ' +
+            'אם המייל לא הגיע — אפשר לשלוח אותו שוב.</p>' +
+            '<button class="btn mt js-resend">שליחת המייל שוב</button>',
+      onMount: function (root, close) {
+        root.querySelector('.js-resend').addEventListener('click', function () {
+          close(); resendForm(email);
+        });
+      }
+    });
+  }
+
   function authForm(mode) {
     var isSignup = mode === 'signup';
     UI.formModal({
@@ -80,8 +139,17 @@ Views.account = (function () {
       fields: [
         { name: 'email', label: 'אימייל', type: 'email', required: true, placeholder: 'dana@example.com' },
         { name: 'password', label: 'סיסמה', type: 'password', required: true,
-          placeholder: '••••••', hint: isSignup ? 'לפחות 6 תווים' : '' }
+          placeholder: '••••••', hint: isSignup ? 'לפחות 6 תווים' : '' },
+        { name: 'resend', type: 'html',
+          html: '<button type="button" class="linkbtn js-resend">' +
+                'מייל האישור לא הגיע? שליחה מחדש</button>' }
       ],
+      onMount: function (root) {
+        root.querySelector('.js-resend').addEventListener('click', function () {
+          var f = root.querySelector('#f-email');
+          resendForm(f ? f.value.trim() : '');
+        });
+      },
       onSubmit: function (v, close) {
         UI.toast(isSignup ? 'פותח חשבון…' : 'מתחבר…');
         var p = isSignup ? Cloud.signUp(v.email, v.password) : Cloud.signIn(v.email, v.password);
@@ -97,8 +165,12 @@ Views.account = (function () {
                     'אם המייל נפתח בטלפון — האישור יתבצע שם, ואפשר להמשיך לעבוד מכל מכשיר.' +
                     '</div></div>' +
                     '<button class="btn mt js-retry">כבר אישרתי — התחברות</button>' +
-                    '<button class="btn soft" style="margin-top:9px" data-action="acc-signin">התחברות ידנית</button>',
+                    '<button class="btn soft js-resend" style="margin-top:9px">' +
+                    'המייל לא הגיע? שליחה שוב</button>',
               onMount: function (root2, close2) {
+                root2.querySelector('.js-resend').addEventListener('click', function () {
+                  close2(); resendForm(v.email);
+                });
                 root2.querySelector('.js-retry').addEventListener('click', function () {
                   UI.toast('מתחבר…');
                   Cloud.signIn(v.email, v.password).then(function () {
@@ -106,6 +178,7 @@ Views.account = (function () {
                     App.render();
                     UI.toast('מחוברים ✓ הנתונים מסונכרנים');
                   }, function (err) {
+                    if (notConfirmed(err)) { close2(); notConfirmedBox(v.email); return; }
                     UI.toast(err && err.message ? err.message : 'ההתחברות נכשלה');
                   });
                 });
@@ -117,6 +190,7 @@ Views.account = (function () {
           UI.toast('מחוברים ✓ הנתונים מסונכרנים');
           if (window.Analytics) Analytics.account(isSignup ? 'signup' : 'signin');
         }, function (err) {
+          if (notConfirmed(err)) { close(); notConfirmedBox(v.email); return; }
           UI.toast(err && err.message ? err.message : 'ההתחברות נכשלה');
         });
         return false;   // הסגירה מתבצעת רק אחרי תשובת השרת
@@ -168,15 +242,15 @@ Views.account = (function () {
         // הודעת השרת מגיעה באנגלית — מציגים אותה רק כשאין לנו הסבר טוב ממנה
         (!expired && res.message ? '<div class="hint">' + UI.esc(res.message) + '</div>' : '') +
         '<div class="btn-row mt">' +
-          '<button class="btn ghost js-again">פתיחת חשבון מחדש</button>' +
-          '<button class="btn js-signin">התחברות</button>' +
+          '<button class="btn ghost js-signin">התחברות</button>' +
+          '<button class="btn js-resend">שליחת קישור חדש</button>' +
         '</div>',
       onMount: function (root, close) {
         root.querySelector('.js-signin').addEventListener('click', function () {
           close(); authForm('signin');
         });
-        root.querySelector('.js-again').addEventListener('click', function () {
-          close(); authForm('signup');
+        root.querySelector('.js-resend').addEventListener('click', function () {
+          close(); resendForm('');
         });
       }
     });
@@ -231,7 +305,7 @@ Views.account = (function () {
 
   return {
     chipHTML: chipHTML, refreshChip: refreshChip, panel: panel, showConflict: showConflict,
-    showAuthResult: showAuthResult,
+    showAuthResult: showAuthResult, resendForm: resendForm,
     actions: {
       'acc-signin':  function () { authForm('signin'); },
       'acc-signup':  function () { authForm('signup'); },

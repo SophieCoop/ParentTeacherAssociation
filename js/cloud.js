@@ -108,6 +108,8 @@ var Cloud = (function () {
                     ('שגיאה ' + res.status);
           var err = new Error(translateError(msg, res.status));
           err.status = res.status;
+          // קוד השגיאה של השרת — מאפשר למסך להגיב למקרה מסוים, בלי לנחש לפי הטקסט
+          err.code = (data && (data.error_code || data.error)) || '';
           err.data = data;
           throw err;
         }
@@ -125,6 +127,10 @@ var Cloud = (function () {
     if (/Password should be at least/i.test(m))      return 'הסיסמה קצרה מדי (לפחות 6 תווים)';
     if (/Unable to validate email/i.test(m))         return 'כתובת המייל אינה תקינה';
     if (/rate limit|too many/i.test(m))              return 'יותר מדי ניסיונות — נסו שוב בעוד כמה דקות';
+    var wait = m.match(/only request this after (\d+) second/i);
+    if (wait)                                        return 'אפשר לבקש מייל נוסף רק בעוד ' + wait[1] + ' שניות';
+    if (/already confirmed|already been confirmed/i.test(m)) return 'החשבון כבר מאושר — אפשר פשוט להתחבר';
+    if (/signups? not allowed|not found/i.test(m))   return 'לא מצאנו חשבון עם הכתובת הזו';
     if (code === 401 || code === 403)                return 'תוקף ההתחברות פג';
     return m;
   }
@@ -187,6 +193,14 @@ var Cloud = (function () {
       }
       return { confirmed: false };
     });
+  }
+
+  /* שליחת מייל האישור מחדש — למי שהמייל לא הגיע אליו או שאבד */
+  function resendConfirm(email) {
+    var back = returnUrl();
+    return api('/auth/v1/resend' + (back ? '?redirect_to=' + encodeURIComponent(back) : ''), {
+      method: 'POST', auth: false, body: { type: 'signup', email: email }
+    }).then(function () { return true; });
   }
 
   function signOut() {
@@ -435,7 +449,7 @@ var Cloud = (function () {
   return {
     init: init, info: info, onChange: onChange,
     enabled: enabled, signedIn: signedIn,
-    signIn: signIn, signUp: signUp, signOut: signOut,
+    signIn: signIn, signUp: signUp, signOut: signOut, resendConfirm: resendConfirm,
     sync: sync, onLocalChange: onLocalChange,
     getConflict: getConflict, resolveConflict: resolveConflict
   };
