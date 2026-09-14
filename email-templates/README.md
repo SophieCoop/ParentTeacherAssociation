@@ -44,6 +44,12 @@ Authentication › URL Configuration
 - **Redirect URLs**: אותה כתובת, ורצוי גם `https://vaadhorim.com/**`
   ו-`https://www.vaadhorim.com/**`.
 
+**חובה לכתוב `https://` בתחילת הכתובת.** בלי הסכמה זו אינה כתובת מוחלטת
+אלא נתיב יחסי: הדפדפן מצרף אותו לכתובת של Supabase ומנסה לפתוח
+`https://<project>.supabase.co/www.vaadhorim.com`, ומקבל
+`{"error":"requested path is invalid"}`. האישור עצמו מצליח — רק ההפניה
+חזרה לאתר נשברת, ולכן קל לטעות ולחשוב שהאישור נכשל.
+
 האפליקציה מבקשת בהרשמה לחזור לכתובת שממנה נרשמו (`redirect_to`).
 כתובת שאינה ברשימה הזו נדחית, ו-Supabase חוזר במקומה ל-Site URL.
 
