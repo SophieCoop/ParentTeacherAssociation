@@ -28,11 +28,6 @@ Views.onboarding = (function () {
 
   function paint() { App.render(); }
 
-  /* נתוני הדוגמה מחליפים את המצב כולו, והמצב כולו נדחף לענן — כך
-     שלמי שמחובר לחשבון הם היו מוחקים את הנתונים האמיתיים מכל
-     המכשירים. הכפתור נועד להתרשמות ראשונית, לא למי שכבר עובד. */
-  function demoAllowed() { return !(window.Cloud && Cloud.signedIn()); }
-
   /* ---------- מסך פתיחה ---------- */
   function splash() {
     return '<div class="splash">' +
@@ -40,9 +35,6 @@ Views.onboarding = (function () {
       '<h1>ועד הורים<br>גן שלנו</h1>' +
       '<p>יחד למען הילדים ❤️<br>ניהול תקציב, גבייה והוצאות במקום אחד</p>' +
       '<button class="btn" data-action="wiz-start">בואו נתחיל</button>' +
-      (demoAllowed()
-        ? '<button class="btn ghost" style="max-width:320px;margin-top:10px" data-action="wiz-demo">הצגת נתוני דוגמה</button>'
-        : '') +
       cloudBlock() +
       '</div>';
   }
@@ -436,15 +428,6 @@ Views.onboarding = (function () {
         App.setVs('forceWizard', true);
         App.setVs('wizStep', 1);
         App.render();
-      },
-      'wiz-demo': function () {
-        // שמירת ביטחון: הכפתור מוסתר, אבל הפעולה עצמה גלובלית
-        if (!demoAllowed()) { UI.toast('אי אפשר לטעון נתוני דוגמה כשמחוברים לחשבון'); return; }
-        resetCloud();
-        Store.loadDemo();
-        App.setVs('wizStep', 0);
-        App.setView('home');
-        UI.toast('נטענו נתוני דוגמה 🌸');
       },
       'wiz-back': function () { App.setVs('wizStep', Math.max(1, step() - 1)); App.render(); },
       'wiz-next': advance,
