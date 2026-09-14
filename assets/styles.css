@@ -650,7 +650,7 @@ table.tbl tr td:first-child{font-weight:600}
 .line-tbl .input[type=number]::-webkit-outer-spin-button,
 .line-tbl .input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .line-tbl select.input{padding-inline-end:22px;text-overflow:ellipsis}
-.line-tbl td:nth-child(4){white-space:nowrap;font-variant-numeric:tabular-nums;font-size:13px}
+.line-tbl td:nth-child(4){white-space:nowrap;font-variant-numeric:tabular-nums;font-size:13.5px}
 .line-tbl td:last-child{width:30px}
 .line-tbl .iconbtn{width:26px;height:26px;font-size:12px}
 
@@ -658,7 +658,7 @@ table.tbl tr td:first-child{font-weight:600}
 .who-btn{
   display:flex;align-items:center;gap:5px;width:100%;min-width:0;
   background:#fff;border:1px solid var(--line);border-radius:var(--r-xs);
-  padding:7px 8px;font-size:13px;color:var(--ink);text-align:start;
+  padding:7px 8px;font-size:12.5px;color:var(--ink);text-align:start;
 }
 .who-btn:active{background:var(--primary-soft)}
 .who-txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1018,11 +1018,6 @@ table.tbl tr td:first-child{font-weight:600}
     font-size:16px;
   }
   .line-tbl .input{padding:7px 6px}
-  /* השדות חייבים להישאר 16px, ולכן שאר התאים בשורה עולים אליהם ולא
-     להפך. 15px הוא הגדול ביותר שבו סכום בן ארבע ספרות עדיין נכנס
-     לרוחב העמודה בטלפון — ההפרש מהשדות אינו נראה לעין. */
-  .line-tbl .who-btn,
-  .line-tbl td:nth-child(4){font-size:15px}
   .line-card .lc-calc .input{padding:6px 4px}
   .line-card .lc-top .input{padding:7px 9px}
   .period .p-dates .input{padding:7px 7px}
@@ -1057,8 +1052,10 @@ table.tbl tr td:first-child{font-weight:600}
   .line-tbl th:nth-child(4){width:16%}
   .line-tbl th:nth-child(5){width:46px}   /* שבב האחוזים לא נדחס */
   .line-tbl th:last-child{width:24px}
+  .line-tbl td:nth-child(4){font-size:12px}
+
   .line-tbl .input{padding:7px 4px}
-  .line-tbl .who-btn{padding:7px 4px;gap:2px}
+  .line-tbl .who-btn{padding:7px 4px;font-size:12px;gap:2px}
   .line-tbl .who-chev{display:none}
   .line-tbl .iconbtn{width:22px;height:22px;font-size:10px}
 
