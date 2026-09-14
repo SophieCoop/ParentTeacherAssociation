@@ -227,6 +227,24 @@ Views.account = (function () {
       return;
     }
 
+    /* לחיצה שנייה על אותו קישור נכשלת תמיד — הוא חד־פעמי. אם המכשיר
+       כבר מחובר, האישור פשוט הצליח בלחיצה הקודמת ואין כאן תקלה */
+    if (Cloud.signedIn()) {
+      UI.modal({
+        title: 'הכול כבר מאושר ✓',
+        body: '<div class="state-box"><div class="state-ico">✓</div>' +
+                '<b>החשבון פעיל וההתחברות קיימת</b>' +
+                '<p>קישור האישור הוא חד־פעמי, ולכן לחיצה נוספת עליו לא עובדת. ' +
+                'אין צורך לעשות דבר — אפשר להמשיך לעבוד.</p>' +
+              '</div>' +
+              '<button class="btn mt js-go">המשך לאפליקציה</button>',
+        onMount: function (root, close) {
+          root.querySelector('.js-go').addEventListener('click', close);
+        }
+      });
+      return;
+    }
+
     // כישלון — ברוב המקרים קישור ישן. אין טעם לשלוח לנסות שוב את אותו קישור
     var expired = /expired|otp_expired/i.test(res.code || '') ||
                   /expired/i.test(res.message || '');
