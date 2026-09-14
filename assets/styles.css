@@ -1061,6 +1061,7 @@ table.tbl tr td:first-child{font-weight:600}
   }
   .line-tbl td:nth-child(4)::before{text-align:start}
   .line-tbl .who-btn{padding:9px 8px}
+}
 
 /* ===================== מצבי טעינה והצלחה ===================== */
 .spinner{
@@ -1087,3 +1088,14 @@ table.tbl tr td:first-child{font-weight:600}
   .spinner{animation-duration:2.6s}
   .state-box .state-ico{animation:none}
 }
+
+/* בתוך חלון צף אין צורך בריפוד העליון של הכרטיס */
+.m-body .state-box{padding:6px 0 4px}
+
+/* קישור־כפתור לפעולה משנית, כמו בקשה לשלוח את מייל האישור שוב */
+.linkbtn{
+  display:block;width:100%;background:none;border:none;padding:4px 0;
+  font:inherit;font-size:12.5px;color:var(--primary);
+  text-decoration:underline;cursor:pointer;text-align:center;
+}
+.linkbtn:hover{color:var(--ink)}

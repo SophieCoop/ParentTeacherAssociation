@@ -345,6 +345,7 @@ Views.onboarding = (function () {
         '<div class="mt">' +
           '<button class="btn" data-action="wiz-next">המשך להקמה</button>' +
           '<button class="btn soft" style="margin-top:9px" data-action="wiz-cloud-check">כבר אישרתי — בדיקה עכשיו</button>' +
+          '<button class="linkbtn" style="margin-top:11px" data-action="wiz-cloud-resend">המייל לא הגיע? שליחה מחדש</button>' +
         '</div>';
     }
 
@@ -439,6 +440,7 @@ Views.onboarding = (function () {
       'wiz-cloud': function (el) { cloud[el.getAttribute('data-key')] = el.value; },
       'wiz-cloud-signup': signup,
       'wiz-cloud-check': function () { check(true); },
+      'wiz-cloud-resend': function () { Views.account.resendForm(cloud.email); },
       'wiz-gan': function (el) {
         Store.state.gan[el.getAttribute('data-key')] = el.value;
         Store.save();

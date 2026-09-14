@@ -105,8 +105,10 @@ var App = (function () {
   function init() {
     Store.load();
     bind();
+    // כשמגיעים מקישור האישור שבמייל, init מחזיר הבטחה עם תוצאת ההתחברות
+    var fromEmail = null;
     if (window.Cloud) {
-      Cloud.init();
+      fromEmail = Cloud.init();
       // עדכון שבב המצב במקום, בלי ציור מחדש שיגזול מיקוד משדות פתוחים
       Cloud.onChange(function () {
         if (Views.account) Views.account.refreshChip();
@@ -115,6 +117,12 @@ var App = (function () {
     var hash = (location.hash || '').replace('#', '');
     if (hash && Views[hash] && Store.state.setupDone) current = hash;
     render();
+    if (fromEmail && fromEmail.then) {
+      fromEmail.then(function (res) {
+        render();
+        if (Views.account) Views.account.showAuthResult(res);
+      });
+    }
     // המסך הראשון. מי שעדיין באשף ידווח דרך שלבי האשף עצמם.
     if (window.Analytics && Store.state.setupDone) Analytics.view(current);
   }
