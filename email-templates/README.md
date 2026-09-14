@@ -21,8 +21,9 @@ Authentication › Emails › Templates › **Confirm signup**
 עלויות: השם בתיבת הדואר אינו של האפליקציה, והמכסה היא כשני מיילים בשעה —
 מגבלה שמורגשת מיד כשכמה הורים נרשמים באותו ערב.
 
-הפתרון הוא SMTP חיצוני: Project Settings › Authentication › **SMTP Settings**.
-כל ספק מתאים (Resend, Brevo, SendGrid, Mailgun). התהליך זהה בכולם:
+הפתרון הוא SMTP חיצוני — **ראו את המדריך המלא ב-[SMTP-SETUP.md](SMTP-SETUP.md)**,
+כולל רשומות ה-DNS והשדות המדויקים. בקצרה, התהליך זהה בכל ספק
+(Resend, Brevo, SendGrid, Mailgun):
 
 1. לפתוח חשבון אצל הספק ולהוסיף את הדומיין `vaadhorim.com`.
 2. להוסיף אצל רשם הדומיין את רשומות ה-DNS שהספק נותן — בדרך כלל
