@@ -1,0 +1,115 @@
+<!-- ============================================================
+     מייל אישור ההרשמה — Supabase › Authentication › Emails › Confirm signup
+     ------------------------------------------------------------
+     מודבק כמו שהוא לתוך תבנית "Confirm signup" בלוח הבקרה.
+     {{ .ConfirmationURL }} ו-{{ .SiteURL }} ממולאים על ידי Supabase.
+
+     בנוי בטבלאות ובעיצוב בשורה (inline) — לא בגלל נוסטלגיה, אלא
+     כי Gmail ו-Outlook מתעלמים מגיליון סגנונות ומ-flex/grid.
+     ============================================================ -->
+<div dir="rtl" lang="he" style="margin:0;padding:0;background:#F3EFF9">
+
+  <!-- שורת התצוגה המקדימה בתיבת הדואר, לפני הפתיחה -->
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0">
+    לחיצה אחת על הכפתור והחשבון מוכן — משם הכול נשמר ומסתנכרן.
+  </div>
+
+  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"
+         style="background:#F3EFF9;padding:28px 14px;font-family:'Heebo',Arial,Helvetica,sans-serif">
+    <tr>
+      <td align="center">
+
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="480"
+               style="width:100%;max-width:480px;background:#FFFFFF;border-radius:22px;
+                      border:1px solid #EAE3F7;overflow:hidden">
+
+          <!-- כותרת -->
+          <tr>
+            <td align="center" style="background:#9B8CE0;padding:26px 24px 22px">
+              <img src="{{ .SiteURL }}/assets/icon-192.png" width="62" height="62" alt=""
+                   style="display:block;width:62px;height:62px;border-radius:18px;border:0;background:#FFFFFF">
+              <div style="font-size:19px;font-weight:700;color:#FFFFFF;padding-top:12px;line-height:1.4">
+                ועד הורים גן שלנו
+              </div>
+              <div style="font-size:13px;color:#EDE9FB;padding-top:3px">
+                תקציב, גבייה והוצאות במקום אחד
+              </div>
+            </td>
+          </tr>
+
+          <!-- גוף ההודעה -->
+          <tr>
+            <td style="padding:28px 28px 8px;text-align:right">
+              <div style="font-size:21px;font-weight:800;color:#3D3357;line-height:1.35">
+                עוד לחיצה אחת והחשבון מוכן
+              </div>
+              <div style="font-size:14.5px;color:#6B6382;line-height:1.75;padding-top:10px">
+                פתחת חשבון עם הכתובת
+                <span style="color:#3D3357;font-weight:700;word-break:break-all">{{ .Email }}</span>.
+                האישור מוודא שהכתובת באמת שלך, ומרגע זה כל מה שמוזן נשמר בענן
+                ומסתנכרן בין הטלפון למחשב.
+              </div>
+            </td>
+          </tr>
+
+          <!-- הכפתור -->
+          <tr>
+            <td align="center" style="padding:22px 28px 6px">
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" bgcolor="#9B8CE0" style="border-radius:14px">
+                    <a href="{{ .ConfirmationURL }}"
+                       style="display:inline-block;padding:15px 38px;font-size:16px;font-weight:700;
+                              color:#FFFFFF;text-decoration:none;border-radius:14px;
+                              font-family:'Heebo',Arial,Helvetica,sans-serif">
+                      אישור הכתובת ומעבר לאפליקציה
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <div style="font-size:12px;color:#9A93AD;padding-top:12px;line-height:1.6">
+                הקישור תקף ל-24 שעות ומיועד ללחיצה אחת בלבד.
+              </div>
+            </td>
+          </tr>
+
+          <!-- קישור גיבוי, לכל מי שהכפתור לא עובד אצלו -->
+          <tr>
+            <td style="padding:20px 28px 0;text-align:right">
+              <div style="border-top:1px solid #F0ECF8;padding-top:18px;
+                          font-size:12px;color:#9A93AD;line-height:1.7">
+                הכפתור לא נפתח? אפשר להעתיק את הכתובת הזו לשורת הדפדפן:
+                <div style="padding-top:6px">
+                  <a href="{{ .ConfirmationURL }}" dir="ltr"
+                     style="color:#8574D6;word-break:break-all;font-size:11.5px">{{ .ConfirmationURL }}</a>
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <!-- הערה למי שלא נרשם -->
+          <tr>
+            <td style="padding:18px 28px 26px;text-align:right">
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"
+                     style="background:#F7F4FD;border-radius:14px">
+                <tr>
+                  <td style="padding:13px 15px;font-size:12.5px;color:#6B6382;line-height:1.7">
+                    לא פתחת חשבון? אפשר פשוט להתעלם מהמייל — בלי הלחיצה כאן שום חשבון לא נפתח.
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <!-- כותרת תחתונה -->
+        <div style="font-size:11.5px;color:#9A93AD;padding-top:16px;line-height:1.7">
+          נשלח אוטומטית מהאפליקציה
+          <a href="{{ .SiteURL }}" style="color:#8574D6;text-decoration:none">ועד הורים גן שלנו</a>
+          <br>אין צורך להשיב להודעה הזו.
+        </div>
+
+      </td>
+    </tr>
+  </table>
+</div>
