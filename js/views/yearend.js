@@ -89,9 +89,9 @@ Views.yearend = (function () {
         '<tfoot><tr>' +
           '<td><b>סה״כ</b></td>' +
           '<td class="end"><span class="ye-tot-val ye-paid">' + UI.money(rf.collected) + '</span>' +
-            '<span class="ye-tot-lab">סך כל התשלומים</span></td>' +
+            '<span class="ye-tot-lab">תשלומים</span></td>' +
           '<td class="end"><span class="ye-tot-val pos">' + UI.money(rf.totalRefund) + '</span>' +
-            '<span class="ye-tot-lab">סך כל ההחזרים</span></td>' +
+            '<span class="ye-tot-lab">החזרים</span></td>' +
         '</tr></tfoot>' +
       '</table>' +
       (rf.totalOwed > 0
