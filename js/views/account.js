@@ -93,8 +93,8 @@ Views.account = (function () {
               subtitle: 'שלחנו מייל אישור לכתובת ' + v.email,
               body: '<p class="small">צריך ללחוץ על הקישור שבמייל כדי להפעיל את החשבון.</p>' +
                     '<div class="note"><div class="n-ico">💡</div><div>' +
-                    '<b>הקישור ייפתח בעמוד ריק — זה תקין.</b>' +
-                    'האישור מתבצע בלחיצה עצמה, גם אם לא נפתח שום דבר. אחרי הלחיצה חוזרים לכאן.' +
+                    '<b>הקישור מחזיר ישר לאפליקציה</b> ומציג הודעת אישור. ' +
+                    'אם המייל נפתח בטלפון — האישור יתבצע שם, ואפשר להמשיך לעבוד מכל מכשיר.' +
                     '</div></div>' +
                     '<button class="btn mt js-retry">כבר אישרתי — התחברות</button>' +
                     '<button class="btn soft" style="margin-top:9px" data-action="acc-signin">התחברות ידנית</button>',
@@ -120,6 +120,64 @@ Views.account = (function () {
           UI.toast(err && err.message ? err.message : 'ההתחברות נכשלה');
         });
         return false;   // הסגירה מתבצעת רק אחרי תשובת השרת
+      }
+    });
+  }
+
+  /* ---------- חזרה מקישור האישור שבמייל ---------- */
+  /* res מגיע מ-Cloud.init: הצלחה מלאה, או קישור שפג תוקפו / כבר נוצל */
+  function showAuthResult(res) {
+    if (!res) return;
+
+    if (res.ok) {
+      var isSignup = res.type === 'signup' || res.type === 'invite';
+      UI.modal({
+        title: isSignup ? 'החשבון אושר 🎉' : 'ההתחברות הושלמה ✓',
+        subtitle: '',
+        body:
+          '<div class="state-box" role="status" aria-live="polite">' +
+            '<div class="state-ico">✓</div>' +
+            '<b>' + (isSignup ? 'המייל אומת והחשבון פעיל' : 'זיהינו אותך') + '</b>' +
+            '<p>' + (res.email ? '<span class="mail">' + UI.esc(res.email) + '</span><br>' : '') +
+            'מעכשיו כל שינוי נשמר בענן אוטומטית, ואפשר להמשיך לעבוד מהטלפון ומהמחשב.</p>' +
+          '</div>' +
+          '<button class="btn mt js-go">המשך לאפליקציה</button>',
+        onMount: function (root, close) {
+          root.querySelector('.js-go').addEventListener('click', function () {
+            close();
+            App.render();
+          });
+        }
+      });
+      if (window.Analytics) Analytics.account('confirmed');
+      return;
+    }
+
+    // כישלון — ברוב המקרים קישור ישן. אין טעם לשלוח לנסות שוב את אותו קישור
+    var expired = /expired|otp_expired/i.test(res.code || '') ||
+                  /expired/i.test(res.message || '');
+    UI.modal({
+      title: expired ? 'הקישור כבר לא בתוקף' : 'האישור לא הושלם',
+      subtitle: expired ? 'קישורי אישור תקפים לזמן מוגבל' : '',
+      body:
+        '<p class="small">' +
+        (expired
+          ? 'הקישור שבמייל פג תוקף או שכבר נעשה בו שימוש. אפשר פשוט להתחבר עם האימייל והסיסמה שבחרת — ואם החשבון עדיין לא אושר, נשלח מייל חדש.'
+          : 'משהו השתבש בדרך חזרה מהמייל. אפשר להתחבר ידנית עם האימייל והסיסמה.') +
+        '</p>' +
+        // הודעת השרת מגיעה באנגלית — מציגים אותה רק כשאין לנו הסבר טוב ממנה
+        (!expired && res.message ? '<div class="hint">' + UI.esc(res.message) + '</div>' : '') +
+        '<div class="btn-row mt">' +
+          '<button class="btn ghost js-again">פתיחת חשבון מחדש</button>' +
+          '<button class="btn js-signin">התחברות</button>' +
+        '</div>',
+      onMount: function (root, close) {
+        root.querySelector('.js-signin').addEventListener('click', function () {
+          close(); authForm('signin');
+        });
+        root.querySelector('.js-again').addEventListener('click', function () {
+          close(); authForm('signup');
+        });
       }
     });
   }
@@ -173,6 +231,7 @@ Views.account = (function () {
 
   return {
     chipHTML: chipHTML, refreshChip: refreshChip, panel: panel, showConflict: showConflict,
+    showAuthResult: showAuthResult,
     actions: {
       'acc-signin':  function () { authForm('signin'); },
       'acc-signup':  function () { authForm('signup'); },

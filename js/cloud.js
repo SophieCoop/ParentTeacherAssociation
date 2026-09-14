@@ -168,8 +168,15 @@ var Cloud = (function () {
     });
   }
 
+  /* לאן יחזור הקישור שבמייל. Supabase מקבל את הכתובת רק אם היא ברשימה
+     המאושרת שבהגדרות הפרויקט, ואחרת חוזר מעצמו לכתובת האתר הראשית */
+  function returnUrl() {
+    try { return location.origin + location.pathname; } catch (e) { return ''; }
+  }
+
   function signUp(email, password) {
-    return api('/auth/v1/signup', {
+    var back = returnUrl();
+    return api('/auth/v1/signup' + (back ? '?redirect_to=' + encodeURIComponent(back) : ''), {
       method: 'POST', auth: false, body: { email: email, password: password }
     }).then(function (d) {
       if (d && d.access_token) {
@@ -334,17 +341,95 @@ var Cloud = (function () {
   }
 
   /* ---------- הפעלה ---------- */
-  function init() {
-    loadLocal();
-    if (!enabled())  { setStatus('off');        return; }
-    if (!signedIn()) { setStatus('signed-out'); return; }
-    setStatus(meta.dirty ? 'pending' : 'synced');
-    sync();
+  /* ---------- חזרה מקישור האישור שבמייל ---------- */
+  /* Supabase מאמת את הכתובת ומפנה חזרה לאתר, כשהסשן מצורף
+     לכתובת אחרי ה-# (ושגיאה, אם הקישור פג או כבר נוצל). */
+  function parsePairs(str) {
+    var out = {};
+    (str || '').replace(/^[#?]/, '').split('&').forEach(function (part) {
+      if (!part) return;
+      var i = part.indexOf('=');
+      var k = decodeURIComponent(i < 0 ? part : part.slice(0, i));
+      var v = i < 0 ? '' : decodeURIComponent(part.slice(i + 1).replace(/\+/g, ' '));
+      if (k) out[k] = v;
+    });
+    return out;
+  }
+
+  /* קורא את פרטי החזרה ומנקה אותם מהכתובת — טוקן התחברות
+     לא אמור להישאר בשורת הכתובת, בהיסטוריה או בקישור משותף. */
+  function takeAuthRedirect() {
+    var p = parsePairs(location.hash);
+    if (!p.access_token && !p.error && !p.error_description) {
+      var q = parsePairs(location.search);
+      if (!q.error && !q.error_description) return null;
+      p = q;
+    }
+    try {
+      history.replaceState(null, document.title, location.pathname);
+    } catch (e) { location.hash = ''; }
+    return p;
+  }
+
+  /* הסשן שחזר מהמייל אינו כולל את פרטי המשתמש, ו-pull/push
+     זקוקים ל-user.id — לכן מושכים אותם לפני שמסמנים התחברות. */
+  function adoptRedirect(back) {
+    return api('/auth/v1/user', {
+      auth: false, headers: { 'Authorization': 'Bearer ' + back.access_token }
+    }).then(function (u) {
+      if (!u || !u.id) throw new Error('לא התקבלו פרטי המשתמש');
+      saveSession({
+        access_token: back.access_token,
+        refresh_token: back.refresh_token,
+        expires_in: parseInt(back.expires_in, 10) || 3600,
+        user: u
+      });
+      meta.lastServerAt = null;          // מכשיר חדש — משווים מול הענן מאפס
+      meta.dirty = hasLocalContent();    // מה שכבר במכשיר לא ייעלם בשקט
+      saveMeta();
+      return sync(true).then(function () {
+        return { ok: true, type: back.type || '', email: u.email || '' };
+      });
+    }).catch(function (e) {
+      clearSession();
+      setStatus('signed-out');
+      return { ok: false, message: (e && e.message) || 'ההתחברות לא הושלמה' };
+    });
+  }
+
+  function listen() {
     window.addEventListener('online', maybeSync);
     window.addEventListener('focus', maybeSync);
     document.addEventListener('visibilitychange', function () {
       if (!document.hidden) maybeSync();
     });
+  }
+
+  /* מחזיר Promise רק כשהגענו לכאן מקישור שבמייל, כדי שהמסך יוכל להציג חיווי */
+  function init() {
+    loadLocal();
+    if (!enabled()) { setStatus('off'); return null; }
+
+    var back = takeAuthRedirect();
+    if (back && back.access_token) {
+      setStatus('syncing');
+      listen();
+      return adoptRedirect(back);
+    }
+    if (back) {
+      if (!signedIn()) setStatus('signed-out');
+      return Promise.resolve({
+        ok: false,
+        code: back.error_code || back.error || '',
+        message: back.error_description || ''
+      });
+    }
+
+    if (!signedIn()) { setStatus('signed-out'); return null; }
+    setStatus(meta.dirty ? 'pending' : 'synced');
+    sync();
+    listen();
+    return null;
   }
 
   return {
