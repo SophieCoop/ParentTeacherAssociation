@@ -253,7 +253,7 @@ Views.onboarding = (function () {
     setTimeout(function () {
       if (cloud.mode !== 'done') return;
       // נמשכו נתונים מהענן של חשבון קיים — ההקמה כבר מאחורינו
-      if (Store.state.setupDone) { App.setVs('forceWizard', false); App.render(); return; }
+      if (Store.state.setupDone) { App.render(); return; }
       advance();
     }, 1400);
   }
@@ -394,7 +394,6 @@ Views.onboarding = (function () {
     stopWatch();
     Store.state.setupDone = true;
     Store.save();
-    App.setVs('forceWizard', false);
     App.setVs('wizStep', 0);
     App.setView('home');
     var withAccount = !!(window.Cloud && Cloud.signedIn());
@@ -422,15 +421,11 @@ Views.onboarding = (function () {
     actions: {
       'wiz-start': function () {
         resetCloud();
-        // פתיחת החשבון בשלב הראשון מדליקה signedIn, ובלי הסימון הזה
-        // מסך ההקמה היה נעלם באמצע (ראו את תנאי הניתוב ב-App.render)
-        App.setVs('forceWizard', true);
         App.setVs('wizStep', 1);
         App.render();
       },
       'run-wizard': function () {
         resetCloud();
-        App.setVs('forceWizard', true);
         App.setVs('wizStep', 1);
         App.render();
       },
