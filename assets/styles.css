@@ -643,7 +643,7 @@ table.tbl tr td:first-child{font-weight:600}
 .line-tbl th.end{text-align:end}
 .line-tbl td{padding:6px 3px;border-top:1px solid var(--line);vertical-align:middle}
 .line-tbl tr:first-child td{border-top:none}
-.line-tbl .input{padding:8px 9px;font-size:13px;width:100%;min-width:0}
+.line-tbl .input{padding:8px 9px;font-size:12.5px;width:100%;min-width:0}
 .line-tbl .input.end{text-align:end;font-weight:700}
 .line-tbl td:nth-child(1){width:28%}
 .line-tbl td:nth-child(2){width:36%}
@@ -653,7 +653,7 @@ table.tbl tr td:first-child{font-weight:600}
 .line-tbl .input[type=number]::-webkit-outer-spin-button,
 .line-tbl .input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .line-tbl select.input{padding-inline-end:22px;text-overflow:ellipsis}
-.line-tbl td:nth-child(4){white-space:nowrap;font-variant-numeric:tabular-nums;font-size:13.5px}
+.line-tbl td:nth-child(4){white-space:nowrap;font-variant-numeric:tabular-nums;font-size:12.5px}
 .line-tbl td:last-child{width:30px}
 .line-tbl .iconbtn{width:26px;height:26px;font-size:12px}
 
@@ -731,10 +731,12 @@ table.tbl tr td:first-child{font-weight:600}
 .pc-none{color:var(--muted)}
 .line-tbl th small{display:block;font-weight:400;font-size:9.5px}
 
-.ln-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:4px}
+.ln-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:4px;flex-wrap:wrap}
 .ln-foot .btn{flex:none;width:auto}
-.ln-total{font-size:12.5px;color:var(--ink-2);white-space:nowrap}
-.ln-total b{font-size:16px;font-weight:800;margin-inline-start:5px}
+/* nowrap על השורה כולה דחף את ההסבר אל מחוץ למסך בטלפון וגרר את
+   החלון לרוחב. הגלישה מותרת, והסכום עצמו הוא מה שנשמר בשורה אחת. */
+.ln-total{font-size:12.5px;color:var(--ink-2);min-width:0;flex:1;text-align:end}
+.ln-total b{font-size:16px;font-weight:800;margin-inline-start:5px;white-space:nowrap}
 .ln-total small{font-size:11.5px;color:var(--muted);margin-inline-start:5px}
 
 .idea-total{
@@ -1014,10 +1016,13 @@ table.tbl tr td:first-child{font-weight:600}
    לחסום זום ידני של המשתמש. הריווח מצטמצם כדי שהשדות יישארו באותו רוחב. */
 @media (pointer: coarse) {
   .input, select.input, textarea.input,
-  .line-tbl .input, .line-card .lc-top .input, .line-card .lc-calc .input,
+  .line-card .lc-top .input, .line-card .lc-calc .input,
   .period .p-dates .input, .pk-top .pk-search {
     font-size:16px;
   }
+  /* יוצא דופן מכוון: שדות שורת ההוצאה נשארים בגודל שאר התאים בשורה,
+     כדי שהשורה תיקרא אחידה. המחיר ידוע — ספארי ב-iOS יגדיל את העמוד
+     כשממקדים אותם. הוחלט שהאחידות שווה את זה. */
   .line-tbl .input{padding:7px 6px}
   .line-card .lc-calc .input{padding:6px 4px}
   .line-card .lc-top .input{padding:7px 9px}
@@ -1055,7 +1060,7 @@ table.tbl tr td:first-child{font-weight:600}
   .line-tbl th:last-child{width:24px}
   .line-tbl td:nth-child(4){font-size:12px}
 
-  .line-tbl .input{padding:7px 4px}
+  .line-tbl .input{padding:7px 4px;font-size:12px}
   .line-tbl .who-btn{padding:7px 4px;font-size:12px;gap:2px}
   .line-tbl .who-chev{display:none}
   .line-tbl .iconbtn{width:22px;height:22px;font-size:10px}
