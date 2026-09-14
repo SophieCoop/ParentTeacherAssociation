@@ -1029,38 +1029,37 @@ table.tbl tr td:first-child{font-weight:600}
   .line-tbl .iconbtn{width:24px;height:24px;font-size:11px}
 }
 
-/* במסך טלפון, חמש עמודות עם גופן 16px נדחסות עד שהטקסט נחתך.
-   לכן כל שורה נפרשת לכרטיס בשתי שורות, ושורת הכותרת מתורגמת
-   לכיתוב קטן מעל כל שדה. */
+/* בטלפון השורה נשארת שורה אחת, כמו במחשב: העמודות מצטמצמות ומוותרות
+   על ריווח, במקום להישבר לכרטיס בכמה שורות. גופן 16px בשדות נשאר —
+   הוא מה שמונע מספארי להגדיל את העמוד בהקלדה — ולכן הריווח הפנימי
+   הוא מה שמתכווץ. אם בכל זאת צר מדי, הטבלה נגללת לרוחב בתוך עצמה. */
 @media (pointer: coarse) and (max-width: 430px) {
-  .line-tbl{overflow-x:visible}
-  .line-tbl table,.line-tbl tbody,.line-tbl tr,.line-tbl td{display:block;width:auto}
-  .line-tbl thead{display:none}
-  .line-tbl tr{
-    display:grid;grid-template-columns:1fr 92px auto;
-    grid-template-areas:"name name del" "who price sum" "pct pct pct";
-    gap:8px;align-items:end;
-    background:#FAF8FD;border-radius:14px;padding:10px;margin-bottom:9px;
-  }
-  .line-tbl td:nth-child(5){
-    grid-area:pct;width:auto;display:flex;align-items:center;gap:7px;
-    border-top:1px solid var(--line);padding-top:8px;
-  }
-  .line-tbl td:nth-child(5)::before{margin-bottom:0}
-  .line-tbl td:last-child{grid-area:del}
-  .line-tbl td{padding:0;border-top:none}
-  /* width:auto חוזר בכל שורה, כדי לגבור על אחוזי העמודות של הטבלה */
-  .line-tbl td:nth-child(1){grid-area:name;width:auto}
-  .line-tbl td:nth-child(2){grid-area:who;width:auto}
-  .line-tbl td:nth-child(3){grid-area:price;width:auto}
-  .line-tbl td:nth-child(4){grid-area:sum;width:auto;align-self:center;padding-bottom:9px}
-  .line-tbl td:last-child{width:auto;align-self:center}
-  .line-tbl td[data-lab]:not(:nth-child(1))::before{
-    content:attr(data-lab);display:block;
-    font-size:10.5px;color:var(--muted);margin-bottom:3px;
-  }
-  .line-tbl td:nth-child(4)::before{text-align:start}
-  .line-tbl .who-btn{padding:9px 8px}
+  .line-tbl{overflow-x:auto}
+  .line-tbl table{table-layout:fixed;width:100%;min-width:0}
+
+  .line-tbl th{font-size:9.5px;padding:0 1px 6px;letter-spacing:-.2px}
+  .line-tbl th small{font-size:8.5px}
+  .line-tbl td{padding:5px 1px}
+
+  /* עם table-layout:fixed הדפדפן קובע את העמודות לפי השורה הראשונה —
+     שורת הכותרות — ולכן הרוחבים חייבים לשבת על ה-th ולא על ה-td.
+     "למי?" מקבל את הרוחב הגדול ביותר: שם דרגה נחתך מהר יותר משם מוצר. */
+  .line-tbl th:nth-child(1){width:19%}
+  .line-tbl th:nth-child(2){width:30%}
+  .line-tbl th:nth-child(3){width:15%}
+  .line-tbl th:nth-child(4){width:16%}
+  .line-tbl th:nth-child(5){width:46px}   /* שבב האחוזים לא נדחס */
+  .line-tbl th:last-child{width:24px}
+  .line-tbl td:nth-child(4){font-size:12px}
+
+  .line-tbl .input{padding:7px 4px}
+  .line-tbl .who-btn{padding:7px 4px;font-size:12px;gap:2px}
+  .line-tbl .who-chev{display:none}
+  .line-tbl .iconbtn{width:22px;height:22px;font-size:10px}
+
+  .pc{padding:3px 5px;min-width:0}
+  .pc b{font-size:12px}
+  .pc small{font-size:9px}
 }
 
 /* ===================== מצבי טעינה והצלחה ===================== */
