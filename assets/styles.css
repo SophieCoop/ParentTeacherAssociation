@@ -1124,8 +1124,8 @@ table.tbl tr td:first-child{font-weight:600}
 /* מחצית הרוחב שמורה לשמות — פי שניים מכל אחת מהאחרות, כך שגם שם ארוך
    נכנס — והמחצית שנותרה מתחלקת שווה בשווה בין "שילם" ל"החזר".
    הרצפה בפיקסלים מגינה על עמודות המספרים במסך צר במיוחד. */
-.ye-tbl th:nth-child(1){width:50%}
-.ye-tbl th:nth-child(2),.ye-tbl th:nth-child(3){width:25%;min-width:84px}
+.ye-tbl th:nth-child(1){width:44%}
+.ye-tbl th:nth-child(2),.ye-tbl th:nth-child(3){width:28%;min-width:92px}
 .ye-tbl td:first-child{white-space:nowrap}
 /* table.tbl th.end מיישר לקצה, ובאותה עוצמת סלקטור — ולכן גם כאן
    table, כדי שהמרכוז יגבר עליו לפי סדר הופעה */
@@ -1158,6 +1158,9 @@ table.ye-tbl td:nth-child(2),table.ye-tbl td:nth-child(3){text-align:center}
 .ye-row[data-action]:active{background:var(--primary-soft)}
 
 .ye-tbl tfoot td{background:var(--primary-soft);border-top:none;padding:11px 8px}
+/* ריווח רק בקצה שבו התוכן צמוד לפינה. בעמודה המרכזת, ריווח בקצה
+   היה מזיז את הערך ומוציא אותו מהיישור עם הכותרת שמעליו. */
+.ye-tbl tfoot td:first-child{padding-inline-start:14px}
 .ye-tbl tfoot td:first-child{border-start-start-radius:11px;border-end-start-radius:11px}
 .ye-tbl tfoot td:last-child{border-start-end-radius:11px;border-end-end-radius:11px}
 .ye-tot-val{display:block;font-size:14.5px;font-weight:800}
