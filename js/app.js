@@ -20,10 +20,12 @@ var App = (function () {
      נשמר במכשיר בלבד ולא בענן — זהו מצב של המסך, לא נתון של הגן. */
   var WIZ_KEY = 'vaad-gan-wizard-v1';
 
+  /* נמחק כשהאשף מגיע לסופו (wizStep חוזר ל-0) ולא כשמדלגים עליו,
+     כדי ש"המשך בתהליך ההקמה" יחזיר לשלב שבו עצרנו */
   function saveWizStep() {
     try {
       var n = viewState.wizStep;
-      if (Store.state.setupDone || !n) localStorage.removeItem(WIZ_KEY);
+      if (!n) localStorage.removeItem(WIZ_KEY);
       else localStorage.setItem(WIZ_KEY, JSON.stringify({ step: n }));
     } catch (e) {}
   }
@@ -80,8 +82,12 @@ var App = (function () {
        לחשבון. פתיחת החשבון היא השלב הראשון באשף עצמו, ולכן תנאי
        שמדלג עליו בגלל התחברות היה זורק החוצה את מי שאישר את המייל
        באמצע. מי שמחובר ורק רוצה למשוך נתונים ממכשיר אחר מקבל את
-       כפתור הסנכרון במסך הפתיחה של האשף. */
-    if (!st.setupDone) {
+       כפתור הסנכרון במסך הפתיחה של האשף.
+
+       resumeWizard הוא חזרה מכוונת לאשף אחרי שדילגו עליו. הוא מקומי
+       ולא נוגע ב-setupDone, שמסונכרן — אחרת חזרה להקמה במכשיר אחד
+       הייתה פותחת את האשף גם בכל שאר המכשירים. */
+    if (!st.setupDone || viewState.resumeWizard) {
       root.className = 'shell shell-plain';
       root.innerHTML = '<div class="page">' + Views.onboarding.render(vs, setVs) + '</div>';
       return;
@@ -162,7 +168,7 @@ var App = (function () {
 
   return {
     init: init, render: render, setView: setView, state: state,
-    vs: vs, setVs: setVs, TABS: TABS
+    vs: vs, setVs: setVs, savedWizStep: loadWizStep, TABS: TABS
   };
 })();
 

@@ -36,6 +36,7 @@ Views.onboarding = (function () {
       '<p>יחד למען הילדים ❤️<br>ניהול תקציב, גבייה והוצאות במקום אחד</p>' +
       '<button class="btn" data-action="wiz-start">בואו נתחיל</button>' +
       cloudBlock() +
+      exitLink() +
       '</div>';
   }
 
@@ -90,7 +91,15 @@ Views.onboarding = (function () {
       '<button class="btn" data-action="wiz-next">' + UI.esc(nextLabel || 'המשך') + '</button>' +
       (n === lastStep() ? '' :
         '<button class="btn soft" style="margin-top:9px" data-action="wiz-skip">דילוג על השלב הזה</button>') +
+      exitLink() +
       '</div>';
+  }
+
+  /* מוצא מההקמה בלי לעבור שלב־שלב. השלב שבו עצרנו נשמר, וההקמה
+     ממשיכה משם דרך הכפתור שבעמוד הראשי */
+  function exitLink() {
+    return '<button class="linkbtn" style="margin-top:12px" data-action="wiz-exit">' +
+      'לדלג על ההקמה ולהיכנס לאפליקציה</button>';
   }
 
   /* ---------- פרטי הגן ---------- */
@@ -394,7 +403,8 @@ Views.onboarding = (function () {
     stopWatch();
     Store.state.setupDone = true;
     Store.save();
-    App.setVs('wizStep', 0);
+    App.setVs('resumeWizard', false);
+    App.setVs('wizStep', 0);   // אפס מוחק את השלב השמור — ההקמה תמה
     App.setView('home');
     var withAccount = !!(window.Cloud && Cloud.signedIn());
     // בלי חשבון לא נשמר דבר מחוץ למכשיר — והטקסט לא יתיימר שכן
@@ -424,10 +434,20 @@ Views.onboarding = (function () {
         App.setVs('wizStep', 1);
         App.render();
       },
+      /* "המשך בתהליך ההקמה" — ממשיכים מהשלב שנשמר, ורק מי שסיים
+         את ההקמה וביקש להריץ אותה שוב מתחיל מהתחלה */
       'run-wizard': function () {
         resetCloud();
-        App.setVs('wizStep', 1);
+        App.setVs('resumeWizard', true);
+        App.setVs('wizStep', App.savedWizStep() || 1);
         App.render();
+      },
+      'wiz-exit': function () {
+        Store.state.setupDone = true;   // "אל תכפו עליי את ההקמה", לא "סיימתי"
+        Store.save();
+        App.setVs('resumeWizard', false);
+        App.setView('home');
+        UI.toast('אפשר להשלים את ההקמה בכל רגע מהעמוד הראשי');
       },
       'wiz-back': function () { App.setVs('wizStep', Math.max(1, step() - 1)); App.render(); },
       'wiz-next': advance,
