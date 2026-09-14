@@ -76,8 +76,7 @@ Views.yearend = (function () {
             '<td><div class="ye-who">' +
               '<div class="avatar" style="background:' + UI.toneVar(UI.toneFor(r.child.name)) + '">' +
                 UI.faceFor(r.child.name) + '</div>' +
-              '<div class="ye-name"><b>' + UI.esc(r.child.name) +
-                (phone ? '<span class="ye-wa" aria-hidden="true">💬</span>' : '') + '</b>' +
+              '<div class="ye-name"><b>' + UI.esc(r.child.name) + '</b>' +
                 /* שם ההורה, ואחוז ההשתתפות רק כשהוא אומר משהו — ילד שהצטרף באמצע */
                 (sub.length ? '<small>' + UI.esc(sub.join(' · ')) + '</small>' : '') +
               '</div></div></td>' +
