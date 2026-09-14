@@ -11,32 +11,38 @@ Views.yearend = (function () {
     var st = Store.state;
     var rf = Calc.refunds(st);
     var positive = rf.pot > 0;
+    var kids = st.children.length;
 
     var html = UI.pageHead({
       title: 'סטטוס סוף שנה',
-      subtitle: 'חישוב ההחזר להורים',
-      art: 'yearend', tone: 'pink', back: 'expenses'
+      subtitle: 'סיכום החזר כספי להורים',
+      art: 'yearend', tone: 'pink', back: 'expenses',
+      action: kids ? { act: 'ye-share', icon: '💬', text: 'שיתוף', label: 'שיתוף סיכום סוף שנה' } : null
     });
 
-    html += '<div class="note"><div class="n-ico">💗</div><div><b>חישוב החזר להורים</b>' +
-      'בסוף השנה יש לחשב מה להחזיר לכל הורה, תוך התחשבות בילדים שהצטרפו באמצע שנה ' +
-      'ורק בהוצאות שהיו אחרי שהצטרפו.</div></div>';
-
-    html += '<div class="summary" style="background:' + (positive ? 'var(--green)' : (rf.pot < 0 ? 'var(--pink)' : '#fff')) + '">' +
-      '<div class="sum-label">' + (positive ? 'יתרה בקופה' : rf.pot < 0 ? 'חסר בקופה' : 'הקופה מאוזנת') + '</div>' +
-      '<div class="sum-value">' + UI.money(Math.abs(rf.pot)) + '</div>' +
-      '<div class="stat-grid">' +
-        '<div class="stat"><div class="s-val">' + UI.money(rf.collected) + '</div><div class="s-lab">נגבה</div></div>' +
-        '<div class="stat"><div class="s-val">' + UI.money(rf.spent) + '</div><div class="s-lab">הוצא</div></div>' +
-        '<div class="stat"><div class="s-val">' + UI.money(rf.costPerUnit) + '</div><div class="s-lab">עלות לילד מלא</div></div>' +
+    /* ---------- כרטיס הסיכום ---------- */
+    html += '<div class="summary ye-sum ' + (positive ? 'ok' : rf.pot < 0 ? 'no' : '') + '">' +
+      '<div class="ye-top">' +
+        '<div class="ye-main">' +
+          '<div class="sum-label">' +
+            (positive ? 'יתרה בקופה' : rf.pot < 0 ? 'חסר בקופה' : 'הקופה מאוזנת') + '</div>' +
+          '<div class="ye-value ' + (rf.pot >= 0 ? 'pos' : 'neg') + '">' + UI.money(Math.abs(rf.pot)) + '</div>' +
+        '</div>' +
+        '<div class="ye-art">' + UI.art('piggy') + '</div>' +
       '</div>' +
-      '<div class="flex-between mt small">' +
-        '<span class="pos">💗 סה״כ להחזר: <b>' + UI.money(rf.totalRefund) + '</b></span>' +
-        (rf.totalOwed > 0 ? '<span class="neg">להשלמה: <b>' + UI.money(rf.totalOwed) + '</b></span>' : '') +
-      '</div></div>';
+      '<div class="stat-grid">' +
+        '<div class="stat"><div class="s-val">' + UI.money(rf.collected) + '</div>' +
+          '<div class="s-lab">סה״כ גבייה</div></div>' +
+        '<div class="stat"><div class="s-val">' + UI.money(rf.spent) + '</div>' +
+          '<div class="s-lab">סה״כ הוצאה</div></div>' +
+        '<div class="stat"><div class="s-val">' + UI.money(rf.costPerUnit) + '</div>' +
+          '<div class="s-lab">עלות לילד מלא</div></div>' +
+      '</div>' +
+    '</div>';
 
-    if (!st.children.length) {
-      return html + UI.empty({ art: 'children', title: 'אין ילדים ברשימה', text: 'הוסיפו ילדים כדי לחשב החזרים.' });
+    if (!kids) {
+      return html + UI.empty({ art: 'children', title: 'אין ילדים ברשימה',
+                               text: 'הוסיפו ילדים כדי לחשב החזרים.' });
     }
 
     if (rf.pot === 0) {
@@ -48,45 +54,55 @@ Views.yearend = (function () {
         'בטבלה מוצג כמה כל הורה צריך להשלים, לפי אותו מפתח יחסי.</div></div>';
     }
 
-    html += '<div class="section-title"><span>פירוט לכל הורה</span>' +
-      '<button class="btn sm soft" data-action="ye-share">💬 שיתוף</button></div>';
+    /* ---------- טבלה אחת: שורה לכל ילד, ובה גם ההודעה להורה ---------- */
+    var anyPhone = false;
 
-    html += '<div class="card"><div class="scroll-x"><table class="tbl wide">' +
-      '<thead><tr><th>ילד/ה</th><th class="end">מאזן</th><th class="end">שולם</th>' +
-      '<th class="end">חלקו בהוצאות</th><th class="end">%</th></tr></thead><tbody>' +
-      rf.rows.map(function (r) {
-        return '<tr><td>' + UI.esc(r.child.name) + '</td>' +
-          '<td class="end ' + (r.balance >= 0 ? 'pos' : 'neg') + '"><b>' +
-            (r.balance >= 0 ? 'החזר ' : 'להשלים ') + UI.money(Math.abs(r.balance)) + '</b></td>' +
-          '<td class="end' + (r.paid > r.due + 0.5 ? ' over-paid' : '') + '">' + UI.money(r.paid) + '</td>' +
-          '<td class="end">' + UI.money(r.fairCost) + '</td>' +
-          '<td class="end">' + r.percent + '%</td></tr>';
-      }).join('') +
-      '<tr style="background:var(--primary-soft)"><td><b>סה״כ</b></td>' +
-      '<td class="end pos"><b>' + UI.money(rf.totalRefund) + '</b></td>' +
-      '<td class="end"><b>' + UI.money(rf.collected) + '</b></td>' +
-      '<td class="end"><b>' + UI.money(rf.spent) + '</b></td><td></td></tr>' +
-      '</tbody></table></div>' +
-      '<p class="hint">"מאזן" = מה ששולם פחות חלקו האמיתי של ההורה בהוצאות.</p></div>';
+    html += '<div class="card">' +
+      '<div class="card-title"><h2>פירוט החזר לכל הורה</h2>' +
+        '<span class="sub">' + kids + ' ילדים</span></div>' +
+      '<table class="tbl slim ye-tbl">' +
+        '<thead><tr><th>ילד/ה</th><th class="end">שילם</th><th class="end">החזר</th></tr></thead>' +
+        '<tbody>' +
+        rf.rows.map(function (r) {
+          var parent = r.child.parents && r.child.parents[0] ? r.child.parents[0] : null;
+          var phone = !!(parent && parent.phone);
+          if (phone) anyPhone = true;
+          var back = r.balance >= 0;
+          var sub = [];
+          if (parent && parent.name) sub.push(parent.name);
+          if (r.percent < 100) sub.push(r.percent + '% מהשנה');
+          return '<tr class="ye-row"' +
+              (phone ? ' data-action="ye-one" data-id="' + r.child.id + '"' : '') + '>' +
+            '<td><div class="ye-who">' +
+              '<div class="avatar" style="background:' + UI.toneVar(UI.toneFor(r.child.name)) + '">' +
+                UI.faceFor(r.child.name) + '</div>' +
+              '<div class="ye-name"><b>' + UI.esc(r.child.name) +
+                (phone ? '<span class="ye-wa" aria-hidden="true">💬</span>' : '') + '</b>' +
+                /* שם ההורה, ואחוז ההשתתפות רק כשהוא אומר משהו — ילד שהצטרף באמצע */
+                (sub.length ? '<small>' + UI.esc(sub.join(' · ')) + '</small>' : '') +
+              '</div></div></td>' +
+            '<td class="end ye-paid">' + UI.money(r.paid) + '</td>' +
+            '<td class="end ye-back' + (back ? '' : ' neg') + '">' + UI.money(Math.abs(r.balance)) +
+              (back ? '' : '<small>להשלמה</small>') + '</td>' +
+            '</tr>';
+        }).join('') +
+        '</tbody>' +
+        '<tfoot><tr>' +
+          '<td><b>סה״כ</b></td>' +
+          '<td class="end"><span class="ye-tot-val ye-paid">' + UI.money(rf.collected) + '</span>' +
+            '<span class="ye-tot-lab">סך כל התשלומים</span></td>' +
+          '<td class="end"><span class="ye-tot-val pos">' + UI.money(rf.totalRefund) + '</span>' +
+            '<span class="ye-tot-lab">סך כל ההחזרים</span></td>' +
+        '</tr></tfoot>' +
+      '</table>' +
+      (rf.totalOwed > 0
+        ? '<div class="hint neg">מתוך אלה, ' + UI.money(rf.totalOwed) + ' עדיין להשלמה מצד הורים ששילמו פחות מחלקם.</div>'
+        : '') +
+      '<div class="hint">"החזר" = מה ששולם, פחות חלקו האמיתי של ההורה בהוצאות.' +
+        (anyPhone ? ' לחיצה על שורה פותחת הודעת וואטסאפ להורה.' : '') + '</div>' +
+    '</div>';
 
-    /* כרטיסי הורים */
-    html += '<div class="section-title"><span>כרטיסי החזר</span></div>';
-    html += rf.rows.map(function (r) {
-      var parent = r.child.parents && r.child.parents[0] ? r.child.parents[0] : null;
-      return '<div class="row">' +
-        '<div class="avatar" style="background:' + UI.toneVar(UI.toneFor(r.child.name)) + '">' + UI.faceFor(r.child.name) + '</div>' +
-        '<div class="r-body"><div class="r-name">' + UI.esc(parent ? parent.name : r.child.name) + '</div>' +
-        '<div class="r-sub" style="white-space:normal">' + UI.esc(r.child.name) +
-        (r.percent < 100 ? ' · ' + r.percent + '%' : '') +
-        ' · שילם ' + UI.money(r.paid) + ' · חלקו ' + UI.money(r.fairCost) + '</div></div>' +
-        '<div class="r-end"><div class="r-amount ' + (r.balance >= 0 ? 'pos' : 'neg') + '">' +
-        UI.money(Math.abs(r.balance)) + '</div>' +
-        '<div class="r-pct">' + (r.balance >= 0 ? 'להחזר' : 'להשלמה') + '</div>' +
-        (parent && parent.phone ? '<button class="btn sm soft" style="margin-top:4px;padding:4px 10px" ' +
-          'data-action="ye-one" data-id="' + r.child.id + '">💬</button>' : '') + '</div></div>';
-    }).join('');
-
-    /* הסבר החישוב */
+    /* ---------- הסבר החישוב ---------- */
     html += '<div class="card mt"><div class="card-title"><h2>איך זה מחושב?</h2></div>' +
       '<ol class="small muted" style="padding-inline-start:18px;margin:0;line-height:1.9">' +
       '<li>סוכמים את כל ההוצאות בפועל: <b>' + UI.money(rf.spent) + '</b>.</li>' +
