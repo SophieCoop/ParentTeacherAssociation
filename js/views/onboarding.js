@@ -238,8 +238,11 @@ Views.onboarding = (function () {
     cloud.mode = 'done';
     cloud.error = '';
 
+    var later = (step() !== accountStep() || Store.state.setupDone);
+    if (window.Analytics) Analytics.account(later ? 'confirmed' : 'signup');
+
     // האישור הגיע אחרי שכבר המשכנו הלאה — די בהודעה קצרה
-    if (step() !== accountStep() || Store.state.setupDone) {
+    if (later) {
       UI.toast('החשבון אושר ✓ הנתונים נשמרים בענן');
       App.render();
       return;
@@ -393,10 +396,10 @@ Views.onboarding = (function () {
     App.setVs('forceWizard', false);
     App.setVs('wizStep', 0);
     App.setView('home');
+    var withAccount = !!(window.Cloud && Cloud.signedIn());
     // בלי חשבון לא נשמר דבר מחוץ למכשיר — והטקסט לא יתיימר שכן
-    UI.toast((window.Cloud && Cloud.signedIn())
-      ? 'הכול מוכן 🎉 הנתונים נשמרים בענן'
-      : 'ההקמה הושלמה 🎉');
+    UI.toast(withAccount ? 'הכול מוכן 🎉 הנתונים נשמרים בענן' : 'ההקמה הושלמה 🎉');
+    if (window.Analytics) Analytics.setupDone(withAccount);
   }
 
   /* מעבר לשלב הבא, או סיום אם זה היה האחרון */
@@ -405,6 +408,7 @@ Views.onboarding = (function () {
     if (n >= lastStep()) return finish();
     App.setVs('wizStep', n + 1);
     App.render();
+    if (window.Analytics) Analytics.wizardStep(n + 1);
   }
 
   function resetCloud() {

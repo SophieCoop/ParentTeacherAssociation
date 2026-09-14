@@ -115,6 +115,7 @@ Views.account = (function () {
           }
           App.render();
           UI.toast('מחוברים ✓ הנתונים מסונכרנים');
+          if (window.Analytics) Analytics.account(isSignup ? 'signup' : 'signin');
         }, function (err) {
           UI.toast(err && err.message ? err.message : 'ההתחברות נכשלה');
         });
