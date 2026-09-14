@@ -23,6 +23,8 @@ var App = (function () {
     window.scrollTo({ top: 0, behavior: 'instant' in window ? 'auto' : 'auto' });
     render();
     try { history.replaceState(null, '', '#' + name); } catch (e) {}
+    // המסכים מתחלפים בלי לעבור כתובת, ולכן הדיווח נעשה כאן ולא אוטומטית
+    if (window.Analytics) Analytics.view(name);
   }
 
   function vs(key, def) {
@@ -113,6 +115,8 @@ var App = (function () {
     var hash = (location.hash || '').replace('#', '');
     if (hash && Views[hash] && Store.state.setupDone) current = hash;
     render();
+    // המסך הראשון. מי שעדיין באשף ידווח דרך שלבי האשף עצמם.
+    if (window.Analytics && Store.state.setupDone) Analytics.view(current);
   }
 
   return {
