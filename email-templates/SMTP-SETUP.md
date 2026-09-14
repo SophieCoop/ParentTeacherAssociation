@@ -44,18 +44,50 @@ Resend יציג מסך עם רשומות DNS. **הערכים המדויקים מ
 DMARC במצב `p=none` לא חוסם דבר — הוא רק מבקש מהשרתים לדווח. זו
 הדרך לראות אם משהו בהגדרה לא תקין לפני שזה פוגע במסירה.
 
-## שלב 2 — הוספת הרשומות אצל רשם הדומיין
+## שלב 2 — הוספת הרשומות ב-Namecheap
 
-נכנסים לניהול ה-DNS של `vaadhorim.com` (במקום שבו נרכש הדומיין) ומוסיפים
-את הרשומות בדיוק כפי ש-Resend הציג.
+שרתי השמות של `vaadhorim.com` הם `dns1/dns2.registrar-servers.com`,
+כלומר ה-DNS מנוהל ב-Namecheap עצמו:
+**Domain List › Manage › Advanced DNS**.
 
-שתי נקודות שבהן קל לטעות:
+### מה שכבר קיים שם, ואסור לשבור
 
-- **שדה השם.** חלק מהרשמים מצפים לשם קצר (`send`) ואחרים לשם מלא
-  (`send.vaadhorim.com`). אם הרשם משלים את הדומיין לבד, הזנת השם המלא
-  תיצור `send.vaadhorim.com.vaadhorim.com`.
-- **רשומת ה-DKIM ארוכה** וקל לקטוע אותה בהעתקה. להעתיק הכול, בלי רווחים
-  בקצוות.
+בדומיין כבר מוגדרת העברת מיילים של Namecheap:
+
+| סוג | Host | ערך | עדיפות |
+|---|---|---|---|
+| `MX` | `@` | `eforward1.registrar-servers.com` | 10 |
+| `MX` | `@` | `eforward2.registrar-servers.com` | 10 |
+| `MX` | `@` | `eforward3.registrar-servers.com` | 10 |
+| `MX` | `@` | `eforward4.registrar-servers.com` | 15 |
+| `MX` | `@` | `eforward5.registrar-servers.com` | 20 |
+| `TXT` | `@` | `v=spf1 include:spf.efwd.registrar-servers.com ~all` | |
+
+הרשומות של Resend יושבות על תת־הדומיין `send`, ולכן הן **אינן מתנגשות**
+עם אלה — כל עוד לא מוחקים אותן.
+
+**אסור שיהיו שתי רשומות SPF על אותו שם.** על השורש כבר יש אחת. אם אי־פעם
+צריך SPF נוסף על `@` — ממזגים אותו לתוך הקיימת ולא מוסיפים שנייה; שתי
+רשומות SPF על אותו שם מבטלות את SPF לחלוטין.
+
+### המלכודת: Mail Settings
+
+בעמוד Advanced DNS יש אזור **Mail Settings** נפרד, המוגדר כרגע
+**Email Forwarding**. במצב זה Namecheap מנהל את רשומות ה-MX בעצמו ולרוב
+לא יאפשר להוסיף MX ידנית — גם לא ל-`send`.
+
+הפתרון: להחליף ל-**Custom MX**, ואז להזין מחדש ידנית את חמש רשומות
+ה-`eforward` מהטבלה למעלה (כדי לא לאבד את העברת המיילים), ולצידן את
+רשומת ה-MX של Resend על `send`.
+
+### שדה ה-Host
+
+Namecheap משלים את הדומיין לבד, ולכן מזינים **שם קצר**: `send`,
+`resend._domainkey`, `_dmarc`. הזנת `send.vaadhorim.com` תיצור
+`send.vaadhorim.com.vaadhorim.com`.
+
+רשומת ה-DKIM ארוכה וקל לקטוע אותה בהעתקה — להעתיק הכול, בלי רווחים
+בקצוות.
 
 אחר כך חוזרים ל-Resend ולוחצים **Verify**. האימות לוקח דקות ספורות,
 לפעמים עד שעה.
