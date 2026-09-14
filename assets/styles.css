@@ -561,6 +561,9 @@ table.tbl.wide{min-width:560px}
 table.tbl.slim{min-width:0}
 table.tbl.slim td{padding:10px 2px}
 table.tbl th{font-size:11.5px;color:var(--muted);font-weight:600;text-align:start;padding:8px 10px;white-space:nowrap}
+/* עמודת מספרים מיושרת לקצה, ולכן גם הכותרת שמעליה — אחרת הכותרת
+   נשארת בצד אחד של העמודה והמספרים בצד השני */
+table.tbl th.end{text-align:end}
 table.tbl td{padding:10px;border-top:1px solid var(--line);white-space:nowrap}
 table.tbl td:first-child{white-space:normal}
 table.tbl tr td:first-child{font-weight:600}
@@ -1098,3 +1101,77 @@ table.tbl tr td:first-child{font-weight:600}
   text-decoration:underline;cursor:pointer;text-align:center;
 }
 .linkbtn:hover{color:var(--ink)}
+
+/* ===================== סוף שנה: סיכום וטבלת ההחזרים ===================== */
+.ye-sum{background:#fff}
+.ye-sum.ok{background:var(--green)}
+.ye-sum.no{background:var(--pink)}
+.ye-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ye-main{min-width:0}
+.ye-value{font-size:34px;font-weight:800;letter-spacing:-1.1px;line-height:1.15;white-space:nowrap}
+.ye-art{flex:none;width:96px}
+.ye-art img.art{width:100%;height:auto;display:block}
+.ye-sum .stat{background:rgba(255,255,255,.82);border-color:transparent}
+
+/* שלוש עמודות בלבד, ולכן הטבלה נכנסת לרוחב הכרטיס בלי גרירה */
+.ye-tbl{min-width:0}
+.ye-tbl th{padding:9px 8px;background:#F7F5FB}
+.ye-tbl th:first-child{border-start-start-radius:11px;border-end-start-radius:11px}
+.ye-tbl th:last-child{border-start-end-radius:11px;border-end-end-radius:11px}
+.ye-tbl td{padding:9px 8px;white-space:nowrap}
+/* שלוש עמודות ברוחב זהה. המספרים ממורכזים בתוך העמודה שלהם, יחד עם
+   הכותרת שמעליהם — כך הם יושבים במרכז השטח שלהם ולא נסחפים אל הקצה. */
+/* מחצית הרוחב שמורה לשמות — פי שניים מכל אחת מהאחרות, כך שגם שם ארוך
+   נכנס — והמחצית שנותרה מתחלקת שווה בשווה בין "שילם" ל"החזר".
+   הרצפה בפיקסלים מגינה על עמודות המספרים במסך צר במיוחד. */
+.ye-tbl th:nth-child(1){width:50%}
+.ye-tbl th:nth-child(2),.ye-tbl th:nth-child(3){width:25%;min-width:84px}
+.ye-tbl td:first-child{white-space:nowrap}
+/* table.tbl th.end מיישר לקצה, ובאותה עוצמת סלקטור — ולכן גם כאן
+   table, כדי שהמרכוז יגבר עליו לפי סדר הופעה */
+table.ye-tbl th:nth-child(2),table.ye-tbl th:nth-child(3),
+table.ye-tbl td:nth-child(2),table.ye-tbl td:nth-child(3){text-align:center}
+
+
+.ye-who{display:flex;align-items:center;gap:9px;min-width:0}
+.ye-who .avatar{width:32px;height:32px;font-size:15px}
+.ye-name{min-width:0}
+/* רוחב העמודה כבר לא נגזר מהשם, ולכן חיתוך בנקודות הוא רשת ביטחון
+   בלבד — לשם שלא נכנס גם במרב המקום */
+.ye-name b{
+  display:block;font-size:13.5px;line-height:1.3;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+/* שורת המשנה נשארת שורה אחת, כדי שכל השורות יישארו באותו גובה */
+.ye-name small{
+  display:block;font-size:10.5px;color:var(--muted);font-weight:400;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+
+.ye-paid{color:var(--orange-ink);font-weight:700}
+.ye-back{color:var(--ok);font-weight:800}
+.ye-back.neg{color:var(--danger)}
+.ye-back small{display:block;font-size:10px;font-weight:600;color:var(--danger)}
+
+/* שורה שמובילה להודעה להורה — ניתנת ללחיצה */
+.ye-row[data-action]{cursor:pointer}
+.ye-row[data-action]:active{background:var(--primary-soft)}
+
+.ye-tbl tfoot td{background:var(--primary-soft);border-top:none;padding:11px 8px}
+.ye-tbl tfoot td:first-child{border-start-start-radius:11px;border-end-start-radius:11px}
+.ye-tbl tfoot td:last-child{border-start-end-radius:11px;border-end-end-radius:11px}
+.ye-tot-val{display:block;font-size:14.5px;font-weight:800}
+.ye-tot-lab{display:block;font-size:10px;color:var(--ink-2);font-weight:400;margin-top:1px;white-space:normal}
+
+.pagehead .head-action.wide{
+  width:auto;padding:0 13px;gap:6px;font-size:13.5px;font-weight:700;
+  color:var(--ink-2);display:inline-flex;align-items:center;
+}
+
+@media (max-width:380px){
+  .ye-art{width:76px}
+  .ye-value{font-size:29px}
+  .ye-tbl th,.ye-tbl td{padding:8px 4px}
+  .ye-who{gap:7px}
+  .ye-who .avatar{width:30px;height:30px;font-size:14px}
+}

@@ -334,7 +334,9 @@ var UI = (function () {
   function pageHead(o) {
     return '<header class="pagehead" style="--tint:' + toneVar(o.tone) + '">' +
       (o.back ? '<button class="back" data-action="nav" data-view="' + esc(o.back) + '" aria-label="חזרה">→</button>' : '') +
-      (o.action ? '<button class="head-action" data-action="' + esc(o.action.act) + '" aria-label="' + esc(o.action.label) + '">' + o.action.icon + '</button>' : '') +
+      (o.action ? '<button class="head-action' + (o.action.text ? ' wide' : '') + '" data-action="' + esc(o.action.act) + '" ' +
+        'aria-label="' + esc(o.action.label) + '">' + o.action.icon +
+        (o.action.text ? '<span>' + esc(o.action.text) + '</span>' : '') + '</button>' : '') +
       (o.art ? '<div class="ph-icon has-art">' + art(o.art) + '</div>'
              : o.icon ? '<div class="ph-icon">' + o.icon + '</div>' : '') +
       '<h1>' + esc(o.title) + '</h1>' +
