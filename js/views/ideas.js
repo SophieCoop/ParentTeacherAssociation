@@ -670,11 +670,17 @@ Views.ideas = (function () {
     }
 
     /* החלק המומלץ של השורה — סכום החלקים של הדרגות שנבחרו בה.
-       שורה שנבחרו בה רק חלק מאנשי הדרגה מקבלת את החלק היחסי בלבד. */
+       שורה שנבחרו בה רק חלק מאנשי הדרגה מקבלת את החלק היחסי בלבד.
+
+       שורה שנשמרה עם דרגה בלבד, בלי בחירה מפורשת, מתורגמת כאן לאנשי
+       אותה דרגה — אחרת החלק המומלץ יוצא אפס, והעמודה מוצגת בלי ההמלצה
+       שבסוגריים ובלי הצבע שנגזר ממנה. */
     function recShare(l) {
       var st = Store.state;
       if (l.shared) return 0;
-      var ids = lineIds(l);
+      var ids = linePicked(l)
+        ? lineIds(l)
+        : (l.levelId && l.levelId !== 'shared' ? idsOfLevel(l.levelId) : []);
       if (!ids.length) return 0;
       var sum = 0;
       staffMix().forEach(function (x) {
