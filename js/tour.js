@@ -141,13 +141,14 @@ var Tour = (function () {
      דווקא רעיון לצוות — המסך שלו הוא העשיר ביותר. רק כשאין במה
      להשתמש נבנה רעיון הדגמה. */
   function tourIdea() {
-    var withLines = (Store.state.ideas || []).filter(function (i) { return (i.lines || []).length; });
-    var staffy = withLines.filter(function (i) {
-      return (i.audiences || []).indexOf('staff') > -1;
+    var staffy = (Store.state.ideas || []).filter(function (i) {
+      return (i.lines || []).length && (i.audiences || []).indexOf('staff') > -1;
     })[0];
-    var pick = staffy || withLines[0];
+    /* רק רעיון לצוות מציג את הדרגות ואת בוחר אנשי הצוות, ושלושה
+       מהשלבים מדברים עליהם. רעיון לילדים היה משאיר אותם בלי מסך
+       להצביע עליו, ולכן עדיף עליו רעיון ההדגמה — שהוא תמיד לצוות. */
     // עותק עמוק: גם אם משהו בטופס ייגע בו, הרעיון של המשתמש לא ייפגע
-    if (pick) { try { return JSON.parse(JSON.stringify(pick)); } catch (e) { return pick; } }
+    if (staffy) { try { return JSON.parse(JSON.stringify(staffy)); } catch (e) { return staffy; } }
     return demoIdea();
   }
 
@@ -194,6 +195,10 @@ var Tour = (function () {
   /* הטופס נפתח דרך הפעולה הרגילה של המסך, ולכן אין בידנו מזהה לסגירה —
      סוגרים אותו כמו שמשתמש היה סוגר, בכפתור ה-✕ שלו. רעיון ריק שנסגר
      אינו נשמר, והסיור אינו מייצר נתונים. */
+  function modalCount() {
+    return document.querySelectorAll('#modal-root .modal-back').length;
+  }
+
   function closeTop() {
     var backs = document.querySelectorAll('#modal-root .modal-back');
     var top = backs[backs.length - 1];
@@ -211,7 +216,14 @@ var Tour = (function () {
     while (same < stack.length && same < want.length && stack[same] === want[same]) same++;
     while (stack.length > same) closeTop();
     var opened = false;
-    for (var i = same; i < want.length; i++) { want[i](); stack.push(want[i]); opened = true; }
+    for (var i = same; i < want.length; i++) {
+      var before = modalCount();
+      want[i]();
+      /* חלון שלא נפתח — כי הפקד שפותח אותו אינו על המסך — אינו נרשם
+         במחסנית. אחרת השלב הבא היה "סוגר" אותו, ובפועל סוגר את הטופס
+         שמתחתיו והסיור היה ממשיך על מסך ריק. */
+      if (modalCount() > before) { stack.push(want[i]); opened = true; }
+    }
     return opened;
   }
 
