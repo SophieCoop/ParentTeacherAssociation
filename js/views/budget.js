@@ -314,6 +314,12 @@ Views.budget = (function () {
     };
     var bd = Calc.itemBreakdown(st, synth);
 
+    /* לפני שהוקלד סכום אין מה לחשב, ושורה שמכריזה "0 ₪ = 0 ₪" היא
+       רעש. ההסבר מופיע ברגע שנכנסת הספרה הראשונה. */
+    if (draft.rate === '' || draft.rate === null || draft.rate === undefined) {
+      return '<div class="hint" style="margin:0">החישוב יוצג כאן ברגע שיוזן סכום.</div>';
+    }
+
     if (bd.perPerson && bd.count === 0) {
       return '<div class="note" style="background:#FDF0F2;margin:0"><div class="n-ico">⚠️</div><div>' +
         (draft.audience === 'children'
@@ -437,7 +443,10 @@ Views.budget = (function () {
     var startAudience = item.audience || '';
     var startBasis  = item.basis  || (bd.perPerson ? 'per_person' : 'total');
     var startPeriod = item.period || 'year';
-    var startRate   = item.rate !== undefined && item.rate !== '' ? item.rate : bd.rate;
+    /* בסעיף חדש השדה נשאר ריק. אפס מוקדם היה מחייב למחוק אותו לפני
+       ההקלדה, ומי ששכח קיבל סכום עם ספרה מובילה מיותרת. */
+    var startRate   = item.rate !== undefined && item.rate !== '' ? item.rate
+                    : (isNew ? '' : bd.rate);
 
     UI.formModal({
       title: isNew ? 'סעיף תקציב חדש' : 'עריכת סעיף',
