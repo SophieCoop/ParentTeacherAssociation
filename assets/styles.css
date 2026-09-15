@@ -1277,3 +1277,5 @@ table.ye-tbl td:nth-child(2),table.ye-tbl td:nth-child(3){text-align:center}
 }
 .staff-mix .sm-per b{display:block;font-size:14.5px;font-variant-numeric:tabular-nums}
 .staff-mix .sm-per span{display:block;font-size:9.5px;color:var(--muted)}
+/* דרגה שירדה עד שאינה מקבלת חלק בתקציב */
+.staff-mix .sm-per .sm-none{color:var(--muted)}

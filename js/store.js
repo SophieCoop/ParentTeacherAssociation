@@ -36,7 +36,7 @@ var Store = (function () {
   /* המזהים קבועים ואין לשנותם — רשומות צוות קיימות מפנות אליהם */
   var STAFF_LEVELS = [
     { id: 'manager',    name: 'מנהלת',              icon: '👩‍💼', tone: 'peach',  weight: 4, plural: 'מנהלות', edu: true },
-    { id: 'lead',       name: 'גננת',               icon: '👩‍🏫', tone: 'purple', weight: 3, plural: 'גננות', edu: true },
+    { id: 'lead',       name: 'גננת',               icon: '👩‍🏫', tone: 'purple', weight: 4, plural: 'גננות', edu: true },
     { id: 'assistant',  name: 'סייעת',              icon: '🧑‍🍼', tone: 'pink',   weight: 2, plural: 'סייעות', edu: true },
     { id: 'aide',       name: 'מטפלת / עוזרת',      icon: '🤱',   tone: 'green',  weight: 2, plural: 'מטפלות / עוזרות', edu: true },
     { id: 'paramedic',  name: 'מטפל/ת פרא-רפואי',   icon: '🩺',   tone: 'mint',   weight: 2, plural: 'מטפלי פרא-רפואי', edu: true },
@@ -138,6 +138,23 @@ var Store = (function () {
     return items;
   }
 
+  /* משקלי הדרגות נשמרו פעם בסולם 0–10, בעוד מספר הדרגה שמוצג היום הוא
+     היפוך של סולם ברירות המחדל: דרגה 1 היא המשקל הגבוה שבו. משקל שחרג
+     מהסולם הוצג כדרגה 1 בדיוק כמו המשקל הגבוה שבו, כך ששתי דרגות נראו
+     זהות אך חילקו סכומים שונים. לכן ערך חורג מוצמד אל קצה הסולם, פעם
+     אחת, בטעינה. */
+  function migrateLevelWeights(settings) {
+    var over = settings && settings.levelWeights;
+    if (!over) return;
+    var top = 1;
+    STAFF_LEVELS.forEach(function (lv) { top = Math.max(top, Number(lv.weight) || 1); });
+    Object.keys(over).forEach(function (id) {
+      var v = Math.round(Number(over[id]));
+      if (!isFinite(v)) { delete over[id]; return; }
+      over[id] = Math.max(0, Math.min(top, v));
+    });
+  }
+
   function migrate(data) {
     var base = blankState();
     Object.keys(base).forEach(function (k) {
@@ -146,6 +163,7 @@ var Store = (function () {
     // שמירה על מבנה אובייקטים מקוננים
     data.gan = Object.assign({}, base.gan, data.gan || {});
     data.settings = Object.assign({}, base.settings, data.settings || {});
+    migrateLevelWeights(data.settings);
     if (!Array.isArray(data.categories) || !data.categories.length) data.categories = base.categories;
     else migrateCategories(data.categories);
     migrateBudgetItems(data.budgetItems);
@@ -269,10 +287,18 @@ var Store = (function () {
       s.staff.push({ id: uid('stf'), name: t[0], role: t[1], level: t[2], phone: '', birthDate: '' });
     });
 
+    /* מזהי אנשי הצוות לפי דרגה — שורות ההוצאה של רעיון הדוגמה מכוונות
+       אליהם, כדי שעמודת "למי?" תראה בחירה אמיתית ולא "בחרו למי" */
+    function staffOf() {
+      var levels = Array.prototype.slice.call(arguments);
+      return s.staff.filter(function (t) { return levels.indexOf(t.level) > -1; })
+                    .map(function (t) { return t.id; });
+    }
+
     // [קטגוריה, שם הסעיף, סכום, תאריך יעד]
     [['cat-bday',    'מתנות ליום הולדת',              1200, d(N, 5, 15)],
      ['cat-holiday', 'מתנה לחג לילדים',               2100, d(Y, 9, 15)],
-     ['cat-yearend', 'מתנת סוף שנה לצוות',            2400, d(N, 6, 15)],
+     ['cat-yearend', 'מתנת סוף שנה לצוות',             810, d(N, 6, 15)],
      ['cat-clubs',   'חוגים במימון אישי',             1800, d(N, 6, 30)],
      ['cat-food',    'כיבוד לאירועים',                1680, d(N, 6, 30)],
      ['cat-other',   'קרן חירום',                     1000, '']].forEach(function (b) {
@@ -296,11 +322,17 @@ var Store = (function () {
     s.ideas.push({
       id: uid('ide'), title: 'מתנת סוף שנה — ספר וכוס', categoryId: 'cat-yearend',
       budgetItemId: yearendId,
-      audiences: ['children', 'staff'], note: 'הצעה של דנה', chosen: false,
+      /* לצוות בלבד: כך הדוגמה נפתחת על הממשק שקיים רק לקהל הזה —
+         כרטיס הרכב הצוות, הדרגות וטבלת השורות עם "למי?" */
+      audiences: ['staff'], note: 'הצעה של דנה', chosen: false,
       lines: [
-        { id: uid('ln'), label: 'ספר אישי', amount: 1400 },
-        { id: uid('ln'), label: 'כוס עם שם', amount: 700 },
-        { id: uid('ln'), label: 'אריזה', amount: 200 }
+        { id: uid('ln'), label: 'ספר אישי', amount: 260,
+          staffIds: staffOf('lead'), names: [], shared: false },
+        { id: uid('ln'), label: 'כוס עם שם', amount: 120,
+          staffIds: staffOf('assistant', 'aide'), names: [], shared: false },
+        /* פריט אחד לכולם — מדגים גם את "פריט משותף" שבבוחר האנשים */
+        { id: uid('ln'), label: 'אריזה', amount: 70,
+          staffIds: staffOf('lead', 'assistant', 'aide', 'external'), names: [], shared: true }
       ]
     });
     s.ideas.push({
@@ -308,8 +340,8 @@ var Store = (function () {
       budgetItemId: yearendId,
       audiences: ['children'], note: '', chosen: false,
       lines: [
-        { id: uid('ln'), label: 'ערכת יצירה', amount: 1600 },
-        { id: uid('ln'), label: 'ברכה מעוצבת', amount: 240 }
+        { id: uid('ln'), label: 'ערכת יצירה', amount: 520 },
+        { id: uid('ln'), label: 'ברכה מעוצבת', amount: 80 }
       ]
     });
 
