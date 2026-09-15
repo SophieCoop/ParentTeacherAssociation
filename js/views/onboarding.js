@@ -25,6 +25,10 @@ Views.onboarding = (function () {
   }
   function lastStep() { return stepList().length; }
   function accountStep() { return (window.Cloud && Cloud.enabled()) ? 1 : 0; }
+  /* השלב הראשון שאפשר לחזור אליו. פתיחת החשבון אינה בכללם: אחרי שנשלח
+     מייל או נפתח חשבון, חזרה לשם רק מבלבלת — ואת המייל אפשר לשנות
+     מההגדרות. */
+  function firstStep() { return accountStep() + 1; }
 
   function paint() { App.render(); }
 
@@ -77,7 +81,10 @@ Views.onboarding = (function () {
 
   function head(n, title, sub, noBack) {
     return '<div style="padding-top:18px">' +
-      (n > 1 && !noBack ? '<button class="iconbtn plain" data-action="wiz-back" style="margin-bottom:6px">→</button>' : '') +
+      (n > firstStep() && !noBack
+        ? '<button class="iconbtn plain" data-action="wiz-back" aria-label="חזרה לשלב הקודם" ' +
+          'style="margin-bottom:6px">→</button>'
+        : '') +
       stepsBar(n) +
       '<h1 style="font-size:24px;text-align:center;margin-top:10px">' + UI.esc(title) + '</h1>' +
       '<p class="center muted small" style="margin:6px 0 20px">' + UI.esc(sub) + '</p>' +
@@ -449,7 +456,12 @@ Views.onboarding = (function () {
         App.setView('home');
         UI.toast('אפשר להשלים את ההקמה בכל רגע מהעמוד הראשי');
       },
-      'wiz-back': function () { App.setVs('wizStep', Math.max(1, step() - 1)); App.render(); },
+      /* המידע נשמר ב-Store תוך כדי ההקלדה, ולכן חזרה אחורה מציגה אותו
+         כפי שהוא — אין כאן מה לשחזר */
+      'wiz-back': function () {
+        App.setVs('wizStep', Math.max(firstStep(), step() - 1));
+        App.render();
+      },
       'wiz-next': advance,
       'wiz-skip': advance,
       'wiz-cloud': function (el) { cloud[el.getAttribute('data-key')] = el.value; },
