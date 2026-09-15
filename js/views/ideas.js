@@ -1008,7 +1008,12 @@ Views.ideas = (function () {
        לדוגמה בלי לשמור אותו */
     form: ideaForm,
     actions: {
-      'idea-add': function () { ideaForm(null); },
+      /* בלחיצה הראשונה רץ סיור קצר על רעיון לדוגמה, ורק בסופו נפתח
+         הטופס הריק. בכל לחיצה אחרת הסיור מחזיר false ולא קורה דבר. */
+      'idea-add': function () {
+        if (window.Tour && Tour.startIdea && Tour.startIdea()) return;
+        ideaForm(null);
+      },
       'idea-edit': function (el) { ideaForm(Store.find('ideas', el.getAttribute('data-id'))); },
 
       'idea-choose': function (el) {

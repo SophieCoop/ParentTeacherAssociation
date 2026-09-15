@@ -14,6 +14,7 @@
 var Tour = (function () {
 
   var KEY = 'vaad-gan-tour-v1';
+  var IDEA_KEY = 'vaad-gan-tour-idea-v1';
 
   var back = null;      // שכבת החושך
   var hole = null;      // חלון הזרקור
@@ -22,7 +23,8 @@ var Tour = (function () {
   var steps = [];
   var live = false;
   var homeView = null;   // המסך שממנו יצאנו, כדי לחזור אליו בסיום
-  var modalFn = null;    // הטופס שהסיור פתח בעצמו
+  var stack = [];        // מחסנית החלונות שהסיור פתח: טופס, ומעליו בוחר האנשים
+  var onDone = null;     // פעולה שתרוץ בסיום (למשל פתיחת טופס ריק)
 
   /* ---------- השלבים ---------- */
   /* target: בורר או מערך בוררים שהזרקור יקיף את כולם יחד.
@@ -47,29 +49,66 @@ var Tour = (function () {
       /* ---- מסך הרעיונות מקרוב ---- */
       { view: 'ideas', target: '[data-action="idea-add"]',
         title: 'פותחים רעיון חדש',
-        text: 'לחיצה כאן פותחת רעיון ריק. אפשר לפתוח כמה רעיונות לאותו אירוע, להשוות ביניהם, ורק אז להחליט.' },
+        text: 'לחיצה כאן פותחת רעיון ריק. אפשר לפתוח כמה רעיונות לאותו אירוע, להשוות ביניהם, ורק אז להחליט.' }
+    ].concat(ideaSteps()).concat([
 
-      { view: 'ideas', modal: openIdeaForm, target: '#field-title',
+      { view: 'home', target: ['.tile[data-view="children"]', '.tile[data-view="staff"]'],
+        title: 'ילדי הגן והצוות',
+        text: 'הרשימות שמזינות את כל השאר: מספר הילדים קובע את הגבייה, והצוות קובע את חישובי המתנות.' },
+      { view: 'home', target: ['.tile[data-view="dates"]', '.tile[data-view="yearend"]'],
+        title: 'תאריכים וסוף שנה',
+        text: 'ימי הולדת, חגים ואירועים — ובסוף השנה, חישוב אוטומטי של החזרים להורים.' }
+    ]);
+
+    if (document.getElementById('sync-chip')) {
+      list.push({ view: 'home', target: '#sync-chip',
+        title: 'סנכרון',
+        text: 'השבב מראה אם הכול שמור בענן. כך אותם נתונים נפתחים גם בטלפון וגם במחשב.' });
+    }
+
+    list.push({ view: 'home', target: '.tabbar',
+      title: 'זהו, אפשר להתחיל 🎉',
+      text: 'התפריט התחתון מלווה אתכם בכל מסך. בהצלחה!' });
+
+    return list;
+  }
+
+  /* שלבי הטופס עצמו. מוגדרים בנפרד כי הם משמשים גם את הסיור המלא
+     וגם את הסיור הקצר שרץ בלחיצה הראשונה על "הוספת רעיון". */
+  function ideaSteps() {
+    var form = [openIdeaForm];
+    var picker = [openIdeaForm, openPicker];
+
+    return [
+      { view: 'ideas', modals: form, target: '#field-title',
         title: 'כך נראה רעיון מלא',
         text: 'לפניכם רעיון לדוגמה לצוות החינוכי. מתחילים בשם — הוא שיופיע אחר כך ברשימת ההוצאות.' },
 
-      { view: 'ideas', modal: openIdeaForm, target: '.staff-mix', soft: true,
-        title: 'הרכב צוות הגן',
-        text: 'כמה אנשים בכל דרגה, ומה החלק המומלץ לכל אחת מהן. מכאן נגזרים האחוזים שליד כל שורה.' },
-
-      { view: 'ideas', modal: openIdeaForm, target: '#field-budgetItemId',
+      { view: 'ideas', modals: form, target: '#field-budgetItemId',
         title: 'סעיף התקציב',
         text: 'הרעיון נצמד לסעיף שתכננתם בתקציב, וכך רואים תוך כדי אם הוא נכנס בו או חורג ממנו.' },
 
-      { view: 'ideas', modal: openIdeaForm, target: '#field-audiences',
+      { view: 'ideas', modals: form, target: '#field-audiences',
         title: 'קהל היעד',
         text: 'למי המתנה — ילדים, צוות או כיבוד. הבחירה קובעת לפי כמה אנשים מחושבת העלות.' },
 
-      { view: 'ideas', modal: openIdeaForm, target: '#f-lines',
-        title: 'שורות ההוצאה',
-        text: 'כל פריט בשורה משלו: מה קונים, למי בצוות, וכמה זה עולה לאדם. עמודת האחוזים מראה כמה מהסעיף כל שורה תופסת מול המומלץ לדרגה.' },
+      { view: 'ideas', modals: form, target: '.staff-mix', soft: true,
+        title: 'הרכב צוות הגן',
+        text: 'כמה אנשים בכל דרגה, ומה החלק המומלץ לכל אחת מהן. מכאן נגזרים האחוזים שליד כל שורה.' },
 
-      { view: 'ideas', modal: openIdeaForm, target: '#lines-total',
+      { view: 'ideas', modals: form, target: '#f-lines',
+        title: 'שורות ההוצאה',
+        text: 'כל פריט בשורה משלו: מה קונים, למי בצוות, וכמה זה עולה לאדם. בדוגמה — עציץ לגננת וכוס לסייעת.' },
+
+      { view: 'ideas', modals: picker, target: '.pk-list', soft: true,
+        title: 'בחירת אנשי הצוות',
+        text: 'לחיצה על "למי?" פותחת את המסך הזה. מסמנים דרגה שלמה או אנשים מסוימים, ואפשר גם להוסיף שם שאינו ברשימה.' },
+
+      { view: 'ideas', modals: picker, target: '.pk-shared', soft: true,
+        title: 'פריט אחד משותף',
+        text: 'מסמנים כשקונים דבר אחד לכולם — עוגה, למשל — כדי שהמחיר לא יוכפל במספר האנשים.' },
+
+      { view: 'ideas', modals: form, target: '#lines-total',
         title: 'הסכום המתגלגל',
         text: 'סה״כ הרעיון מול מה שמתוכנן בסעיף — כאן רואים מיד אם הוא נכנס בתקציב.' },
 
@@ -79,26 +118,8 @@ var Tour = (function () {
 
       { view: 'expenses', target: ['.summary', '.exp-row'], soft: true,
         title: 'וההוצאה נרשמת כאן',
-        text: 'הרעיון שנבחר נכנס לרשימה הזו עם הסכום שחושב בו, סך ההוצאות עולה בהתאם — והיתרה בקופה יורדת. מכאן והלאה זה כסף שיצא, לא תוכנית.' },
-      { target: ['.tile[data-view="children"]', '.tile[data-view="staff"]'],
-        title: 'ילדי הגן והצוות',
-        text: 'הרשימות שמזינות את כל השאר: מספר הילדים קובע את הגבייה, והצוות קובע את חישובי המתנות.' },
-      { target: ['.tile[data-view="dates"]', '.tile[data-view="yearend"]'],
-        title: 'תאריכים וסוף שנה',
-        text: 'ימי הולדת, חגים ואירועים — ובסוף השנה, חישוב אוטומטי של החזרים להורים.' }
+        text: 'הרעיון שנבחר נכנס לרשימה הזו עם הסכום שחושב בו, סך ההוצאות עולה בהתאם — והיתרה בקופה יורדת. מכאן והלאה זה כסף שיצא, לא תוכנית.' }
     ];
-
-    if (document.getElementById('sync-chip')) {
-      list.push({ target: '#sync-chip',
-        title: 'סנכרון',
-        text: 'השבב מראה אם הכול שמור בענן. כך אותם נתונים נפתחים גם בטלפון וגם במחשב.' });
-    }
-
-    list.push({ target: '.tabbar',
-      title: 'זהו, אפשר להתחיל 🎉',
-      text: 'התפריט התחתון מלווה אתכם בכל מסך. בהצלחה!' });
-
-    return list;
   }
 
   /* ---------- ניווט בתוך הסיור ---------- */
@@ -141,10 +162,11 @@ var Tour = (function () {
       audiences: ['staff'],
       note: '',
       chosen: false,
+      /* שתי דרגות בלבד וסכומים קטנים — דוגמה צריכה להיות קלה לקריאה,
+         לא להיראות כמו תקציב אמיתי */
       lines: [
-        { id: 'tour-l1', label: 'עציץ',        levelId: 'lead',      amount: 45 },
-        { id: 'tour-l2', label: 'כוס עם שם',   levelId: 'assistant', amount: 30 },
-        { id: 'tour-l3', label: 'זר למנהלת',   levelId: 'manager',   amount: 120 }
+        { id: 'tour-l1', label: 'עציץ',      levelId: 'lead',      amount: 25 },
+        { id: 'tour-l2', label: 'כוס עם שם', levelId: 'assistant', amount: 18 }
       ]
     };
   }
@@ -156,10 +178,30 @@ var Tour = (function () {
   /* הטופס נפתח דרך הפעולה הרגילה של המסך, ולכן אין בידנו מזהה לסגירה —
      סוגרים אותו כמו שמשתמש היה סוגר, בכפתור ה-✕ שלו. רעיון ריק שנסגר
      אינו נשמר, והסיור אינו מייצר נתונים. */
-  function closeModal() {
-    var x = document.querySelector('#modal-root .modal-close');
+  function closeTop() {
+    var backs = document.querySelectorAll('#modal-root .modal-back');
+    var top = backs[backs.length - 1];
+    var x = top && top.querySelector('.modal-close');
     if (x) x.click();
-    modalFn = null;
+    stack.pop();
+  }
+
+  /* מביא את מחסנית החלונות למצב שהשלב מבקש: סוגר מלמעלה מה שאינו
+     נחוץ, ופותח את מה שחסר. כך בוחר האנשים נפתח מעל הטופס ונסגר
+     בחזרה אליו, במקום שהשניים ייסגרו יחד. */
+  function syncModals(want) {
+    want = want || [];
+    var same = 0;
+    while (same < stack.length && same < want.length && stack[same] === want[same]) same++;
+    while (stack.length > same) closeTop();
+    var opened = false;
+    for (var i = same; i < want.length; i++) { want[i](); stack.push(want[i]); opened = true; }
+    return opened;
+  }
+
+  function openPicker() {
+    var btn = document.querySelector('#modal-root [data-who]');
+    if (btn) btn.click();
   }
 
   /* ---------- עזרה ---------- */
@@ -279,12 +321,10 @@ var Tour = (function () {
     var s = steps[idx];
     if (!s) return finish();
 
-    // שלב שמבקש מסך אחר או טופס — מציירים קודם, ומודדים אחרי
+    // שלב שמבקש מסך אחר או חלון — מציירים קודם, ומודדים אחרי
     var moved = goTo(s.view);
-    if (modalFn && modalFn !== s.modal) closeModal();
-    var opened = false;
-    if (s.modal && modalFn !== s.modal) { s.modal(); modalFn = s.modal; opened = true; }
-    if (moved || opened) { setTimeout(function () { if (live) draw(); }, 140); return; }
+    var opened = syncModals(s.modals);
+    if (moved || opened) { setTimeout(function () { if (live) draw(); }, 160); return; }
     draw();
   }
 
@@ -330,11 +370,13 @@ var Tour = (function () {
 
   function finish() {
     markSeen();
-    if (modalFn) closeModal();
+    while (stack.length) closeTop();
     // החזרה למסך שממנו יצאנו נעשית בעוד הסיור מסומן כפעיל, כדי שלא
     // תיספר כביקור של המשתמש במדידת השימוש
     if (homeView) { goTo(homeView); homeView = null; }
     live = false;
+    var after = onDone; onDone = null;
+    if (after) setTimeout(after, 120);
     window.removeEventListener('resize', reposition);
     window.removeEventListener('scroll', reposition, true);
     document.removeEventListener('keydown', onKey);
@@ -349,12 +391,36 @@ var Tour = (function () {
   }
 
   /* ---------- הפעלה ---------- */
+  /* הלחיצה הראשונה על "הוספת רעיון" מריצה את שלבי הטופס על רעיון
+     לדוגמה, ורק בסופם נפתח הטופס הריק שהמשתמש ביקש. פעם אחת בלבד;
+     בכל לחיצה אחרת מוחזר false והמסך מתנהג כרגיל. */
+  function startIdea() {
+    if (live) return false;
+    try { if (localStorage.getItem(IDEA_KEY) === 'done') return false; } catch (e) { return false; }
+    try { localStorage.setItem(IDEA_KEY, 'done'); } catch (e) {}
+
+    steps = [{ title: 'רגע לפני שמתחילים ✨',
+               text: 'נעבור יחד על רעיון לדוגמה — מה יש בטופס ואיך הוא מחושב. בסוף ייפתח טופס ריק, שלכם.' }]
+            .concat(ideaSteps().filter(function (st) { return st.modals; }));
+
+    onDone = function () {
+      if (window.Views && Views.ideas && Views.ideas.form) Views.ideas.form(null);
+    };
+    open();
+    return true;
+  }
+
   function start() {
     if (live) return;
     steps = stepList();
+    onDone = null;
+    open();
+  }
+
+  function open() {
     idx = 0;
     live = true;
-    modalFn = null;
+    stack = [];
     homeView = (window.App && App.view) ? App.view() : null;
 
     back = document.createElement('div');
@@ -382,6 +448,6 @@ var Tour = (function () {
     }, 700);
   }
 
-  return { start: start, maybeStart: maybeStart, seen: seen,
+  return { start: start, startIdea: startIdea, maybeStart: maybeStart, seen: seen,
            running: function () { return live; } };
 })();
