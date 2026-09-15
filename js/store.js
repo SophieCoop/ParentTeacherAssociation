@@ -138,6 +138,22 @@ var Store = (function () {
     return items;
   }
 
+  /* הוצאות שנוצרו מרעיון לפני שקהל היעד הועתק אליהן — יושבות בקבוצת
+     "כללי" במקום אצל הילדים או הצוות. משלימים להן את קהל היעד מהרעיון
+     שיצר אותן. רק כשהשדה חסר לגמרי: הוצאה שנערכה ידנית שומרת מחרוזת
+     ריקה, וזו בחירה של המשתמש שאין לדרוס. */
+  function migrateExpenses(expenses, ideas) {
+    // store.js נטען לפני calc.js; הטעינה עצמה מתרחשת מאוחר יותר, אבל
+    // אין סיבה שסדר הסקריפטים יפיל את קריאת הנתונים
+    if (!window.Calc || !Calc.ideaAudience) return expenses;
+    (expenses || []).forEach(function (e) {
+      if (!e.ideaId || 'audience' in e) return;
+      var idea = (ideas || []).filter(function (i) { return i.id === e.ideaId; })[0];
+      if (idea) e.audience = Calc.ideaAudience(idea);
+    });
+    return expenses;
+  }
+
   function migrate(data) {
     var base = blankState();
     Object.keys(base).forEach(function (k) {
@@ -149,6 +165,7 @@ var Store = (function () {
     if (!Array.isArray(data.categories) || !data.categories.length) data.categories = base.categories;
     else migrateCategories(data.categories);
     migrateBudgetItems(data.budgetItems);
+    migrateExpenses(data.expenses, data.ideas);
     return data;
   }
 
