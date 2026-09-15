@@ -290,7 +290,7 @@ var Store = (function () {
     // [קטגוריה, שם הסעיף, סכום, תאריך יעד]
     [['cat-bday',    'מתנות ליום הולדת',              1200, d(N, 5, 15)],
      ['cat-holiday', 'מתנה לחג לילדים',               2100, d(Y, 9, 15)],
-     ['cat-yearend', 'מתנת סוף שנה לצוות',            2400, d(N, 6, 15)],
+     ['cat-yearend', 'מתנת סוף שנה לצוות',             810, d(N, 6, 15)],
      ['cat-clubs',   'חוגים במימון אישי',             1800, d(N, 6, 30)],
      ['cat-food',    'כיבוד לאירועים',                1680, d(N, 6, 30)],
      ['cat-other',   'קרן חירום',                     1000, '']].forEach(function (b) {
@@ -316,9 +316,9 @@ var Store = (function () {
       budgetItemId: yearendId,
       audiences: ['children', 'staff'], note: 'הצעה של דנה', chosen: false,
       lines: [
-        { id: uid('ln'), label: 'ספר אישי', amount: 1400 },
-        { id: uid('ln'), label: 'כוס עם שם', amount: 700 },
-        { id: uid('ln'), label: 'אריזה', amount: 200 }
+        { id: uid('ln'), label: 'ספר אישי', amount: 450 },
+        { id: uid('ln'), label: 'כוס עם שם', amount: 240 },
+        { id: uid('ln'), label: 'אריזה', amount: 70 }
       ]
     });
     s.ideas.push({
@@ -326,8 +326,8 @@ var Store = (function () {
       budgetItemId: yearendId,
       audiences: ['children'], note: '', chosen: false,
       lines: [
-        { id: uid('ln'), label: 'ערכת יצירה', amount: 1600 },
-        { id: uid('ln'), label: 'ברכה מעוצבת', amount: 240 }
+        { id: uid('ln'), label: 'ערכת יצירה', amount: 520 },
+        { id: uid('ln'), label: 'ברכה מעוצבת', amount: 80 }
       ]
     });
 
