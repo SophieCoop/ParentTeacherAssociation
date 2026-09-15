@@ -36,7 +36,7 @@ var Store = (function () {
   /* המזהים קבועים ואין לשנותם — רשומות צוות קיימות מפנות אליהם */
   var STAFF_LEVELS = [
     { id: 'manager',    name: 'מנהלת',              icon: '👩‍💼', tone: 'peach',  weight: 4, plural: 'מנהלות', edu: true },
-    { id: 'lead',       name: 'גננת',               icon: '👩‍🏫', tone: 'purple', weight: 3, plural: 'גננות', edu: true },
+    { id: 'lead',       name: 'גננת',               icon: '👩‍🏫', tone: 'purple', weight: 4, plural: 'גננות', edu: true },
     { id: 'assistant',  name: 'סייעת',              icon: '🧑‍🍼', tone: 'pink',   weight: 2, plural: 'סייעות', edu: true },
     { id: 'aide',       name: 'מטפלת / עוזרת',      icon: '🤱',   tone: 'green',  weight: 2, plural: 'מטפלות / עוזרות', edu: true },
     { id: 'paramedic',  name: 'מטפל/ת פרא-רפואי',   icon: '🩺',   tone: 'mint',   weight: 2, plural: 'מטפלי פרא-רפואי', edu: true },
@@ -287,6 +287,14 @@ var Store = (function () {
       s.staff.push({ id: uid('stf'), name: t[0], role: t[1], level: t[2], phone: '', birthDate: '' });
     });
 
+    /* מזהי אנשי הצוות לפי דרגה — שורות ההוצאה של רעיון הדוגמה מכוונות
+       אליהם, כדי שעמודת "למי?" תראה בחירה אמיתית ולא "בחרו למי" */
+    function staffOf() {
+      var levels = Array.prototype.slice.call(arguments);
+      return s.staff.filter(function (t) { return levels.indexOf(t.level) > -1; })
+                    .map(function (t) { return t.id; });
+    }
+
     // [קטגוריה, שם הסעיף, סכום, תאריך יעד]
     [['cat-bday',    'מתנות ליום הולדת',              1200, d(N, 5, 15)],
      ['cat-holiday', 'מתנה לחג לילדים',               2100, d(Y, 9, 15)],
@@ -314,11 +322,17 @@ var Store = (function () {
     s.ideas.push({
       id: uid('ide'), title: 'מתנת סוף שנה — ספר וכוס', categoryId: 'cat-yearend',
       budgetItemId: yearendId,
-      audiences: ['children', 'staff'], note: 'הצעה של דנה', chosen: false,
+      /* לצוות בלבד: כך הדוגמה נפתחת על הממשק שקיים רק לקהל הזה —
+         כרטיס הרכב הצוות, הדרגות וטבלת השורות עם "למי?" */
+      audiences: ['staff'], note: 'הצעה של דנה', chosen: false,
       lines: [
-        { id: uid('ln'), label: 'ספר אישי', amount: 450 },
-        { id: uid('ln'), label: 'כוס עם שם', amount: 240 },
-        { id: uid('ln'), label: 'אריזה', amount: 70 }
+        { id: uid('ln'), label: 'ספר אישי', amount: 260,
+          staffIds: staffOf('lead'), names: [], shared: false },
+        { id: uid('ln'), label: 'כוס עם שם', amount: 120,
+          staffIds: staffOf('assistant', 'aide'), names: [], shared: false },
+        /* פריט אחד לכולם — מדגים גם את "פריט משותף" שבבוחר האנשים */
+        { id: uid('ln'), label: 'אריזה', amount: 70,
+          staffIds: staffOf('lead', 'assistant', 'aide', 'external'), names: [], shared: true }
       ]
     });
     s.ideas.push({
