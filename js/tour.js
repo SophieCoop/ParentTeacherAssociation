@@ -50,8 +50,12 @@ var Tour = (function () {
         text: 'לחיצה כאן פותחת רעיון ריק. אפשר לפתוח כמה רעיונות לאותו אירוע, להשוות ביניהם, ורק אז להחליט.' },
 
       { view: 'ideas', modal: openIdeaForm, target: '#field-title',
-        title: 'שם הרעיון',
-        text: 'מה מציעים — "עציץ וכוס לצוות", "ערכת יצירה לילדים". השם הזה הוא שיופיע אחר כך ברשימת ההוצאות.' },
+        title: 'כך נראה רעיון מלא',
+        text: 'לפניכם רעיון לדוגמה לצוות החינוכי. מתחילים בשם — הוא שיופיע אחר כך ברשימת ההוצאות.' },
+
+      { view: 'ideas', modal: openIdeaForm, target: '.staff-mix', soft: true,
+        title: 'הרכב צוות הגן',
+        text: 'כמה אנשים בכל דרגה, ומה החלק המומלץ לכל אחת מהן. מכאן נגזרים האחוזים שליד כל שורה.' },
 
       { view: 'ideas', modal: openIdeaForm, target: '#field-budgetItemId',
         title: 'סעיף התקציב',
@@ -63,7 +67,7 @@ var Tour = (function () {
 
       { view: 'ideas', modal: openIdeaForm, target: '#f-lines',
         title: 'שורות ההוצאה',
-        text: 'כל פריט נכנס בשורה משלו — מה קונים, למי, וכמה זה עולה לאדם. "הוספת שורה" פותחת את הראשונה, והסכומים מתעדכנים תוך כדי הקלדה.' },
+        text: 'כל פריט בשורה משלו: מה קונים, למי בצוות, וכמה זה עולה לאדם. עמודת האחוזים מראה כמה מהסעיף כל שורה תופסת מול המומלץ לדרגה.' },
 
       { view: 'ideas', modal: openIdeaForm, target: '#lines-total',
         title: 'הסכום המתגלגל',
@@ -106,8 +110,47 @@ var Tour = (function () {
     return true;
   }
 
+  /* איזה רעיון להראות בטופס. טופס ריק אינו מלמד דבר: אין בו שורות,
+     אין הרכב צוות ואין אחוזים. לכן מעדיפים רעיון אמיתי של המשתמש, ובו
+     דווקא רעיון לצוות — המסך שלו הוא העשיר ביותר. רק כשאין במה
+     להשתמש נבנה רעיון הדגמה. */
+  function tourIdea() {
+    var withLines = (Store.state.ideas || []).filter(function (i) { return (i.lines || []).length; });
+    var staffy = withLines.filter(function (i) {
+      return (i.audiences || []).indexOf('staff') > -1;
+    })[0];
+    var pick = staffy || withLines[0];
+    // עותק עמוק: גם אם משהו בטופס ייגע בו, הרעיון של המשתמש לא ייפגע
+    if (pick) { try { return JSON.parse(JSON.stringify(pick)); } catch (e) { return pick; } }
+    return demoIdea();
+  }
+
+  /* רעיון הדגמה — חי בזיכרון בלבד, לא נוסף ל-Store ולא נשמר.
+     שלוש שורות לדרגות שונות, כדי שטבלת השורות ועמודת האחוזים יראו
+     כמו במסך אמיתי. */
+  function demoIdea() {
+    var b = (Store.state.budgetItems || []).filter(function (x) {
+      return (x.audiences || []).indexOf('staff') > -1;
+    })[0] || (Store.state.budgetItems || [])[0];
+
+    return {
+      id: 'tour-demo',
+      title: 'מתנת סוף שנה לצוות החינוכי',
+      budgetItemId: b ? b.id : '',
+      categoryId: b ? b.categoryId : 'cat-yearend',
+      audiences: ['staff'],
+      note: '',
+      chosen: false,
+      lines: [
+        { id: 'tour-l1', label: 'עציץ',        levelId: 'lead',      amount: 45 },
+        { id: 'tour-l2', label: 'כוס עם שם',   levelId: 'assistant', amount: 30 },
+        { id: 'tour-l3', label: 'זר למנהלת',   levelId: 'manager',   amount: 120 }
+      ]
+    };
+  }
+
   function openIdeaForm() {
-    if (window.Views && Views.ideas && Views.ideas.actions) Views.ideas.actions['idea-add']();
+    if (window.Views && Views.ideas && Views.ideas.form) Views.ideas.form(tourIdea());
   }
 
   /* הטופס נפתח דרך הפעולה הרגילה של המסך, ולכן אין בידנו מזהה לסגירה —
@@ -185,6 +228,7 @@ var Tour = (function () {
       bubble.className = 'tour-bubble center';
       bubble.style.top = '';
       bubble.style.left = '';
+      bubble.style.transform = '';
       return;
     }
 
@@ -194,15 +238,30 @@ var Tour = (function () {
     hole.style.width = r.width + 'px';
     hole.style.height = r.height + 'px';
 
-    /* הבועה מתחת ליעד אם יש מקום, ומעליו אם אין */
+    /* הבועה מתחת ליעד אם יש מקום, ומעליו אם אין. יעד שגבוה מהמסך —
+       למשל אזור שורות ההוצאה בטופס רעיון מלא — אינו מותיר מקום לא
+       מעליו ולא מתחתיו, ואז הבועה נצמדת לתחתית המסך ומוותרת על החץ.
+       בלי זה היא נופלת מחוץ למסך, וכפתור "הבא" אינו נגיש. */
     var vh = window.innerHeight, vw = window.innerWidth;
     var bh = bubble.offsetHeight || 150;
     var below = r.top + r.height + 12;
     var above = r.top - bh - 12;
-    var onTop = (below + bh > vh - 10) && above > 10;
+    var fitsBelow = below + bh <= vh - 10;
+    var fitsAbove = above >= 10;
+    var top, cls;
 
-    bubble.className = 'tour-bubble ' + (onTop ? 'above' : 'below');
-    bubble.style.top = (onTop ? above : below) + 'px';
+    if (fitsBelow)       { top = below; cls = 'below'; }
+    else if (fitsAbove)  { top = above; cls = 'above'; }
+    else                 { top = vh - bh - 12; cls = 'center'; }
+
+    bubble.className = 'tour-bubble ' + cls;
+    if (cls === 'center') {
+      // מיקום ידני בתחתית, ולכן בלי המרכוז שמגיע עם המחלקה
+      bubble.style.transform = 'none';
+    } else {
+      bubble.style.transform = '';
+    }
+    bubble.style.top = top + 'px';
 
     var bw = Math.min(330, vw - 24);
     bubble.style.width = bw + 'px';

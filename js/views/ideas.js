@@ -1004,6 +1004,9 @@ Views.ideas = (function () {
     audienceLabel: audienceLabel,
     perHeadLabel: perHeadLabel,
     perOneLabel: function (id) { return ONE[id] ? 'לכל ' + ONE[id] : ''; },
+    /* פתיחת הטופס על רעיון נתון — משמש את סיור ההיכרות, שמציג רעיון
+       לדוגמה בלי לשמור אותו */
+    form: ideaForm,
     actions: {
       'idea-add': function () { ideaForm(null); },
       'idea-edit': function (el) { ideaForm(Store.find('ideas', el.getAttribute('data-id'))); },
