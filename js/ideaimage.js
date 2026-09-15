@@ -113,6 +113,7 @@ var IdeaImage = (function () {
 
     /* ----- שורות ההוצאה ----- */
     var lines = idea.lines || [];
+    var staffLines = Calc.staffIdea(idea);
     if (!lines.length) {
       ctx.font = font(15); ctx.fillStyle = MUTED; ctx.textAlign = 'right'; ctx.textBaseline = 'top';
       ctx.fillText('עוד אין שורות הוצאה ברעיון הזה', right, y);
@@ -125,10 +126,10 @@ var IdeaImage = (function () {
       ctx.textBaseline = 'middle';
 
       ctx.font = font(18, 800); ctx.textAlign = 'left'; ctx.fillStyle = INK;
-      ctx.fillText(UI.money(Calc.lineTotal(l, Store.state)), left + 14, mid);
+      ctx.fillText(UI.money(Calc.lineTotalFor(staffLines, l, Store.state)), left + 14, mid);
 
       ctx.font = font(14); ctx.textAlign = 'left'; ctx.fillStyle = MUTED;
-      ctx.fillText(Calc.lineQty(l, Store.state) + ' × ' + UI.money(l.amount), left + 124, mid);
+      ctx.fillText(Calc.lineQtyFor(staffLines, l, Store.state) + ' × ' + UI.money(l.amount), left + 124, mid);
 
       ctx.font = font(17, 700); ctx.textAlign = 'right'; ctx.fillStyle = INK;
       ctx.fillText(clip(ctx, l.label || 'סעיף', cw - 260), right - 14, mid);

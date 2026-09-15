@@ -170,11 +170,12 @@ Views.ideas = (function () {
     if (!(idea.lines || []).length) {
       html += '<p class="muted small" style="margin:0 0 8px">עוד אין שורות הוצאה ברעיון הזה — אפשר להוסיף בעריכה ✏️</p>';
     } else {
+      var staffLines = Calc.staffIdea(idea);
       html += idea.lines.map(function (l) {
         return '<div class="idea-line">' +
           '<span class="il-name">' + UI.esc(l.label || 'סעיף') + '</span>' +
-          '<span class="il-calc">' + Calc.lineQty(l, st) + ' \u00d7 ' + UI.money(l.amount) + '</span>' +
-          '<b class="il-sum">' + UI.money(Calc.lineTotal(l, st)) + '</b>' +
+          '<span class="il-calc">' + Calc.lineQtyFor(staffLines, l, st) + ' \u00d7 ' + UI.money(l.amount) + '</span>' +
+          '<b class="il-sum">' + UI.money(Calc.lineTotalFor(staffLines, l, st)) + '</b>' +
           '</div>';
       }).join('');
     }
@@ -313,7 +314,7 @@ Views.ideas = (function () {
     /* דרגת הצוות נשמרת על השורה גם כשיוצאים מקהל היעד של צוות,
        כדי שחזרה אליו לא תאבד את הבחירה — אבל החישוב מתעלם ממנה בינתיים. */
     function lineSum(l, staff) {
-      return Calc.lineTotal(staff ? l : { qty: l.qty, amount: l.amount }, Store.state);
+      return Calc.lineTotalFor(staff, l, Store.state);
     }
 
     /* יציאה מקהל יעד של צוות מקבעת את הכמות שהבחירה הניבה */
@@ -377,9 +378,13 @@ Views.ideas = (function () {
         '</div>';
     }
 
-    /* למי מיועדת השורה בפועל — גם שורה ישנה ששמרה דרגה בלבד */
+    /* למי מיועדת השורה בפועל — גם שורה ישנה ששמרה דרגה בלבד.
+       הסדר זהה ל-Calc.lineQty, כדי שהפס ימדוד את מי שהשורה באמת
+       נספרת עליו: רשימה ריקה אינה בחירה אלא היעדר בחירה, ולכן
+       היא נופלת חזרה לדרגה במקום לרוקן את השורה. */
     function lineTargets(l) {
-      if (linePicked(l)) return { ids: lineIds(l), extra: lineNames(l).length };
+      var ids = lineIds(l), extra = lineNames(l).length;
+      if (ids.length || extra) return { ids: ids, extra: extra };
       if (l.levelId === 'shared') return { ids: idsOfLevel('all'), extra: 0 };
       if (l.levelId) return { ids: idsOfLevel(l.levelId), extra: 0 };
       return { ids: [], extra: 0 };
@@ -954,12 +959,14 @@ Views.ideas = (function () {
      prefix מאפשר תבליט בהערות, ובלעדיו הטקסט נקי לוואטסאפ. */
   function linesText(idea, prefix) {
     var st = Store.state;
+    var staff = Calc.staffIdea(idea);
     return (idea.lines || []).map(function (l) {
-      var q = Calc.lineQty(l, st);
-      var who = l.levelId ? ' (' + levelName(l.levelId, q) + ')' : '';
+      var q = Calc.lineQtyFor(staff, l, st);
+      var sum = Calc.lineTotalFor(staff, l, st);
+      var who = (staff && l.levelId) ? ' (' + levelName(l.levelId, q) + ')' : '';
       return (prefix || '') + (l.label || 'סעיף') + who + ' - ' +
-        (q !== 1 ? q + ' × ' + UI.money(l.amount) + ' = ' + UI.money(Calc.lineTotal(l, st))
-                 : UI.money(Calc.lineTotal(l, st)));
+        (q !== 1 ? q + ' × ' + UI.money(l.amount) + ' = ' + UI.money(sum)
+                 : UI.money(sum));
     }).join('\n');
   }
 
@@ -1064,7 +1071,13 @@ Views.ideas = (function () {
         var idea = Store.find('ideas', el.getAttribute('data-id'));
         if (!idea) return;
         var total = Calc.ideaTotal(idea, Store.state);
-        if (total <= 0) { UI.toast('צריך להוסיף שורות הוצאה לפני הבחירה'); return; }
+        if (total <= 0) {
+          /* יש שורות, אבל הן מסתכמות באפס — הודעה על "להוסיף שורות" רק מבלבלת */
+          UI.toast((idea.lines || []).length
+            ? 'שורות ההוצאה מסתכמות ב-0 ₪ — צריך למלא מחיר ולמי הן מיועדות'
+            : 'צריך להוסיף שורות הוצאה לפני הבחירה');
+          return;
+        }
         var vs = Calc.ideaVsBudget(Store.state, idea);
         UI.modal({
           title: 'בחירת הרעיון',
