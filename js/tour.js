@@ -103,7 +103,7 @@ var Tour = (function () {
       { view: 'ideas', modals: form, target: '#f-lines',
         title: 'שורות ההוצאה',
         text: 'כל פריט בשורה משלו: מה קונים, למי בצוות, וכמה זה עולה לאדם.' +
-              (demo ? ' בדוגמה — עציץ לגננת וכוס לסייעת.' : '') },
+              (demo ? ' בדוגמה — שי לגננת ומזכרת לסייעות.' : '') },
 
       { view: 'ideas', modals: picker, target: '.pk-list', soft: true,
         title: 'בחירת אנשי הצוות',
@@ -137,7 +137,7 @@ var Tour = (function () {
   }
 
   /* איזה רעיון להראות בטופס. טופס ריק אינו מלמד דבר: אין בו שורות,
-     אין הרכב צוות ואין אחוזים. לכן מעדיפים רעיון אמיתי של המשתמש, ובו
+     אין הרכב צוות ואין סכומים. לכן מעדיפים רעיון אמיתי של המשתמש, ובו
      דווקא רעיון לצוות — המסך שלו הוא העשיר ביותר. רק כשאין במה
      להשתמש נבנה רעיון הדגמה. */
   function tourIdea() {
@@ -152,12 +152,24 @@ var Tour = (function () {
   }
 
   /* רעיון הדגמה — חי בזיכרון בלבד, לא נוסף ל-Store ולא נשמר.
-     שלוש שורות לדרגות שונות, כדי שטבלת השורות ועמודת האחוזים יראו
-     כמו במסך אמיתי. */
+     שתי שורות לשתי דרגות, כדי שטבלת השורות וכרטיס הרכב הצוות
+     ייראו כמו במסך אמיתי. */
   function demoIdea() {
     var b = (Store.state.budgetItems || []).filter(function (x) {
       return (x.audiences || []).indexOf('staff') > -1;
     })[0] || (Store.state.budgetItems || [])[0];
+    var planned = b ? Calc.itemAmount(Store.state, b) : 0;
+
+    /* המחיר בדוגמה נגזר מהסכום המומלץ לאותה דרגה, ולא נקוב מראש:
+       הפס שמעל הסכום המומלץ מודד בדיוק את היחס הזה, וסכום קבוע מול
+       תקציב אמיתי היה מצייר פס ריק שאינו מלמד דבר. שורה אחת קרובה
+       להמלצה והשנייה בערך בחציה, כדי ששני המצבים ייראו זה לצד זה.
+       בלי סעיף תקציב אין המלצה, ואז נשארים סכומים קטנים וקבועים. */
+    function demoAmount(levelId, share, fallback) {
+      var per = planned ? Calc.levelPerPerson(Store.state, levelId, planned) : 0;
+      if (!per) return fallback;
+      return Math.max(5, Math.round((per * share) / 5) * 5);
+    }
 
     return {
       id: 'tour-demo',
@@ -167,11 +179,10 @@ var Tour = (function () {
       audiences: ['staff'],
       note: '',
       chosen: false,
-      /* שתי דרגות בלבד וסכומים קטנים — דוגמה צריכה להיות קלה לקריאה,
-         לא להיראות כמו תקציב אמיתי */
+      /* שתי דרגות בלבד — דוגמה צריכה להיות קלה לקריאה */
       lines: [
-        { id: 'tour-l1', label: 'עציץ',      levelId: 'lead',      amount: 25 },
-        { id: 'tour-l2', label: 'כוס עם שם', levelId: 'assistant', amount: 18 }
+        { id: 'tour-l1', label: 'שי אישי',     levelId: 'lead',      amount: demoAmount('lead', 0.8, 25) },
+        { id: 'tour-l2', label: 'מזכרת עם שם', levelId: 'assistant', amount: demoAmount('assistant', 0.45, 18) }
       ]
     };
   }
