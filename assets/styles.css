@@ -1253,7 +1253,7 @@ table.ye-tbl td:nth-child(2),table.ye-tbl td:nth-child(3){text-align:center}
 .staff-mix .sm-num{color:var(--muted)}
 .staff-mix .sm-rank{
   display:flex;align-items:center;justify-content:center;gap:4px;
-  border-top:1px solid var(--line);padding-top:5px;margin-top:5px;width:100%;
+  border-top:1px solid var(--line);padding-top:5px;margin-top:6px;width:100%;
 }
 .staff-mix .sm-rank .sm-rlab{font-size:10.5px;color:var(--muted);line-height:1.2}
 .staff-mix .sm-rank .sm-rlab b{font-size:12.5px;color:var(--ink);font-variant-numeric:tabular-nums}
@@ -1262,17 +1262,18 @@ table.ye-tbl td:nth-child(2),table.ye-tbl td:nth-child(3){text-align:center}
   background:#fff;color:var(--primary-dark);font-size:13px;line-height:1;
 }
 .staff-mix .sm-rank button:active{filter:brightness(.94)}
+/* הפס מתמלא לפי שורות ההוצאה שכבר יועדו לאותה דרגה */
 .staff-mix .sm-bar{
-  width:100%;height:5px;border-radius:5px;background:#fff;
-  overflow:hidden;margin-top:7px;
+  width:100%;height:5px;border-radius:5px;background:var(--primary-soft);
+  overflow:hidden;margin-top:6px;
 }
-.staff-mix .sm-bar > i{display:block;height:100%;border-radius:5px}
-.staff-mix .sm-per{margin-top:6px;line-height:1.2}
+.staff-mix .sm-bar > i{display:block;height:100%;border-radius:5px;transition:width .18s ease}
+/* ריבוע הסכום המומלץ — ממורכז מתחת לכותרת התא, והטקסט ממורכז בתוכו */
+.staff-mix .sm-per{
+  margin:6px auto 0;width:100%;box-sizing:border-box;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:1px;text-align:center;line-height:1.2;
+  background:var(--primary-soft);border-radius:var(--r-xs);padding:5px 4px;
+}
 .staff-mix .sm-per b{display:block;font-size:14.5px;font-variant-numeric:tabular-nums}
-.staff-mix .sm-per span{font-size:9.5px;color:var(--muted)}
-
-/* ההמלצה לשורה יושבת מתחת לשדה המחיר, במקום עמודת אחוזים */
-.ln-rec{
-  display:block;font-size:10px;color:var(--muted);margin-top:3px;
-  text-align:center;font-variant-numeric:tabular-nums;white-space:nowrap;
-}
+.staff-mix .sm-per span{display:block;font-size:9.5px;color:var(--muted)}
