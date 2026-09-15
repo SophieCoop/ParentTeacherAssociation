@@ -649,7 +649,13 @@ table.tbl tr td:first-child{font-weight:600}
   padding:0 5px 7px;white-space:nowrap;
 }
 .line-tbl th.end{text-align:end}
-.line-tbl td{padding:6px 3px;border-top:1px solid var(--line);vertical-align:middle}
+/* כל הפקדים בשורה מתחילים באותו גובה. שורת ההמלצה שמתחת לשדה המחיר
+   מגביהה את התא, ובמרכוז אנכי היא הייתה מרימה את השדה עצמו ומוציאה
+   אותו מהיישור עם שם המוצר ועם "למי?". */
+.line-tbl td{padding:6px 3px;border-top:1px solid var(--line);vertical-align:top}
+/* הסכום וכפתור המחיקה אינם פקדים, ולכן הם מוזזים ידנית אל מרכז שורת הפקדים */
+.line-tbl td:nth-child(4){padding-top:15px}
+.line-tbl td:last-child{padding-top:11px}
 .line-tbl tr:first-child td{border-top:none}
 .line-tbl .input{padding:8px 9px;font-size:12.5px;width:100%;min-width:0}
 .line-tbl .input.end{text-align:end;font-weight:700}
@@ -1056,6 +1062,8 @@ table.tbl tr td:first-child{font-weight:600}
   .line-tbl th{font-size:9.5px;padding:0 1px 6px;letter-spacing:-.2px}
   .line-tbl th small{font-size:8.5px}
   .line-tbl td{padding:5px 1px}
+  /* הריפוד העליון קטן כאן, ולכן ההזחה של הסכום מתקצרת איתו */
+  .line-tbl td:nth-child(4){padding-top:13px}
 
   /* עם table-layout:fixed הדפדפן קובע את העמודות לפי השורה הראשונה —
      שורת הכותרות — ולכן הרוחבים חייבים לשבת על ה-th ולא על ה-td.
