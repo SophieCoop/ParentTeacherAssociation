@@ -352,6 +352,13 @@ Views.ideas = (function () {
     }
 
     /* כרטיס תקציב הרעיון — כמה הסעיף נותן, כמה הרעיון מנצל ומה נותר */
+    /* התקציב המתוכנן של הסעיף שנבחר — הבסיס לכל ההמלצות */
+    function plannedOf(root) {
+      var sel = root && root.querySelector('#f-budgetItemId');
+      var b = sel ? itemLeft(sel.value) : null;
+      return (b && b.planned) || 0;
+    }
+
     function budgetCardHTML(root, total) {
       var sel = root && root.querySelector('#f-budgetItemId');
       var b = sel ? itemLeft(sel.value) : null;
@@ -374,7 +381,7 @@ Views.ideas = (function () {
     }
 
     /* כרטיס הרכב הצוות — מנין נלקחות הכמויות בטבלה */
-    function staffMixHTML() {
+    function staffMixHTML(planned) {
       var mix = staffMix();
       if (!mix.length) {
         return '<div class="note"><div class="n-ico">\ud83d\udc65</div><div>' +
@@ -382,33 +389,48 @@ Views.ideas = (function () {
           'אפשר להוסיף אותם בלשונית "צוות הגן", ואז הכמויות יתמלאו כאן מעצמן.' +
           '</div></div>';
       }
+
+      var total = mix.reduce(function (n, x) { return n + x.count; }, 0);
+      /* אורך הפס יחסי לדרגה הגבוהה ביותר שיש בגן, ולא לסולם המלא —
+         כך ההבדל בין הדרגות שקיימות בפועל נראה לעין */
+      var maxW = mix.reduce(function (m, x) {
+        return Math.max(m, Calc.levelWeight(Store.state, x.level.id));
+      }, 1);
+
       return '<div class="staff-mix">' +
-        '<div class="sm-head">\ud83d\udc65 <b>הרכב צוות הגן</b></div>' +
+        '<div class="sm-head">' +
+          '<b>\ud83d\udc65 הרכב צוות הגן</b>' +
+          '<span class="sm-total">סה״כ ' + total + ' אנשי צוות</span>' +
+        '</div>' +
         /* עמודה לכל דרגה, כך שכולן בשורה אחת ואין דרגה שנופלת לשורה משלה */
         '<div class="sm-grid" style="--cols:' + mix.length + '">' +
           mix.map(function (x) {
             var name = levelName(x.level.id, x.count);
             var w = Calc.levelWeight(Store.state, x.level.id);
+            var per = Calc.levelPerPerson(Store.state, x.level.id, planned);
             return '<div class="sm-cell">' +
               '<button type="button" class="sm-top" data-mix="' + x.level.id + '" ' +
                 'aria-label="הצגת השמות — ' + UI.esc(name) + '">' +
                 '<span class="sm-name">' + UI.esc(name) + '</span>' +
-                '<b class="sm-num">' + x.count + '</b></button>' +
+                '<span class="sm-num">(' + x.count + ')</span></button>' +
               '<div class="sm-rank">' +
-                '<span class="sm-rlab">רמת תקציב</span>' +
-                '<span class="sm-step">' +
-                  '<button type="button" data-w="' + x.level.id + '" data-d="-1" ' +
-                    'aria-label="הפחתת רמת התקציב">−</button>' +
-                  '<b>' + w + '</b>' +
-                  '<button type="button" data-w="' + x.level.id + '" data-d="1" ' +
-                    'aria-label="הגדלת רמת התקציב">+</button>' +
-                '</span>' +
+                '<button type="button" data-w="' + x.level.id + '" data-d="-1" ' +
+                  'aria-label="הפחתת רמת התקציב">−</button>' +
+                '<span class="sm-rlab">דרגה <b>' + w + '</b></span>' +
+                '<button type="button" data-w="' + x.level.id + '" data-d="1" ' +
+                  'aria-label="הגדלת רמת התקציב">+</button>' +
+              '</div>' +
+              '<div class="sm-bar"><i style="width:' + Math.round((w / maxW) * 100) + '%;' +
+                'background:' + UI.toneInk(x.level.tone) + '"></i></div>' +
+              '<div class="sm-per">' +
+                (per ? '<b>' + UI.money(per) + '</b><span>מומלץ לאדם</span>'
+                     : '<span>בחרו סעיף תקציב</span>') +
               '</div>' +
               '</div>';
           }).join('') +
         '</div>' +
-        '<p class="sm-hint">רמת התקציב משמשת רק לחישוב היחס המומלץ למתנה, ואינה משקפת הערכה אישית. ' +
-          'לחיצה על דרגה מציגה את השמות.</p>' +
+        '<p class="sm-hint">הסכום המומלץ מחלק את תקציב הסעיף לפי הדרגה ומספר האנשים בה. ' +
+          'הדרגה ניתנת לשינוי, והיא משמשת רק לחישוב — לא להערכה אישית. לחיצה על דרגה מציגה את השמות.</p>' +
         '</div>';
     }
 
@@ -655,47 +677,41 @@ Views.ideas = (function () {
       });
     }
 
-    /* כמה אחוז מתקציב הרעיון השורה תופסת בפועל, מול החלק שמומלץ
-       לדרגות שנבחרו בה, לפי רמות התקציב ומספר האנשים בכל דרגה */
-    function pctCellHTML(l, root) {
+    /* הסכום המומלץ לאדם בשורה: ממוצע ההמלצה של הדרגות שנבחרו בה.
+       שורה שכולה דרגה אחת מקבלת בדיוק את ההמלצה של אותה דרגה. */
+    function recPerPerson(l, root) {
       var sel = root && root.querySelector('#f-budgetItemId');
       var b = sel ? itemLeft(sel.value) : null;
-      if (!b || !b.planned) return '<span class="pc-none">—</span>';
+      if (!b || !b.planned || l.shared) return 0;
 
-      var actual = Math.round((lineSum(l, true) / b.planned) * 100);
-      var rec = Math.round(recShare(l) * 100);
-      var cls = !rec ? '' : (actual > rec + 2 ? 'over' : (actual < rec - 2 ? 'under' : 'ok'));
-      return '<span class="pc ' + cls + '"><b>' + actual + '%</b>' +
-        (rec ? '<small>(' + rec + '%)</small>' : '') + '</span>';
+      var st = Store.state;
+      // שורה עם דרגה בלבד — ההמלצה היא של אותה דרגה
+      if (!linePicked(l)) {
+        if (!l.levelId || l.levelId === 'shared') return 0;
+        return Calc.levelPerPerson(st, l.levelId, b.planned);
+      }
+
+      var ids = lineIds(l);
+      if (!ids.length) return 0;
+      var sum = 0, n = 0;
+      ids.forEach(function (id) {
+        var t = staffById(id);
+        if (!t) return;
+        sum += Calc.levelPerPerson(st, t.level, b.planned);
+        n++;
+      });
+      return n ? Calc.round2(sum / n) : 0;
     }
 
-    /* החלק המומלץ של השורה — סכום החלקים של הדרגות שנבחרו בה.
-       שורה שנבחרו בה רק חלק מאנשי הדרגה מקבלת את החלק היחסי בלבד.
-
-       שורה שנשמרה עם דרגה בלבד, בלי בחירה מפורשת, מתורגמת כאן לאנשי
-       אותה דרגה — אחרת החלק המומלץ יוצא אפס, והעמודה מוצגת בלי ההמלצה
-       שבסוגריים ובלי הצבע שנגזר ממנה. */
-    function recShare(l) {
-      var st = Store.state;
-      if (l.shared) return 0;
-      var ids = linePicked(l)
-        ? lineIds(l)
-        : (l.levelId && l.levelId !== 'shared' ? idsOfLevel(l.levelId) : []);
-      if (!ids.length) return 0;
-      var sum = 0;
-      staffMix().forEach(function (x) {
-        var all = idsOfLevel(x.level.id);
-        var picked = all.filter(function (id) { return ids.indexOf(id) > -1; }).length;
-        if (picked) sum += Calc.levelShare(st, x.level.id) * (picked / all.length);
-      });
-      return sum;
+    function recHintHTML(l, root) {
+      var per = recPerPerson(l, root);
+      return per ? '<span class="ln-rec">מומלץ: ' + UI.money(per) + '</span>' : '';
     }
 
     function linesTableHTML(root) {
       return '<div class="line-tbl"><table><thead><tr>' +
           '<th>מוצר / שירות</th><th>למי?</th>' +
-          '<th class="end">מחיר לאדם</th><th class="end">סה״כ</th>' +
-          '<th class="end">% בפועל<small>(מומלץ)</small></th><th></th>' +
+          '<th class="end">מחיר לאדם</th><th class="end">סה״כ</th><th></th>' +
         '</tr></thead><tbody>' +
         lines.map(function (l, i) {
           return '<tr>' +
@@ -707,9 +723,9 @@ Views.ideas = (function () {
               '</button></td>' +
             '<td data-lab="מחיר לאדם"><input class="input end" data-ln="amount" data-i="' + i + '" type="number" ' +
               'inputmode="decimal" min="0" placeholder="0" aria-label="מחיר לאדם" ' +
-              'value="' + UI.esc(l.amount === '' || l.amount === undefined ? '' : l.amount) + '"></td>' +
+              'value="' + UI.esc(l.amount === '' || l.amount === undefined ? '' : l.amount) + '">' +
+              '<span data-ln-rec="' + i + '">' + recHintHTML(l, root) + '</span></td>' +
             '<td class="end" data-lab="סה״כ"><b data-ln-sum="' + i + '">' + UI.money(lineSum(l, true)) + '</b></td>' +
-            '<td class="end" data-lab="% בפועל (מומלץ)" data-ln-pct="' + i + '">' + pctCellHTML(l, root) + '</td>' +
             '<td><button type="button" class="iconbtn del" data-ln-del="' + i + '" ' +
               'aria-label="מחיקת שורה">✕</button></td>' +
             '</tr>';
@@ -751,7 +767,7 @@ Views.ideas = (function () {
 
       box.innerHTML =
         budgetCardHTML(root, linesTotal(staff)) +
-        (staff ? staffMixHTML() : '') +
+        (staff ? staffMixHTML(plannedOf(root)) : '') +
         '<label>שורות ההוצאה</label>' +
         (lines.length ? (staff ? linesTableHTML(root) : lineCardsHTML())
                       : '<p class="small muted" style="margin:0 0 8px">עוד לא נוספו שורות הוצאה.</p>') +
@@ -792,8 +808,8 @@ Views.ideas = (function () {
                         : (inp.value === '' ? '' : Calc.num(inp.value));
           var sum = box.querySelector('[data-ln-sum="' + i + '"]');
           if (sum) sum.textContent = UI.money(lineSum(lines[i], staff));
-          var pc = box.querySelector('[data-ln-pct="' + i + '"]');
-          if (pc) pc.innerHTML = pctCellHTML(lines[i], root);
+          var rc = box.querySelector('[data-ln-rec="' + i + '"]');
+          if (rc) rc.innerHTML = recHintHTML(lines[i], root);
           refreshTotal(root);
         };
         inp.addEventListener('input', handler);
@@ -1004,8 +1020,16 @@ Views.ideas = (function () {
     audienceLabel: audienceLabel,
     perHeadLabel: perHeadLabel,
     perOneLabel: function (id) { return ONE[id] ? 'לכל ' + ONE[id] : ''; },
+    /* פתיחת הטופס על רעיון נתון — משמש את סיור ההיכרות, שמציג רעיון
+       לדוגמה בלי לשמור אותו */
+    form: ideaForm,
     actions: {
-      'idea-add': function () { ideaForm(null); },
+      /* בלחיצה הראשונה רץ סיור קצר על רעיון לדוגמה, ורק בסופו נפתח
+         הטופס הריק. בכל לחיצה אחרת הסיור מחזיר false ולא קורה דבר. */
+      'idea-add': function () {
+        if (window.Tour && Tour.startIdea && Tour.startIdea()) return;
+        ideaForm(null);
+      },
       'idea-edit': function (el) { ideaForm(Store.find('ideas', el.getAttribute('data-id'))); },
 
       'idea-choose': function (el) {

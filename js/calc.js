@@ -578,6 +578,17 @@ var Calc = (function () {
     return (levelWeight(state, levelId) * staffAtLevel(state, levelId)) / units;
   }
 
+  /* הסכום המומלץ לאיש צוות בדרגה מסוימת: חלקה של הדרגה בתקציב הסעיף,
+     מחולק במספר האנשים שבה. מתקצר ל-planned × משקל הדרגה / יחידות
+     הצוות, ולכן מי שבדרגה גבוהה יותר מקבל יותר, וריבוי אנשים בדרגה
+     מקטין את הסכום לאדם בלי לשנות את חלקה של הדרגה בתקציב. */
+  function levelPerPerson(state, levelId, planned) {
+    var n = staffAtLevel(state, levelId);
+    if (!n || !planned) return 0;
+    // שקלים שלמים: המלצה למתנה אינה נמדדת באגורות
+    return Math.round((planned * levelShare(state, levelId)) / n);
+  }
+
   /* כמות השורה. שורה שהוצמדה לדרגת צוות סופרת את אנשי הצוות
      שבאותה דרגה, כך שהמספר מתעדכן מאליו כשמשתנה הרכב הצוות. */
   function lineQty(l, state) {
@@ -750,7 +761,7 @@ var Calc = (function () {
     overview: overview, refunds: refunds,
     ideaTotal: ideaTotal, lineTotal: lineTotal, lineQty: lineQty,
     staffAtLevel: staffAtLevel,
-    levelWeight: levelWeight, staffWeightUnits: staffWeightUnits, levelShare: levelShare,
+    levelWeight: levelWeight, staffWeightUnits: staffWeightUnits, levelShare: levelShare, levelPerPerson: levelPerPerson,
     ideaSplit: ideaSplit, ideaVsBudget: ideaVsBudget,
     allDates: allDates, nextOccurrence: nextOccurrence, upcoming: upcoming
   };
