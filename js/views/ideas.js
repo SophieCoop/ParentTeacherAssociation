@@ -439,7 +439,7 @@ Views.ideas = (function () {
         '<div class="sm-grid" style="--cols:' + mix.length + '">' +
           mix.map(function (x) {
             var name = levelName(x.level.id, x.count);
-            var w = Calc.levelWeight(Store.state, x.level.id);
+            var rank = Calc.levelRank(Store.state, x.level.id);
             var per = Calc.levelPerPerson(Store.state, x.level.id, planned);
             return '<div class="sm-cell">' +
               '<button type="button" class="sm-top" data-mix="' + x.level.id + '" ' +
@@ -449,21 +449,28 @@ Views.ideas = (function () {
               '<div class="sm-bar" data-mix-bar="' + x.level.id + '" ' +
                 'title="כמה משורות ההוצאה כבר מיועד לכל אדם בדרגה, מתוך הסכום המומלץ">' +
                 mixBarHTML(x.level.id, x.level.tone, planned) + '</div>' +
+              /* אין סכום משתי סיבות שונות, וצריך להבדיל ביניהן: או שעוד
+                 לא נבחר סעיף תקציב, או שהדרגה ירדה עד שאינה מקבלת חלק */
               '<div class="sm-per">' +
-                (per ? '<b>' + UI.money(per) + '</b><span>מומלץ לאדם</span>'
-                     : '<span>בחרו סעיף תקציב</span>') +
+                (!planned ? '<span>בחרו סעיף תקציב</span>'
+                 : per    ? '<b>' + UI.money(per) + '</b><span>מומלץ לאדם</span>'
+                          : '<b class="sm-none">—</b><span>ללא חלק בתקציב</span>') +
               '</div>' +
+              /* הכפתורים מזיזים את המספר שעל המסך: − מקטין אותו ומעלה
+                 את הדרגה, + מגדיל אותו ומוריד אותה */
               '<div class="sm-rank">' +
                 '<button type="button" data-w="' + x.level.id + '" data-d="-1" ' +
-                  'aria-label="הפחתת רמת התקציב">−</button>' +
-                '<span class="sm-rlab">דרגה <b>' + w + '</b></span>' +
+                  'aria-label="העלאת הדרגה — מספר קטן יותר">−</button>' +
+                '<span class="sm-rlab">דרגה <b>' + rank + '</b></span>' +
                 '<button type="button" data-w="' + x.level.id + '" data-d="1" ' +
-                  'aria-label="הגדלת רמת התקציב">+</button>' +
+                  'aria-label="הורדת הדרגה — מספר גדול יותר">+</button>' +
               '</div>' +
               '</div>';
           }).join('') +
         '</div>' +
-        '<p class="sm-hint">הסכום המומלץ מחלק את תקציב הסעיף לפי הדרגה ומספר האנשים בה, ' +
+        '<p class="sm-hint"><b>דרגה 1 היא הגבוהה ביותר</b>, וככל שהמספר עולה הדרגה יורדת ' +
+          'ואיתה הסכום המומלץ — דרגה ' + Calc.lowestRank() + ' אינה מקבלת חלק בתקציב. ' +
+          'הסכום המומלץ מחלק את תקציב הסעיף לפי הדרגה ומספר האנשים בה, ' +
           'והפס שמעליו מתמלא לפי שורות ההוצאה שכבר יועדו לאותה דרגה. ' +
           'הדרגה ניתנת לשינוי, והיא משמשת רק לחישוב — לא להערכה אישית. לחיצה על דרגה מציגה את השמות.</p>' +
         '</div>';
@@ -794,9 +801,10 @@ Views.ideas = (function () {
       Array.prototype.forEach.call(box.querySelectorAll('[data-w]'), function (btn) {
         btn.addEventListener('click', function () {
           var id = btn.getAttribute('data-w');
-          var next = Calc.levelWeight(Store.state, id) + Calc.num(btn.getAttribute('data-d'));
+          /* הלחיצה משנה את מספר הדרגה, והוא מתורגם בחזרה למשקל שנשמר */
+          var next = Calc.levelRank(Store.state, id) + Calc.num(btn.getAttribute('data-d'));
           Store.state.settings.levelWeights = Store.state.settings.levelWeights || {};
-          Store.state.settings.levelWeights[id] = Math.max(0, Math.min(10, next));
+          Store.state.settings.levelWeights[id] = Calc.rankToWeight(next);
           Store.save();
           drawLines(root);
         });

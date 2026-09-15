@@ -562,6 +562,37 @@ var Calc = (function () {
     return num(Store.staffLevel(levelId).weight) || 1;
   }
 
+  /* ---------- מספר הדרגה שרואים על המסך ----------
+     המשקל שלמעלה הוא כלי חישוב: ככל שהוא גדול יותר, כך גדל חלקה של
+     הדרגה בתקציב. המספר שמוצג למשתמש הפוך לו — דרגה 1 היא הגבוהה
+     ביותר (מנהלת/גננת), וככל שהמספר עולה הדרגה יורדת ואיתה הסכום
+     המומלץ. ההיפוך נעשה סביב הדרגה הגבוהה בסולם: דרגה = (המשקל
+     הגבוה בסולם + 1) פחות המשקל. לכן משקל 4 הוא דרגה 1, ומשקל 0 —
+     הדרגה הנמוכה בסולם, שאינה מקבלת חלק בתקציב כלל. */
+
+  /* המשקל הגבוה בסולם, נגזר מברירות המחדל כדי שהסולם יזוז מאליו
+     אם תתווסף דרגה גבוהה יותר */
+  function rankSpan() {
+    var top = 1;
+    (Store.STAFF_LEVELS || []).forEach(function (lv) {
+      top = Math.max(top, num(lv.weight) || 1);
+    });
+    return top;
+  }
+  function clampRank(rank) {
+    return Math.max(1, Math.min(rankSpan() + 1, Math.round(num(rank)) || 1));
+  }
+  /* הדרגה הנמוכה ביותר — זו שאינה מקבלת חלק בתקציב */
+  function lowestRank() { return rankSpan() + 1; }
+
+  function levelRank(state, levelId) {
+    return clampRank(rankSpan() + 1 - levelWeight(state, levelId));
+  }
+  /* הדרך חזרה: ממספר הדרגה שעל המסך אל המשקל ששומרים ומחשבים לפיו */
+  function rankToWeight(rank) {
+    return rankSpan() + 1 - clampRank(rank);
+  }
+
   /* סך "יחידות התקציב" של הצוות — רמת כל דרגה כפול מספר האנשים בה */
   function staffWeightUnits(state) {
     var total = 0;
@@ -762,6 +793,7 @@ var Calc = (function () {
     ideaTotal: ideaTotal, lineTotal: lineTotal, lineQty: lineQty,
     staffAtLevel: staffAtLevel,
     levelWeight: levelWeight, staffWeightUnits: staffWeightUnits, levelShare: levelShare, levelPerPerson: levelPerPerson,
+    levelRank: levelRank, rankToWeight: rankToWeight, lowestRank: lowestRank,
     ideaSplit: ideaSplit, ideaVsBudget: ideaVsBudget,
     allDates: allDates, nextOccurrence: nextOccurrence, upcoming: upcoming
   };

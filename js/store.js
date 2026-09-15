@@ -138,6 +138,23 @@ var Store = (function () {
     return items;
   }
 
+  /* משקלי הדרגות נשמרו פעם בסולם 0–10, בעוד מספר הדרגה שמוצג היום הוא
+     היפוך של סולם ברירות המחדל: דרגה 1 היא המשקל הגבוה שבו. משקל שחרג
+     מהסולם הוצג כדרגה 1 בדיוק כמו המשקל הגבוה שבו, כך ששתי דרגות נראו
+     זהות אך חילקו סכומים שונים. לכן ערך חורג מוצמד אל קצה הסולם, פעם
+     אחת, בטעינה. */
+  function migrateLevelWeights(settings) {
+    var over = settings && settings.levelWeights;
+    if (!over) return;
+    var top = 1;
+    STAFF_LEVELS.forEach(function (lv) { top = Math.max(top, Number(lv.weight) || 1); });
+    Object.keys(over).forEach(function (id) {
+      var v = Math.round(Number(over[id]));
+      if (!isFinite(v)) { delete over[id]; return; }
+      over[id] = Math.max(0, Math.min(top, v));
+    });
+  }
+
   function migrate(data) {
     var base = blankState();
     Object.keys(base).forEach(function (k) {
@@ -146,6 +163,7 @@ var Store = (function () {
     // שמירה על מבנה אובייקטים מקוננים
     data.gan = Object.assign({}, base.gan, data.gan || {});
     data.settings = Object.assign({}, base.settings, data.settings || {});
+    migrateLevelWeights(data.settings);
     if (!Array.isArray(data.categories) || !data.categories.length) data.categories = base.categories;
     else migrateCategories(data.categories);
     migrateBudgetItems(data.budgetItems);
