@@ -1098,6 +1098,9 @@ Views.ideas = (function () {
                 categoryId: idea.categoryId,
                 budgetItemId: idea.budgetItemId || '',
                 title: idea.title || 'רעיון שנבחר',
+                /* מסך ההוצאות מקבץ לפי קהל היעד, ולכן מתנה לצוות
+                   צריכה להגיע לקבוצת הצוות ולא לקבוצת "כללי" */
+                audience: Calc.ideaAudience(idea),
                 amount: total,
                 date: UI.todayISO(),
                 note: expenseNote(idea, total),

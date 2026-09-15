@@ -638,6 +638,17 @@ var Calc = (function () {
     return round2(lineQty(l, state) * num(l && l.amount));
   }
 
+  /* קהל היעד של הרעיון בשפת ההוצאות. מסך ההוצאות מקבץ לפי ילדים,
+     צוות חינוכי וכללי — ולכן רעיון שמיועד גם וגם, או לכיבוד, נרשם
+     ככללי, בדיוק כמו הוצאה שנרשמה ידנית בלי קהל יעד. */
+  function ideaAudience(idea) {
+    var aud = (idea && idea.audiences) || [];
+    if (aud.length !== 1) return '';
+    if (aud[0] === 'staff') return 'staff_edu';
+    if (aud[0] === 'children') return 'children';
+    return '';
+  }
+
   /* האם הרעיון מיועד לצוות. רק אז שדות הצוות שעל השורה קובעים כמות. */
   function staffIdea(idea) {
     var aud = idea && idea.audiences;
@@ -814,6 +825,7 @@ var Calc = (function () {
     overview: overview, refunds: refunds,
     ideaTotal: ideaTotal, lineTotal: lineTotal, lineQty: lineQty,
     staffIdea: staffIdea, lineTotalFor: lineTotalFor, lineQtyFor: lineQtyFor,
+    ideaAudience: ideaAudience,
     staffAtLevel: staffAtLevel,
     levelWeight: levelWeight, staffWeightUnits: staffWeightUnits, levelShare: levelShare, levelPerPerson: levelPerPerson,
     levelRank: levelRank, rankToWeight: rankToWeight, lowestRank: lowestRank,
