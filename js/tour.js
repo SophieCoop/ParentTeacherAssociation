@@ -78,11 +78,15 @@ var Tour = (function () {
   function ideaSteps() {
     var form = [openIdeaForm];
     var picker = [openIdeaForm, openPicker];
+    /* הטופס מציג רעיון אמיתי של המשתמש כשיש כזה, ורק אחרת את רעיון
+       ההדגמה. הטקסט מתאר את מה שנמצא על המסך, ולכן הוא נגזר מזה. */
+    var demo = tourIdea().id === 'tour-demo';
 
     return [
       { view: 'ideas', modals: form, target: '#field-title',
         title: 'כך נראה רעיון מלא',
-        text: 'לפניכם רעיון לדוגמה לצוות החינוכי. מתחילים בשם — הוא שיופיע אחר כך ברשימת ההוצאות.' },
+        text: (demo ? 'לפניכם רעיון לדוגמה לצוות החינוכי.' : 'לפניכם רעיון לצוות החינוכי.') +
+              ' מתחילים בשם — הוא שיופיע אחר כך ברשימת ההוצאות.' },
 
       { view: 'ideas', modals: form, target: '#field-budgetItemId',
         title: 'סעיף התקציב',
@@ -94,11 +98,12 @@ var Tour = (function () {
 
       { view: 'ideas', modals: form, target: '.staff-mix', soft: true,
         title: 'הרכב צוות הגן',
-        text: 'כמה אנשים בכל דרגה, ומה החלק המומלץ לכל אחת מהן. מכאן נגזרים האחוזים שליד כל שורה.' },
+        text: 'כמה אנשים בכל דרגה, ומה הסכום המומלץ לכל אחד מהם. מכאן נגזרת ההמלצה שמתחת למחיר בכל שורה.' },
 
       { view: 'ideas', modals: form, target: '#f-lines',
         title: 'שורות ההוצאה',
-        text: 'כל פריט בשורה משלו: מה קונים, למי בצוות, וכמה זה עולה לאדם. בדוגמה — עציץ לגננת וכוס לסייעת.' },
+        text: 'כל פריט בשורה משלו: מה קונים, למי בצוות, וכמה זה עולה לאדם.' +
+              (demo ? ' בדוגמה — עציץ לגננת וכוס לסייעת.' : '') },
 
       { view: 'ideas', modals: picker, target: '.pk-list', soft: true,
         title: 'בחירת אנשי הצוות',

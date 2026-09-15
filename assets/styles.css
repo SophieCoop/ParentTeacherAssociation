@@ -658,6 +658,8 @@ table.tbl tr td:first-child{font-weight:600}
 .line-tbl td:last-child{padding-top:11px}
 .line-tbl tr:first-child td{border-top:none}
 .line-tbl .input{padding:8px 9px;font-size:12.5px;width:100%;min-width:0}
+/* שם המוצר, "למי?" והמחיר הם שלושה שדות של אותה שורה, ולכן אותו עיגול פינות */
+.line-tbl .input,.line-tbl .who-btn{border-radius:14px}
 .line-tbl .input.end{text-align:end;font-weight:700}
 .line-tbl td:nth-child(1){width:28%}
 .line-tbl td:nth-child(2){width:36%}
