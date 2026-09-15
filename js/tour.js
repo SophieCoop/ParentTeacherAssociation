@@ -1,9 +1,12 @@
 /* ============================================================
-   סיור ההיכרות — זרקור על חלקי מסך הבית
+   סיור ההיכרות — זרקור על חלקי המסך
    ------------------------------------------------------------
-   מסך הבית הוא מפה של האפליקציה: כל אריח מוביל למסך אחר. לכן
-   הסיור כולו יושב עליו ואינו מנווט בין מסכים — מה שמונע מצב שבו
-   ציור מחדש של מסך אחר מושך את הקרקע מתחת לזרקור.
+   רובו יושב על מסך הבית, שהוא מפה של האפליקציה. החלק השני נכנס
+   פנימה אל מסך הרעיונות, כי שם יש תהליך שאי אפשר להסביר מבחוץ:
+   איך נראה טופס רעיון, ומה קורה כשרעיון נבחר.
+
+   שלב שמבקש מסך אחר (view) או טופס (modal) מקבל שהות לציור לפני
+   שהזרקור נמדד — אחרת המדידה נעשית על מסך שכבר אינו קיים.
 
    הזרקור עצמו הוא חלון שקוף עם צל ענק סביבו, ולכן הוא חושף את
    האלמנט האמיתי ולא עותק שלו.
@@ -18,6 +21,8 @@ var Tour = (function () {
   var idx = 0;
   var steps = [];
   var live = false;
+  var homeView = null;   // המסך שממנו יצאנו, כדי לחזור אליו בסיום
+  var modalFn = null;    // הטופס שהסיור פתח בעצמו
 
   /* ---------- השלבים ---------- */
   /* target: בורר או מערך בוררים שהזרקור יקיף את כולם יחד.
@@ -37,7 +42,40 @@ var Tour = (function () {
         text: 'כמה צריך לגבות מכל ילד, מי כבר שילם ומי עוד לא. אפשר לסמן תשלומים ולשלוח תזכורת.' },
       { target: '.tile[data-view="ideas"]',
         title: 'רעיונות למתנות',
-        text: 'מרכזים כאן רעיונות למתנות לצוות ולאירועים, עם פירוט עלויות — לפני שמחליטים.' },
+        text: 'מרכזים כאן רעיונות למתנות לצוות ולאירועים, עם פירוט עלויות — לפני שמחליטים. ניכנס לרגע פנימה.' },
+
+      /* ---- מסך הרעיונות מקרוב ---- */
+      { view: 'ideas', target: '[data-action="idea-add"]',
+        title: 'פותחים רעיון חדש',
+        text: 'לחיצה כאן פותחת רעיון ריק. אפשר לפתוח כמה רעיונות לאותו אירוע, להשוות ביניהם, ורק אז להחליט.' },
+
+      { view: 'ideas', modal: openIdeaForm, target: '#field-title',
+        title: 'שם הרעיון',
+        text: 'מה מציעים — "עציץ וכוס לצוות", "ערכת יצירה לילדים". השם הזה הוא שיופיע אחר כך ברשימת ההוצאות.' },
+
+      { view: 'ideas', modal: openIdeaForm, target: '#field-budgetItemId',
+        title: 'סעיף התקציב',
+        text: 'הרעיון נצמד לסעיף שתכננתם בתקציב, וכך רואים תוך כדי אם הוא נכנס בו או חורג ממנו.' },
+
+      { view: 'ideas', modal: openIdeaForm, target: '#field-audiences',
+        title: 'קהל היעד',
+        text: 'למי המתנה — ילדים, צוות או כיבוד. הבחירה קובעת לפי כמה אנשים מחושבת העלות.' },
+
+      { view: 'ideas', modal: openIdeaForm, target: '#f-lines',
+        title: 'שורות ההוצאה',
+        text: 'כל פריט נכנס בשורה משלו — מה קונים, למי, וכמה זה עולה לאדם. "הוספת שורה" פותחת את הראשונה, והסכומים מתעדכנים תוך כדי הקלדה.' },
+
+      { view: 'ideas', modal: openIdeaForm, target: '#lines-total',
+        title: 'הסכום המתגלגל',
+        text: 'סה״כ הרעיון מול מה שמתוכנן בסעיף — כאן רואים מיד אם הוא נכנס בתקציב.' },
+
+      { view: 'ideas', target: '[data-action="idea-choose"]', soft: true,
+        title: 'בחירת הרעיון',
+        text: 'זה הרגע שבו רעיון הופך להחלטה: העלות נרשמת אוטומטית כהוצאה, והיתרה בקופה יורדת בהתאם. ביטול הבחירה מסיר את ההוצאה בחזרה.' },
+
+      { view: 'expenses', target: ['.summary', '.exp-row'], soft: true,
+        title: 'וההוצאה נרשמת כאן',
+        text: 'הרעיון שנבחר נכנס לרשימה הזו עם הסכום שחושב בו, סך ההוצאות עולה בהתאם — והיתרה בקופה יורדת. מכאן והלאה זה כסף שיצא, לא תוכנית.' },
       { target: ['.tile[data-view="children"]', '.tile[data-view="staff"]'],
         title: 'ילדי הגן והצוות',
         text: 'הרשימות שמזינות את כל השאר: מספר הילדים קובע את הגבייה, והצוות קובע את חישובי המתנות.' },
@@ -57,6 +95,28 @@ var Tour = (function () {
       text: 'התפריט התחתון מלווה אתכם בכל מסך. בהצלחה!' });
 
     return list;
+  }
+
+  /* ---------- ניווט בתוך הסיור ---------- */
+  /* הסיור הוא הגורם היחיד שמנווט בזמן שהוא רץ, ולכן די להשוות למסך
+     הנוכחי כדי לא לצייר מחדש בכל שלב ולאבד את מיקום הגלילה. */
+  function goTo(view) {
+    if (!view || !window.App || !App.view || App.view() === view) return false;
+    App.setView(view);
+    return true;
+  }
+
+  function openIdeaForm() {
+    if (window.Views && Views.ideas && Views.ideas.actions) Views.ideas.actions['idea-add']();
+  }
+
+  /* הטופס נפתח דרך הפעולה הרגילה של המסך, ולכן אין בידנו מזהה לסגירה —
+     סוגרים אותו כמו שמשתמש היה סוגר, בכפתור ה-✕ שלו. רעיון ריק שנסגר
+     אינו נשמר, והסיור אינו מייצר נתונים. */
+  function closeModal() {
+    var x = document.querySelector('#modal-root .modal-close');
+    if (x) x.click();
+    modalFn = null;
   }
 
   /* ---------- עזרה ---------- */
@@ -160,8 +220,30 @@ var Tour = (function () {
     var s = steps[idx];
     if (!s) return finish();
 
+    // שלב שמבקש מסך אחר או טופס — מציירים קודם, ומודדים אחרי
+    var moved = goTo(s.view);
+    if (modalFn && modalFn !== s.modal) closeModal();
+    var opened = false;
+    if (s.modal && modalFn !== s.modal) { s.modal(); modalFn = s.modal; opened = true; }
+    if (moved || opened) { setTimeout(function () { if (live) draw(); }, 140); return; }
+    draw();
+  }
+
+  function draw() {
+    var s = steps[idx];
+    if (!s) return finish();
+
+    // הטופס מחזיר את הגלילה לגוף העמוד כשהוא נסגר, והסיור עדיין רץ
+    document.body.style.overflow = 'hidden';
+
     var el = s.target ? firstEl(s.target) : null;
-    if (s.target && !el) { idx++; return show(); }   // האלמנט לא קיים — מדלגים על השלב
+    /* אלמנט חסר: שלב רגיל מדלגים עליו, אבל שלב שסומן soft נושא מסר
+       שאינו תלוי במה שיש על המסך — ומוצג כבועה ממורכזת */
+    if (s.target && !el) {
+      if (!s.soft) { idx++; return show(); }
+      s = { title: s.title, text: s.text };
+      steps[idx] = s;
+    }
 
     bubble.innerHTML = bubbleHTML(s);
     bubble.querySelector('.tour-next').addEventListener('click', next);
@@ -188,8 +270,12 @@ var Tour = (function () {
   }
 
   function finish() {
-    live = false;
     markSeen();
+    if (modalFn) closeModal();
+    // החזרה למסך שממנו יצאנו נעשית בעוד הסיור מסומן כפעיל, כדי שלא
+    // תיספר כביקור של המשתמש במדידת השימוש
+    if (homeView) { goTo(homeView); homeView = null; }
+    live = false;
     window.removeEventListener('resize', reposition);
     window.removeEventListener('scroll', reposition, true);
     document.removeEventListener('keydown', onKey);
@@ -209,6 +295,8 @@ var Tour = (function () {
     steps = stepList();
     idx = 0;
     live = true;
+    modalFn = null;
+    homeView = (window.App && App.view) ? App.view() : null;
 
     back = document.createElement('div');
     back.className = 'tour-back';
@@ -235,5 +323,6 @@ var Tour = (function () {
     }, 700);
   }
 
-  return { start: start, maybeStart: maybeStart, seen: seen };
+  return { start: start, maybeStart: maybeStart, seen: seen,
+           running: function () { return live; } };
 })();

@@ -1185,7 +1185,8 @@ table.ye-tbl td:nth-child(2),table.ye-tbl td:nth-child(3){text-align:center}
 /* ===================== סיור ההיכרות ===================== */
 /* הזרקור הוא חלון שקוף עם צל ענק סביבו: כך נחשף האלמנט האמיתי
    שעל המסך, ולא עותק שלו, וכל שינוי בו נראה מיד */
-.tour-back{position:fixed;inset:0;z-index:70}
+/* מעל המודאל (80), כדי שהזרקור יוכל להאיר גם אלמנט בתוך טופס פתוח */
+.tour-back{position:fixed;inset:0;z-index:95}
 .tour-hole{
   position:fixed;border-radius:16px;pointer-events:none;
   box-shadow:0 0 0 9999px rgba(43,35,66,.62);

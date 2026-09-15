@@ -47,8 +47,9 @@ var App = (function () {
     window.scrollTo({ top: 0, behavior: 'instant' in window ? 'auto' : 'auto' });
     render();
     try { history.replaceState(null, '', '#' + name); } catch (e) {}
-    // המסכים מתחלפים בלי לעבור כתובת, ולכן הדיווח נעשה כאן ולא אוטומטית
-    if (window.Analytics) Analytics.view(name);
+    // המסכים מתחלפים בלי לעבור כתובת, ולכן הדיווח נעשה כאן ולא אוטומטית.
+    // ניווט של סיור ההיכרות אינו ביקור של המשתמש ואינו נספר.
+    if (window.Analytics && !(window.Tour && Tour.running && Tour.running())) Analytics.view(name);
   }
 
   function vs(key, def) {
@@ -171,7 +172,8 @@ var App = (function () {
 
   return {
     init: init, render: render, setView: setView, state: state,
-    vs: vs, setVs: setVs, savedWizStep: loadWizStep, TABS: TABS
+    vs: vs, setVs: setVs, savedWizStep: loadWizStep, TABS: TABS,
+    view: function () { return current; }
   };
 })();
 
