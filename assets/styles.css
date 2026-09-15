@@ -1181,3 +1181,48 @@ table.ye-tbl td:nth-child(2),table.ye-tbl td:nth-child(3){text-align:center}
   .ye-who{gap:7px}
   .ye-who .avatar{width:30px;height:30px;font-size:14px}
 }
+
+/* ===================== סיור ההיכרות ===================== */
+/* הזרקור הוא חלון שקוף עם צל ענק סביבו: כך נחשף האלמנט האמיתי
+   שעל המסך, ולא עותק שלו, וכל שינוי בו נראה מיד */
+.tour-back{position:fixed;inset:0;z-index:70}
+.tour-hole{
+  position:fixed;border-radius:16px;pointer-events:none;
+  box-shadow:0 0 0 9999px rgba(43,35,66,.62);
+  transition:top .25s ease,left .25s ease,width .25s ease,height .25s ease;
+}
+.tour-bubble{
+  position:fixed;width:min(330px,calc(100vw - 24px));
+  background:#fff;border-radius:var(--r);padding:16px 17px 13px;
+  box-shadow:0 14px 40px rgba(43,35,66,.28);
+  transition:top .25s ease,left .25s ease;
+}
+.tour-bubble.center{
+  top:50%;left:50%;transform:translate(-50%,-50%);
+}
+.tour-bubble h4{margin:0 0 6px;font-size:17px;font-weight:800;color:var(--ink)}
+.tour-bubble p{margin:0;font-size:13.5px;line-height:1.7;color:var(--ink-2)}
+.tour-arrow{
+  position:absolute;width:14px;height:14px;background:#fff;transform:rotate(45deg);
+}
+.tour-bubble.below .tour-arrow{top:-6px}
+.tour-bubble.above .tour-arrow{bottom:-6px}
+.tour-bubble.center .tour-arrow{display:none}
+.tour-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px}
+.tour-dots{display:flex;gap:5px}
+.tour-dots i{width:6px;height:6px;border-radius:50%;background:#E4DEEE}
+.tour-dots i.on{background:var(--primary);width:18px;border-radius:6px}
+.tour-btns{display:flex;align-items:center;gap:8px}
+.tour-skip{
+  background:none;border:none;font:inherit;font-size:13px;
+  color:var(--muted);cursor:pointer;padding:8px 4px;
+}
+.tour-next{
+  background:var(--primary);color:#fff;border:none;border-radius:var(--r-xs);
+  font:inherit;font-size:13.5px;font-weight:700;padding:9px 20px;cursor:pointer;
+}
+.tour-next:active{background:var(--primary-dark)}
+
+@media (prefers-reduced-motion:reduce){
+  .tour-hole,.tour-bubble{transition:none}
+}

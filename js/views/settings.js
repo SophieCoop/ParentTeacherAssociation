@@ -59,6 +59,13 @@ Views.settings = (function () {
         '<div class="stat"><div class="s-val">' + st.expenses.length + '</div><div class="s-lab">הוצאות</div></div>' +
       '</div></div>';
 
+    html += '<div class="card">' +
+      '<div class="card-title"><h2>עזרה</h2></div>' +
+      '<p class="small muted">סיור קצר שמראה מה יש בכל חלק של האפליקציה. ' +
+      'רץ פעם אחת בכניסה הראשונה, ומכאן אפשר להריץ אותו שוב בכל רגע.</p>' +
+      '<button class="btn ghost mt" data-action="set-tour">🧭 סיור היכרות</button>' +
+      '</div>';
+
     /* נתוני הדוגמה מחליפים את המצב כולו, והמצב כולו נדחף לענן —
        כך שלמי שמחובר לחשבון הכפתור הזה מוחק את הנתונים האמיתיים
        מכל המכשירים. הוא נועד להתרשמות ראשונית, לא למי שכבר עובד. */
@@ -79,6 +86,11 @@ Views.settings = (function () {
   return {
     render: render,
     actions: {
+      /* הסיור יושב על מסך הבית, ולכן חוזרים אליו לפני שמתחילים */
+      'set-tour': function () {
+        App.setView('home');
+        setTimeout(function () { Tour.start(); }, 260);
+      },
       'set-gan': function (el) { Store.state.gan[el.getAttribute('data-key')] = el.value; Store.save(); UI.toast('נשמר ✓'); },
       'set-cfg': function (el) {
         var key = el.getAttribute('data-key');

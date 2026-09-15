@@ -97,6 +97,9 @@ var App = (function () {
     root.className = 'shell';
     root.innerHTML = tabbar() + '<div class="page">' + view.render(vs, setVs) + '</div>';
     if (view.mount) view.mount();
+
+    // סיור ההיכרות רץ פעם אחת, בהגעה הראשונה למסך הבית אחרי ההקמה
+    if (current === 'home' && window.Tour) Tour.maybeStart();
   }
 
   /* ---------- אירועים גלובליים בשיטת האצלה (delegation) ---------- */
