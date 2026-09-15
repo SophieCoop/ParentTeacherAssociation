@@ -595,10 +595,10 @@ var Calc = (function () {
     if (!l) return 1;
     /* פריט משותף — רכישה אחת, בלי קשר למספר הנמענים */
     if (l.shared || l.levelId === 'shared') return 1;
-    /* בחירה מפורשת של אנשי צוות ושל שמות חופשיים */
-    if (l.staffIds || l.names) {
-      return ((l.staffIds || []).length + (l.names || []).length);
-    }
+    /* בחירה מפורשת של אנשי צוות ושל שמות חופשיים. רשימה ריקה אינה
+       בחירה אלא היעדר בחירה, ולכן היא אינה מבטלת את הדרגה שעל השורה. */
+    var picked = (l.staffIds || []).length + (l.names || []).length;
+    if (picked) return picked;
     if (l.levelId) return staffAtLevel(state, l.levelId);
     if (l.qty === undefined || l.qty === null || l.qty === '') return 1;
     return num(l.qty);
@@ -606,8 +606,30 @@ var Calc = (function () {
   function lineTotal(l, state) {
     return round2(lineQty(l, state) * num(l && l.amount));
   }
+
+  /* האם הרעיון מיועד לצוות. רק אז שדות הצוות שעל השורה קובעים כמות. */
+  function staffIdea(idea) {
+    var aud = idea && idea.audiences;
+    return !!(aud && aud.indexOf('staff') > -1);
+  }
+
+  /* שדות הצוות (דרגה, אנשים שנבחרו, פריט משותף) נשארים על השורה גם
+     כשקהל היעד משתנה לילדים או לכיבוד, כדי שחזרה לצוות לא תאבד את
+     הבחירה. כל עוד הרעיון אינו לצוות הם נזנחים, והכמות היא זו שנקבעה
+     ידנית — אחרת שורה אחת הייתה נספרת לפי הרכב הצוות בטופס ולפי כמות
+     בכרטיס, ושני המספרים לא היו מסתדרים. */
+  function lineQtyFor(staff, l, state) {
+    return lineQty(staff ? l : { qty: l && l.qty, amount: l && l.amount }, state);
+  }
+  function lineTotalFor(staff, l, state) {
+    return round2(lineQtyFor(staff, l, state) * num(l && l.amount));
+  }
+
   function ideaTotal(idea, state) {
-    return round2((idea.lines || []).reduce(function (s, l) { return s + lineTotal(l, state); }, 0));
+    var staff = staffIdea(idea);
+    return round2((idea.lines || []).reduce(function (s, l) {
+      return s + lineTotalFor(staff, l, state);
+    }, 0));
   }
 
   /* חלוקת עלות הרעיון לפי קהל היעד — כמה יוצא לכל ילד / איש צוות */
@@ -760,6 +782,7 @@ var Calc = (function () {
     collectionSummary: collectionSummary, byMethod: byMethod,
     overview: overview, refunds: refunds,
     ideaTotal: ideaTotal, lineTotal: lineTotal, lineQty: lineQty,
+    staffIdea: staffIdea, lineTotalFor: lineTotalFor, lineQtyFor: lineQtyFor,
     staffAtLevel: staffAtLevel,
     levelWeight: levelWeight, staffWeightUnits: staffWeightUnits, levelShare: levelShare, levelPerPerson: levelPerPerson,
     ideaSplit: ideaSplit, ideaVsBudget: ideaVsBudget,
