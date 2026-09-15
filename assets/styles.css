@@ -595,10 +595,18 @@ table.tbl tr td:first-child{font-weight:600}
 .staff-mix .sm-head{display:flex;align-items:center;gap:6px;font-size:13.5px;margin-bottom:9px}
 /* עמודה לכל דרגה — כולן בשורה אחת */
 .staff-mix .sm-grid{display:grid;gap:5px;grid-template-columns:repeat(var(--cols,4),minmax(0,1fr))}
-/* במסך צר אין מקום לכולן בשורה אחת בלי לחתוך את התוכן.
-   הרשת נשברת לשורות שווות, כך שדרגה אחרונה תופסת עמודה אחת ולא שורה שלמה. */
+/* גם במסך צר כל הדרגות נשארות בשורה אחת — שורה שנייה עם תא בודד
+   נראית כמו טעות. התאים מצטמצמים בריווח ובגופן במקום להישבר. */
 @media (max-width:520px){
-  .staff-mix .sm-grid{grid-template-columns:repeat(auto-fit,minmax(74px,1fr))}
+  .staff-mix{padding:10px 8px}
+  .staff-mix .sm-grid{gap:4px}
+  .staff-mix .sm-cell{padding:6px 2px}
+  .staff-mix .sm-name{font-size:10px}
+  .staff-mix .sm-rank{gap:2px}
+  .staff-mix .sm-rank button{width:17px;height:17px;font-size:12px}
+  .staff-mix .sm-rank .sm-rlab{font-size:9px}
+  .staff-mix .sm-per b{font-size:12.5px}
+  .staff-mix .sm-per span{font-size:8.5px}
 }
 .staff-mix .sm-cell{
   background:#fff;border-radius:var(--r-xs);padding:6px 3px;min-width:0;
@@ -641,9 +649,17 @@ table.tbl tr td:first-child{font-weight:600}
   padding:0 5px 7px;white-space:nowrap;
 }
 .line-tbl th.end{text-align:end}
-.line-tbl td{padding:6px 3px;border-top:1px solid var(--line);vertical-align:middle}
+/* כל הפקדים בשורה מתחילים באותו גובה. שורת ההמלצה שמתחת לשדה המחיר
+   מגביהה את התא, ובמרכוז אנכי היא הייתה מרימה את השדה עצמו ומוציאה
+   אותו מהיישור עם שם המוצר ועם "למי?". */
+.line-tbl td{padding:6px 3px;border-top:1px solid var(--line);vertical-align:top}
+/* הסכום וכפתור המחיקה אינם פקדים, ולכן הם מוזזים ידנית אל מרכז שורת הפקדים */
+.line-tbl td:nth-child(4){padding-top:15px}
+.line-tbl td:last-child{padding-top:11px}
 .line-tbl tr:first-child td{border-top:none}
 .line-tbl .input{padding:8px 9px;font-size:12.5px;width:100%;min-width:0}
+/* שם המוצר, "למי?" והמחיר הם שלושה שדות של אותה שורה, ולכן אותו עיגול פינות */
+.line-tbl .input,.line-tbl .who-btn{border-radius:14px}
 .line-tbl .input.end{text-align:end;font-weight:700}
 .line-tbl td:nth-child(1){width:28%}
 .line-tbl td:nth-child(2){width:36%}
@@ -1048,15 +1064,18 @@ table.tbl tr td:first-child{font-weight:600}
   .line-tbl th{font-size:9.5px;padding:0 1px 6px;letter-spacing:-.2px}
   .line-tbl th small{font-size:8.5px}
   .line-tbl td{padding:5px 1px}
+  /* הריפוד העליון קטן כאן, ולכן ההזחה של הסכום מתקצרת איתו */
+  .line-tbl td:nth-child(4){padding-top:13px}
 
   /* עם table-layout:fixed הדפדפן קובע את העמודות לפי השורה הראשונה —
      שורת הכותרות — ולכן הרוחבים חייבים לשבת על ה-th ולא על ה-td.
      "למי?" מקבל את הרוחב הגדול ביותר: שם דרגה נחתך מהר יותר משם מוצר. */
-  .line-tbl th:nth-child(1){width:19%}
-  .line-tbl th:nth-child(2){width:30%}
-  .line-tbl th:nth-child(3){width:15%}
-  .line-tbl th:nth-child(4){width:16%}
-  .line-tbl th:nth-child(5){width:46px}   /* שבב האחוזים לא נדחס */
+  /* שם המוצר הוא הטקסט הארוך ביותר בשורה, ולכן הוא מקבל את הנתח
+     הגדול. שדה המחיר מחזיק שלוש ספרות ודי לו במעט. */
+  .line-tbl th:nth-child(1){width:34%}
+  .line-tbl th:nth-child(2){width:26%}
+  .line-tbl th:nth-child(3){width:21%}
+  .line-tbl th:nth-child(4){width:19%}
   .line-tbl th:last-child{width:24px}
   .line-tbl td:nth-child(4){font-size:12px}
 
@@ -1185,7 +1204,8 @@ table.ye-tbl td:nth-child(2),table.ye-tbl td:nth-child(3){text-align:center}
 /* ===================== סיור ההיכרות ===================== */
 /* הזרקור הוא חלון שקוף עם צל ענק סביבו: כך נחשף האלמנט האמיתי
    שעל המסך, ולא עותק שלו, וכל שינוי בו נראה מיד */
-.tour-back{position:fixed;inset:0;z-index:70}
+/* מעל המודאל (80), כדי שהזרקור יוכל להאיר גם אלמנט בתוך טופס פתוח */
+.tour-back{position:fixed;inset:0;z-index:95}
 .tour-hole{
   position:fixed;border-radius:16px;pointer-events:none;
   box-shadow:0 0 0 9999px rgba(43,35,66,.62);
@@ -1225,4 +1245,34 @@ table.ye-tbl td:nth-child(2),table.ye-tbl td:nth-child(3){text-align:center}
 
 @media (prefers-reduced-motion:reduce){
   .tour-hole,.tour-bubble{transition:none}
+}
+
+/* ===== הרכב צוות הגן: דרגה, פס יחסי וסכום מומלץ לאדם ===== */
+.staff-mix .sm-head{justify-content:space-between}
+.staff-mix .sm-total{font-size:11.5px;color:var(--ink-2);font-weight:400}
+.staff-mix .sm-num{color:var(--muted)}
+.staff-mix .sm-rank{
+  display:flex;align-items:center;justify-content:center;gap:4px;
+  border-top:1px solid var(--line);padding-top:5px;margin-top:5px;width:100%;
+}
+.staff-mix .sm-rank .sm-rlab{font-size:10.5px;color:var(--muted);line-height:1.2}
+.staff-mix .sm-rank .sm-rlab b{font-size:12.5px;color:var(--ink);font-variant-numeric:tabular-nums}
+.staff-mix .sm-rank button{
+  width:19px;height:19px;border-radius:7px;flex:none;
+  background:#fff;color:var(--primary-dark);font-size:13px;line-height:1;
+}
+.staff-mix .sm-rank button:active{filter:brightness(.94)}
+.staff-mix .sm-bar{
+  width:100%;height:5px;border-radius:5px;background:#fff;
+  overflow:hidden;margin-top:7px;
+}
+.staff-mix .sm-bar > i{display:block;height:100%;border-radius:5px}
+.staff-mix .sm-per{margin-top:6px;line-height:1.2}
+.staff-mix .sm-per b{display:block;font-size:14.5px;font-variant-numeric:tabular-nums}
+.staff-mix .sm-per span{font-size:9.5px;color:var(--muted)}
+
+/* ההמלצה לשורה יושבת מתחת לשדה המחיר, במקום עמודת אחוזים */
+.ln-rec{
+  display:block;font-size:10px;color:var(--muted);margin-top:3px;
+  text-align:center;font-variant-numeric:tabular-nums;white-space:nowrap;
 }
