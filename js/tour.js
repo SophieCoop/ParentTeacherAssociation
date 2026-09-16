@@ -273,11 +273,18 @@ var Tour = (function () {
   }
 
   /* ---------- ציור ---------- */
+  /* מעל התקרה הזו שורת הנקודות ארוכה מהמקום שיש לה, ואיש גם אינו סופר
+     עשרים נקודות — שם היא מוחלפת במונה קצר. סיור הרעיון, שקצר ממנה,
+     ממשיך להציג נקודות. */
+  var MAX_DOTS = 12;
+
   function bubbleHTML(s) {
     var last = idx === steps.length - 1;
-    var dots = steps.map(function (_, i) {
-      return '<i class="' + (i === idx ? 'on' : '') + '"></i>';
-    }).join('');
+    var dots = steps.length > MAX_DOTS
+      ? '<span class="tour-count">שלב ' + (idx + 1) + ' מתוך ' + steps.length + '</span>'
+      : steps.map(function (_, i) {
+          return '<i class="' + (i === idx ? 'on' : '') + '"></i>';
+        }).join('');
     return '<div class="tour-arrow"></div>' +
       '<h4>' + UI.esc(s.title) + '</h4>' +
       '<p>' + UI.esc(s.text) + '</p>' +
