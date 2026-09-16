@@ -44,13 +44,8 @@ var Tour = (function () {
         text: 'כמה צריך לגבות מכל ילד, מי כבר שילם ומי עוד לא. אפשר לסמן תשלומים ולשלוח תזכורת.' },
       { target: '.tile[data-view="ideas"]',
         title: 'רעיונות למתנות',
-        text: 'מרכזים כאן רעיונות למתנות לצוות ולאירועים, עם פירוט עלויות — לפני שמחליטים. ניכנס לרגע פנימה.' },
-
-      /* ---- מסך הרעיונות מקרוב ---- */
-      { view: 'ideas', target: '[data-action="idea-add"]',
-        title: 'פותחים רעיון חדש',
-        text: 'לחיצה כאן פותחת רעיון ריק. אפשר לפתוח כמה רעיונות לאותו אירוע, להשוות ביניהם, ורק אז להחליט.' }
-    ].concat(ideaSteps()).concat([
+        text: 'מרכזים כאן רעיונות למתנות לצוות ולאירועים, עם פירוט עלויות — לפני שמחליטים. ' +
+              'בכניסה הראשונה לשם יחכה סיור קצר על הרעיון עצמו.' },
 
       { view: 'home', target: ['.tile[data-view="children"]', '.tile[data-view="staff"]'],
         title: 'ילדי הגן והצוות',
@@ -58,7 +53,7 @@ var Tour = (function () {
       { view: 'home', target: ['.tile[data-view="dates"]', '.tile[data-view="yearend"]'],
         title: 'תאריכים וסוף שנה',
         text: 'ימי הולדת, חגים ואירועים — ובסוף השנה, חישוב אוטומטי של החזרים להורים.' }
-    ]);
+    ];
 
     if (document.getElementById('sync-chip')) {
       list.push({ view: 'home', target: '#sync-chip',
@@ -331,6 +326,16 @@ var Tour = (function () {
     else if (fitsAbove)  { top = above; cls = 'above'; }
     else                 { top = vh - bh - 12; cls = 'center'; }
 
+    /* fitsAbove בדק רק את הקצה העליון, ולכן יעד שיושב נמוך במסך הניח
+       את הבועה כך שתחתיתה — ואיתה הכפתורים — יורדת מתחת לקצה. כאן
+       הבועה נצמדת לגבולות בכל מקרה. בועה גבוהה מהמסך נצמדת לתחתית
+       דווקא, כי שם הכפתורים, ומוטב שהכותרת תיחתך מהם. */
+    var fit = (bh > vh - 20) ? vh - bh - 10
+                             : Math.max(10, Math.min(top, vh - bh - 10));
+    /* אם היה צורך להזיז, החץ כבר אינו מצביע על היעד ואין טעם בו */
+    if (Math.abs(fit - top) > 1) cls = 'center';
+    top = fit;
+
     bubble.className = 'tour-bubble ' + cls;
     if (cls === 'center') {
       // מיקום ידני בתחתית, ולכן בלי המרכוז שמגיע עם המחלקה
@@ -434,15 +439,34 @@ var Tour = (function () {
     try { if (localStorage.getItem(IDEA_KEY) === 'done') return false; } catch (e) { return false; }
     try { localStorage.setItem(IDEA_KEY, 'done'); } catch (e) {}
 
-    steps = [{ title: 'רגע לפני שמתחילים ✨',
-               text: 'נעבור יחד על רעיון לדוגמה — מה יש בטופס ואיך הוא מחושב. בסוף ייפתח טופס ריק, שלכם.' }]
-            .concat(ideaSteps().filter(function (st) { return st.modals; }));
+    /* כל שלבי הרעיון, ולא רק אלה שבתוך הטופס. הסינון ל-modals נולד
+       כשהסיור הזה רץ לפני פתיחת טופס ריק ורצה רק את מה שבתוכו; מאז
+       שסיור הבית אינו נכנס לרעיון, שני השלבים האחרונים — בחירת הרעיון
+       וההוצאה שנרשמת ממנה — לא הוצגו בשום מקום. */
+    steps = [{ title: 'ככה נראה רעיון 💡',
+               text: 'נעבור יחד על רעיון לדוגמה — מה יש בו, איך הוא מחושב ומה קורה כשבוחרים בו. ' +
+                     'אפשר לדלג בכל רגע.' }]
+            .concat(ideaSteps());
 
+    /* הסיור נפתח מעצמו בכניסה למסך, ולא בעקבות בקשה להוסיף רעיון,
+       ולכן אינו מסיים בטופס ריק שאיש לא ביקש. שני השלבים האחרונים
+       עוברים למסכים אחרים, ולכן בסופו חוזרים למסך שממנו התחלנו. */
     onDone = function () {
-      if (window.Views && Views.ideas && Views.ideas.form) Views.ideas.form(null);
+      if (window.App && App.setView) App.setView('ideas');
     };
     open();
     return true;
+  }
+
+  /* ריצה אוטומטית בכניסה הראשונה למסך הרעיונות, פעם אחת בלבד.
+     המסך צריך להיות מצויר כבר, אחרת אין על מה להצביע. */
+  function maybeStartIdea() {
+    if (live) return;
+    try { if (localStorage.getItem(IDEA_KEY) === 'done') return; } catch (e) { return; }
+    if (!Store.state.setupDone) return;
+    setTimeout(function () {
+      if (!live && document.querySelector('[data-action="idea-add"]')) startIdea();
+    }, 700);
   }
 
   function start() {
@@ -483,6 +507,7 @@ var Tour = (function () {
     }, 700);
   }
 
-  return { start: start, startIdea: startIdea, maybeStart: maybeStart, seen: seen,
+  return { start: start, startIdea: startIdea, maybeStart: maybeStart,
+           maybeStartIdea: maybeStartIdea, seen: seen,
            running: function () { return live; } };
 })();
