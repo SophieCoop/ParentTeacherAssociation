@@ -22,9 +22,10 @@ Views.staff = (function () {
       }).join('') +
       '</div>';
 
+    html += UI.addBtn({ act: 'staff-add', label: 'הוספת איש צוות', cls: 'mb-add' });
+
     if (!st.staff.length) {
-      return html + UI.empty({ art: 'staff', title: 'עוד לא הוספתם צוות', text: 'הצוות עוזר בחישוב מתנות לחגים ולסוף שנה.', action: { act: 'staff-add', label: '+ הוספת איש צוות' } }) +
-        '<button class="btn" data-action="staff-add">+ הוספת איש צוות</button>';
+      return html + UI.empty({ art: 'staff', title: 'עוד לא הוספתם צוות', text: 'הצוות עוזר בחישוב מתנות לחגים ולסוף שנה.' });
     }
 
     /* קיבוץ לפי היררכיה */
@@ -46,7 +47,6 @@ Views.staff = (function () {
       html += list.map(function (t) { return staffRow(t, Store.staffLevel(t.level)); }).join('');
     }
 
-    html += '<button class="btn" style="margin-top:14px" data-action="staff-add">+ הוספת איש צוות</button>';
     return html;
   }
 

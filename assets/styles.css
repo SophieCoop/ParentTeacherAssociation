@@ -947,10 +947,9 @@ table.tbl tr td:first-child{font-weight:600}
 .bcat-item .bi-name{display:block;font-weight:600;font-size:14.5px}
 .bcat-item .bi-sub{display:block;font-size:12px;color:var(--muted)}
 .bcat-item .bi-amount{flex:none;font-weight:800;font-size:14.5px;white-space:nowrap}
-.bcat-add{
-  display:block;width:100%;margin-top:8px;padding:10px;border-radius:var(--r-sm);
-  background:var(--primary-soft);color:var(--primary-dark);font-weight:700;font-size:13.5px;
-}
+/* הכפתור שבתוך קטגוריה בתקציב הוא כפתור ההוספה הרגיל, ולכן נשאר כאן
+   רק מה שמייחד אותו להקשר: רוחב מלא בתוך הכרטיס והמרווח שמעליו */
+.btn.bcat-add{width:100%;margin-top:8px}
 
 /* ===================== עמוד התאריכים ===================== */
 /* תג תאריך, גוף וכותרת — משותפים לכרטיס "האירוע הבא" ולשורות שבחודשים */
@@ -1369,3 +1368,19 @@ table.ye-tbl td:nth-child(2),table.ye-tbl td:nth-child(3){text-align:center}
 /* דרגה שירדה עד שאינה מקבלת חלק בתקציב */
 .staff-mix .sm-per .sm-none{color:var(--muted)}
 
+
+/* ===== כפתור ההוספה האחיד =====
+   התווית במרכז וסימן החיבור לצידה, מופרד בקו דק. אותו פקד בכל מסך,
+   כדי שאותה פעולה תיראה ותשב באותו מקום בכל האפליקציה. */
+.btn.add-btn{gap:0}
+.btn.add-btn .ab-label{padding-inline-end:14px}
+.btn.add-btn .ab-plus{
+  padding-inline-start:14px;border-inline-start:1px solid rgba(255,255,255,.35);
+  font-size:20px;font-weight:400;line-height:1;
+}
+/* מרווח אחיד, במקום style מוטבע שהיה שונה בכל מסך */
+.btn.add-btn.mb-add{margin-bottom:14px}
+.btn.add-btn.mt-add{margin-top:14px}
+/* בגרסאות הבהירות של הכפתור הקו כהה, אחרת הוא נעלם על רקע לבן */
+.btn.add-btn.ghost .ab-plus,
+.btn.add-btn.soft .ab-plus{border-inline-start-color:var(--line)}

@@ -122,7 +122,7 @@ Views.budget = (function () {
   /* ניהול הקטגוריות — יושב בלשונית הקטגוריות, גם כשעוד אין סעיפים */
   function categoryManager(st) {
     return '<div class="section-title"><span>ניהול קטגוריות</span>' +
-      '<button class="btn sm soft" data-action="cat-add">+ קטגוריה</button></div>' +
+      UI.addBtn({ act: 'cat-add', label: 'הוספת קטגוריה', cls: 'soft sm' }) + '</div>' +
       '<div class="card"><div class="flex wrap" style="gap:8px">' +
       st.categories.map(function (c) {
         return '<button class="chip" data-action="cat-edit" data-id="' + c.id + '" ' +
@@ -138,13 +138,12 @@ Views.budget = (function () {
     });
     var total = Calc.budgetTotal(st);
 
-    var html = '<button class="btn ghost" data-action="budget-add" style="margin-bottom:14px">+ הוספת סעיף הוצאה</button>';
+    var html = UI.addBtn({ act: 'budget-add', label: 'הוספת סעיף הוצאה', cls: 'mb-add' });
 
     if (!items.length) {
       return html + UI.empty({
         art: 'budget', title: 'עוד לא תכננתם תקציב',
-        text: 'הוסיפו סעיפי הוצאה מתוך הקטגוריות — מתנות, כיבוד, חוגים ועוד.',
-        action: { act: 'budget-add', label: '+ הוספת הסעיף הראשון' }
+        text: 'הוסיפו סעיפי הוצאה מתוך הקטגוריות — מתנות, כיבוד, חוגים ועוד.'
       }) + categoryManager(st);
     }
 
@@ -250,8 +249,8 @@ Views.budget = (function () {
           (isOpen
             ? '<div class="bcat-body">' +
                 list.map(function (b) { return summaryItemRow(st, b); }).join('') +
-                '<button class="bcat-add" data-action="budget-add" data-category="' + c.id + '">' +
-                  '+ הוספת סעיף ל' + UI.esc(c.name) + '</button>' +
+                UI.addBtn({ act: 'budget-add', label: 'הוספת סעיף ל' + c.name,
+                            cls: 'soft sm bcat-add', data: { category: c.id } }) +
               '</div>'
             : '') +
           '</div>';
@@ -413,7 +412,8 @@ Views.budget = (function () {
             '</div>' +
             '</div>';
         }).join('') : '<p class="small muted" style="margin:0 0 8px">לא הוגדרו תקופות — החישוב יתבצע לפי כל שנת הלימודים.</p>') +
-        '<button type="button" class="btn soft sm" data-per-add="1" style="width:100%">+ הוספת תקופה</button>' +
+        '<button type="button" class="btn add-btn soft sm" data-per-add="1" style="width:100%">' +
+          '<span class="ab-label">הוספת תקופה</span><span class="ab-plus" aria-hidden="true">+</span></button>' +
         '<div class="hint">אפשר להוסיף כמה תקופות, למשל חוג שנעצר בחופשה וחוזר אחריה. ' +
         'החישוב מסכם את חודשי הפעילות בלבד.</div>';
 

@@ -9,10 +9,10 @@ Views.children = (function () {
     var st = Store.state;
     var kids = st.children.slice().sort(function (a, b) { return a.name.localeCompare(b.name, 'he'); });
 
-    var html = '<button class="btn ghost" data-action="child-add" style="margin-bottom:14px">+ הוספת ילד</button>';
+    var html = UI.addBtn({ act: 'child-add', label: 'הוספת ילד', cls: 'mb-add' });
 
     if (!kids.length) {
-      return html + UI.empty({ art: 'children', title: 'עוד אין ילדים ברשימה', text: 'הוסיפו את ילדי הגן, ההורים והטלפונים.', action: { act: 'child-add', label: '+ הוספת הילד הראשון' } });
+      return html + UI.empty({ art: 'children', title: 'עוד אין ילדים ברשימה', text: 'הוסיפו את ילדי הגן, ההורים והטלפונים.' });
     }
 
     html += kids.map(function (c) {

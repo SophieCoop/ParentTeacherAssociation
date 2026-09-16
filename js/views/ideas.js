@@ -799,7 +799,8 @@ Views.ideas = (function () {
         (lines.length ? (staff ? linesTableHTML() : lineCardsHTML())
                       : '<p class="small muted" style="margin:0 0 8px">עוד לא נוספו שורות הוצאה.</p>') +
         '<div class="ln-foot">' +
-          '<button type="button" class="btn soft sm" data-ln-add="1">+ הוספת שורה</button>' +
+          '<button type="button" class="btn add-btn soft sm" data-ln-add="1">' +
+            '<span class="ab-label">הוספת שורה</span><span class="ab-plus" aria-hidden="true">+</span></button>' +
           '<span class="ln-total" id="lines-total">' + totalText(root, linesTotal(staff)) + '</span>' +
         '</div>';
 
@@ -1013,16 +1014,17 @@ Views.ideas = (function () {
       art: 'ideas', tone: 'purple', back: 'home'
     });
 
-    html += '<div class="flex-between" style="margin-bottom:14px">' +
-      '<span class="small muted">' + ideas.length + ' רעיונות' +
-      (ideas.filter(function (i) { return i.chosen; }).length ? ' · ' + ideas.filter(function (i) { return i.chosen; }).length + ' נבחרו' : '') + '</span>' +
-      '<button class="btn sm" data-action="idea-add">+ הוספת רעיון</button></div>';
+    html += UI.addBtn({ act: 'idea-add', label: 'הוספת רעיון', cls: 'mb-add' });
+    if (ideas.length) {
+      html += '<div class="small muted" style="margin-bottom:10px">' + ideas.length + ' רעיונות' +
+        (ideas.filter(function (i) { return i.chosen; }).length
+          ? ' · ' + ideas.filter(function (i) { return i.chosen; }).length + ' נבחרו' : '') + '</div>';
+    }
 
     if (!ideas.length) {
       return html + UI.empty({
         art: 'ideas', title: 'בואו נעשה סיעור מוחות',
         text: 'כל רעיון הוא ריבוע נפרד: בוחרים קטגוריה וקהל יעד, מוסיפים שורות הוצאה — והמערכת מחשבת כמה זה יוצא לכל ילד ולכל הורה.',
-        action: { act: 'idea-add', label: '+ הרעיון הראשון' }
       });
     }
 
@@ -1044,7 +1046,6 @@ Views.ideas = (function () {
         '</tbody></table></div></div>';
     }
 
-    html += '<button class="btn" data-action="idea-add">+ הוספת רעיון</button>';
     return html;
   }
 

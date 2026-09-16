@@ -120,9 +120,11 @@ Views.expenses = (function () {
         'אפשר לעדכן את סעיפי התקציב או לצמצם הוצאות.</div></div>';
     }
 
+    html += UI.addBtn({ act: 'exp-add', label: 'הוספת הוצאה', cls: 'mb-add' });
+
     var exps = st.expenses.slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); });
     if (!exps.length) {
-      return html + UI.empty({ art: 'expenses', title: 'עוד לא נרשמו הוצאות', text: 'כל הוצאה שנרשמת יורדת מהתקציב באופן מיידי.', action: { act: 'exp-add', label: '+ רישום ההוצאה הראשונה' } });
+      return html + UI.empty({ art: 'expenses', title: 'עוד לא נרשמו הוצאות', text: 'כל הוצאה שנרשמת יורדת מהתקציב באופן מיידי.' });
     }
 
     var groups = AUD_GROUPS.map(function (g) {
@@ -338,8 +340,8 @@ Views.expenses = (function () {
         var cat = Store.category(e.categoryId);
         return drillRow(e, UI.catIcon(cat) + ' ' + UI.esc(cat.name) + (e.date ? ' · ' + UI.dateShort(e.date) : ''));
       }).join('') : '<p class="muted small">אין עדיין הוצאות בקבוצה הזו.</p>') +
-      '<button class="btn soft mt" data-action="exp-add" data-audience="' + g.id + '">' +
-        '+ הוספת הוצאה ' + g.short + '</button>';
+      UI.addBtn({ act: 'exp-add', label: 'הוספת הוצאה ' + g.short,
+                  cls: 'soft mt', data: { audience: g.id } });
   }
 
   function categoryBody(catId) {
@@ -353,8 +355,8 @@ Views.expenses = (function () {
       (list.length ? list.map(function (e) {
         return drillRow(e, UI.dateShort(e.date));
       }).join('') : '<p class="muted small">אין עדיין הוצאות בקטגוריה הזו.</p>') +
-      '<button class="btn soft mt" data-action="exp-add" data-category="' + cat.id + '">' +
-        '+ הוספת הוצאה ל' + UI.esc(cat.name) + '</button>';
+      UI.addBtn({ act: 'exp-add', label: 'הוספת הוצאה ל' + cat.name,
+                  cls: 'soft mt', data: { category: cat.id } });
   }
 
   function openDrillDown(title, bodyFn) {
