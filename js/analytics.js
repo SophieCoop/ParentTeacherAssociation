@@ -22,7 +22,8 @@ var Analytics = (function () {
     'view':        { screen: SCREENS },
     'wizard-step': { step: ['1', '2', '3', '4', '5'] },
     'setup-done':  { account: ['yes', 'no'] },
-    'account':     { action: ['signup', 'signin', 'confirmed'] }
+    'account':     { action: ['signup', 'signin', 'confirmed'] },
+    'install':     { action: ['shown', 'manual', 'accepted', 'dismissed', 'never', 'installed'] }
   };
 
   function send(name, data) {
@@ -59,6 +60,9 @@ var Analytics = (function () {
     setupDone: function (hasAccount) { send('setup-done', { account: hasAccount ? 'yes' : 'no' }); },
 
     /* פעולות חשבון — בלי כתובת המייל, כמובן */
-    account: function (action) { send('account', { action: action }); }
+    account: function (action) { send('account', { action: action }); },
+
+    /* ההצעה להוסיף את האפליקציה למסך הבית: הוצגה, נדחתה, בוצעה */
+    install: function (action) { send('install', { action: action }); }
   };
 })();
