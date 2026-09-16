@@ -174,8 +174,8 @@ Views.settings = (function () {
         });
       },
       'set-reset': function () {
-        UI.confirmBox('מחיקת כל הנתונים?', 'כל הילדים, התשלומים וההוצאות יימחקו לצמיתות. פעולה זו אינה הפיכה.', function () {
-          Store.reset();
+        UI.confirmBox('מחיקת כל הנתונים?', 'כל הילדים, התשלומים וההוצאות יימחקו לצמיתות — כולל גנים של חשבונות אחרים שחונים במכשיר. פעולה זו אינה הפיכה.', function () {
+          Store.clearAllSlots();
           App.setVs('wizStep', 0);
           App.setView('home');
           UI.toast('הכל נמחק');
