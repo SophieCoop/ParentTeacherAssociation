@@ -259,6 +259,35 @@ var Cloud = (function () {
     }
   }
 
+  /* ---------- מחיקת החשבון ---------- */
+  /* מחיקה אמיתית, לא רק ניתוק: השורה בענן והמשתמש עצמו נמחקים.
+     דפדפן אינו רשאי למחוק משתמש, ולכן הפעולה עוברת דרך פונקציה
+     בשרת (delete_account) שמוחקת אך ורק את מי שקרא לה — המזהה
+     נלקח מהטוקן ולא מפרמטר.
+
+     סדר הפעולות חשוב: קודם השרת, ורק אחרי שהוא אישר נמחק גם מה
+     שבמכשיר. מחיקה מקומית מוקדמת הייתה משאירה את הנתונים בענן בלי
+     שום דרך להגיע אליהם. התא של החשבון נמחק לבדו — ייתכן שחונה
+     כאן גם גן של חשבון אחר. */
+  function deleteAccount() {
+    if (!enabled())  return Promise.reject(new Error('הסנכרון כבוי'));
+    if (!signedIn()) return Promise.reject(new Error('לא מחוברים לחשבון'));
+
+    var uid = session.user && session.user.id;
+    return fresh().then(function () {
+      return api('/rest/v1/rpc/delete_account', { method: 'POST', body: {} });
+    }).then(function () {
+      try { localStorage.removeItem(META_KEY + ':' + uid); } catch (e) {}
+      clearSession();
+      if (window.Store && Store.dropSlot) Store.dropSlot(uid);
+      meta = { lastServerAt: null, dirty: false, lastSyncAt: null };
+      conflict = null;
+      clearTimeout(pushTimer);
+      setStatus('signed-out');
+      return true;
+    });
+  }
+
   /* ---------- משיכה ודחיפה ---------- */
   function pull() {
     return fresh().then(function () {
@@ -494,6 +523,7 @@ var Cloud = (function () {
     init: init, info: info, onChange: onChange,
     enabled: enabled, signedIn: signedIn,
     signIn: signIn, signUp: signUp, signOut: signOut, resendConfirm: resendConfirm,
+    deleteAccount: deleteAccount,
     sync: sync, onLocalChange: onLocalChange,
     getConflict: getConflict, resolveConflict: resolveConflict
   };

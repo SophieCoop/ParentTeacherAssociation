@@ -154,6 +154,18 @@ var Store = (function () {
     return true;
   }
 
+  /* מחיקת התא של חשבון אחד — כשהחשבון עצמו נמחק. שאר התאים נשארים:
+     ייתכן שחונה כאן גם גן של חשבון אחר, ואין סיבה שהוא ייפגע. אם זה
+     היה התא הפעיל, המכשיר חוזר לתא המקומי והאשף נפתח מחדש. */
+  function dropSlot(id) {
+    try { localStorage.removeItem(slotKey(id || '')); } catch (e) {}
+    if ((id || '') === owner) {
+      owner = '';
+      writeOwner('');
+      loadSlot('');
+    }
+  }
+
   /* ניקוי המכשיר: כל התאים, לא רק הפעיל. אין מסך שמציג מי חונה כאן,
      ולכן זו הפעולה היחידה שמוודאת שלא נשאר דבר לפני מסירת מכשיר. */
   function clearAllSlots() {
@@ -461,7 +473,7 @@ var Store = (function () {
     get state() { return state; },
     load: load, save: save, reset: reset,
     useSlot: useSlot, adoptInto: adoptInto, hasSlot: hasSlot,
-    currentOwner: currentOwner, clearAllSlots: clearAllSlots,
+    currentOwner: currentOwner, clearAllSlots: clearAllSlots, dropSlot: dropSlot,
     uid: uid, list: list, find: find, add: add, update: update, remove: remove,
     replaceState: replaceState,
     exportJSON: exportJSON, importJSON: importJSON, loadDemo: loadDemo,

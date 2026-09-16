@@ -63,7 +63,12 @@ Views.settings = (function () {
         '<div class="stat"><div class="s-val">' + st.children.length + '</div><div class="s-lab">ילדים</div></div>' +
         '<div class="stat"><div class="s-val">' + st.payments.length + '</div><div class="s-lab">תשלומים</div></div>' +
         '<div class="stat"><div class="s-val">' + st.expenses.length + '</div><div class="s-lab">הוצאות</div></div>' +
-      '</div></div>';
+      '</div>' +
+      /* עמוד סטטי מחוץ לאפליקציה, ולכן קישור רגיל ולא data-action */
+      '<p class="small muted mt mb0">באפליקציה יושבים פרטים של ילדים והורים. ' +
+      '<a href="privacy.html" target="_blank" rel="noopener">מדיניות הפרטיות</a> ' +
+      'מפרטת מה נשמר, איפה, ומי יכול לגשת.</p>' +
+      '</div>';
 
     /* ההצעה קופצת מעצמה אחרי כמה כניסות, ומי שדחה אותה צריך דרך
        לחזור אליה — וגם מי שרוצה להתקין את האפליקציה במכשיר נוסף */
@@ -104,6 +109,12 @@ Views.settings = (function () {
         : '<div class="hint" style="margin:0 0 12px">נתוני הדוגמה אינם זמינים כשמחוברים לחשבון — הם היו מחליפים ' +
           'את הנתונים האמיתיים גם בענן וגם בכל מכשיר אחר שמחובר אליו.</div>') +
       '<button class="btn danger" data-action="set-reset">🗑 מחיקת כל הנתונים</button>' +
+      /* מחיקת החשבון היא פעולה אחרת ממחיקת הנתונים שבמכשיר, והיא
+         נפרדת ממנה בכוונה: זו מוחקת גם את מה שבענן ואת החשבון עצמו */
+      (window.Cloud && Cloud.signedIn()
+        ? '<button class="btn danger" data-action="set-delete-account" style="margin-top:9px">' +
+          '☁️ מחיקת החשבון לצמיתות</button>'
+        : '') +
       '</div>';
 
     html += '<p class="center small muted mt">ועד הורים גן שלנו · יחד למען הילדים ❤️<br>' +
@@ -189,6 +200,54 @@ Views.settings = (function () {
           Store.loadDemo();
           App.setView('home');
           UI.toast('נטענו נתוני דוגמה 🌸');
+        });
+      },
+      /* מחיקת חשבון היא הפעולה היחידה באפליקציה שאי אפשר לחזור ממנה
+         בשום דרך — גם לא מגיבוי בענן, כי הענן עצמו נמחק. לכן החלון
+         מפרט מה נמחק, ומציע לייצא גיבוי לפני. */
+      'set-delete-account': function () {
+        var email = (Cloud.info().email || '');
+        UI.modal({
+          title: 'מחיקת החשבון לצמיתות?',
+          subtitle: email ? 'החשבון ' + email : '',
+          body:
+            '<p class="small" style="line-height:1.75;margin:0 0 12px">מה יימחק:</p>' +
+            '<ul class="bullets" style="margin-bottom:14px">' +
+              '<li>החשבון עצמו, ואיתו האפשרות להתחבר איתו שוב.</li>' +
+              '<li>כל הנתונים ששמורים בענן — ילדים, הורים, תשלומים והוצאות.</li>' +
+              '<li>הגן ששמור במכשיר הזה.</li>' +
+            '</ul>' +
+            '<div class="note" style="background:#FDF0F2;margin-bottom:14px"><div class="n-ico">⚠️</div><div>' +
+            'הפעולה מיידית ואינה הפיכה. מכשיר אחר שמחובר לחשבון יינתק בפעם ' +
+            'הבאה שינסה להסתנכרן, אבל העותק ששמור בו יישאר שם עד שיימחק בנפרד.' +
+            '</div></div>' +
+            '<button class="btn ghost js-backup">⬇️ ייצוא גיבוי קודם</button>' +
+            '<div class="btn-row mt">' +
+              '<button class="btn soft js-no">ביטול</button>' +
+              '<button class="btn js-yes" style="background:var(--danger);color:#fff">מחיקת החשבון</button>' +
+            '</div>',
+          onMount: function (root, close) {
+            root.querySelector('.js-backup').addEventListener('click', function () {
+              Views.settings.actions['set-export']();
+            });
+            root.querySelector('.js-no').addEventListener('click', close);
+            root.querySelector('.js-yes').addEventListener('click', function (e) {
+              var btn = e.currentTarget;
+              btn.disabled = true;
+              btn.textContent = 'מוחק…';
+              Cloud.deleteAccount().then(function () {
+                close();
+                App.setVs('resumeWizard', false);
+                App.setVs('wizStep', 0);
+                App.setView('home');
+                UI.toast('החשבון נמחק');
+              }, function (err) {
+                btn.disabled = false;
+                btn.textContent = 'מחיקת החשבון';
+                UI.toast((err && err.message) || 'מחיקת החשבון נכשלה');
+              });
+            });
+          }
         });
       },
       'set-reset': function () {
