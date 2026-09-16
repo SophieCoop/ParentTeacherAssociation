@@ -101,6 +101,8 @@ var App = (function () {
 
     // סיור ההיכרות רץ פעם אחת, בהגעה הראשונה למסך הבית אחרי ההקמה
     if (current === 'home' && window.Tour) Tour.maybeStart();
+    // סיור הרעיון מחכה בכניסה הראשונה למסך שלו
+    if (current === 'ideas' && window.Tour && Tour.maybeStartIdea) Tour.maybeStartIdea();
     // וההצעה להוסיף את האפליקציה למסך הבית — רק אחרי כמה כניסות
     if (current === 'home' && window.Install) Install.maybeOffer();
   }

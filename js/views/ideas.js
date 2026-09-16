@@ -1062,10 +1062,7 @@ Views.ideas = (function () {
     actions: {
       /* בלחיצה הראשונה רץ סיור קצר על רעיון לדוגמה, ורק בסופו נפתח
          הטופס הריק. בכל לחיצה אחרת הסיור מחזיר false ולא קורה דבר. */
-      'idea-add': function () {
-        if (window.Tour && Tour.startIdea && Tour.startIdea()) return;
-        ideaForm(null);
-      },
+      'idea-add': function () { ideaForm(null); },
       'idea-edit': function (el) { ideaForm(Store.find('ideas', el.getAttribute('data-id'))); },
 
       'idea-choose': function (el) {

@@ -44,13 +44,8 @@ var Tour = (function () {
         text: 'כמה צריך לגבות מכל ילד, מי כבר שילם ומי עוד לא. אפשר לסמן תשלומים ולשלוח תזכורת.' },
       { target: '.tile[data-view="ideas"]',
         title: 'רעיונות למתנות',
-        text: 'מרכזים כאן רעיונות למתנות לצוות ולאירועים, עם פירוט עלויות — לפני שמחליטים. ניכנס לרגע פנימה.' },
-
-      /* ---- מסך הרעיונות מקרוב ---- */
-      { view: 'ideas', target: '[data-action="idea-add"]',
-        title: 'פותחים רעיון חדש',
-        text: 'לחיצה כאן פותחת רעיון ריק. אפשר לפתוח כמה רעיונות לאותו אירוע, להשוות ביניהם, ורק אז להחליט.' }
-    ].concat(ideaSteps()).concat([
+        text: 'מרכזים כאן רעיונות למתנות לצוות ולאירועים, עם פירוט עלויות — לפני שמחליטים. ' +
+              'בכניסה הראשונה לשם יחכה סיור קצר על הרעיון עצמו.' },
 
       { view: 'home', target: ['.tile[data-view="children"]', '.tile[data-view="staff"]'],
         title: 'ילדי הגן והצוות',
@@ -58,7 +53,7 @@ var Tour = (function () {
       { view: 'home', target: ['.tile[data-view="dates"]', '.tile[data-view="yearend"]'],
         title: 'תאריכים וסוף שנה',
         text: 'ימי הולדת, חגים ואירועים — ובסוף השנה, חישוב אוטומטי של החזרים להורים.' }
-    ]);
+    ];
 
     if (document.getElementById('sync-chip')) {
       list.push({ view: 'home', target: '#sync-chip',
@@ -444,15 +439,26 @@ var Tour = (function () {
     try { if (localStorage.getItem(IDEA_KEY) === 'done') return false; } catch (e) { return false; }
     try { localStorage.setItem(IDEA_KEY, 'done'); } catch (e) {}
 
-    steps = [{ title: 'רגע לפני שמתחילים ✨',
-               text: 'נעבור יחד על רעיון לדוגמה — מה יש בטופס ואיך הוא מחושב. בסוף ייפתח טופס ריק, שלכם.' }]
+    steps = [{ title: 'ככה נראה רעיון 💡',
+               text: 'נעבור יחד על רעיון לדוגמה — מה יש בו ואיך הוא מחושב. אפשר לדלג בכל רגע.' }]
             .concat(ideaSteps().filter(function (st) { return st.modals; }));
 
-    onDone = function () {
-      if (window.Views && Views.ideas && Views.ideas.form) Views.ideas.form(null);
-    };
+    /* הסיור נפתח מעצמו בכניסה למסך, ולא בעקבות בקשה להוסיף רעיון,
+       ולכן בסופו חוזרים למסך הרעיונות ולא לטופס ריק שאיש לא ביקש. */
+    onDone = null;
     open();
     return true;
+  }
+
+  /* ריצה אוטומטית בכניסה הראשונה למסך הרעיונות, פעם אחת בלבד.
+     המסך צריך להיות מצויר כבר, אחרת אין על מה להצביע. */
+  function maybeStartIdea() {
+    if (live) return;
+    try { if (localStorage.getItem(IDEA_KEY) === 'done') return; } catch (e) { return; }
+    if (!Store.state.setupDone) return;
+    setTimeout(function () {
+      if (!live && document.querySelector('[data-action="idea-add"]')) startIdea();
+    }, 700);
   }
 
   function start() {
@@ -493,6 +499,7 @@ var Tour = (function () {
     }, 700);
   }
 
-  return { start: start, startIdea: startIdea, maybeStart: maybeStart, seen: seen,
+  return { start: start, startIdea: startIdea, maybeStart: maybeStart,
+           maybeStartIdea: maybeStartIdea, seen: seen,
            running: function () { return live; } };
 })();
