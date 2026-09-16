@@ -49,7 +49,7 @@ Views.onboarding = (function () {
      באייפון היא מקבלת אחסון נפרד מזה של הדפדפן, ולכן מי שכבר עבד
      כאן בספארי פוגש מסך פתיחה ריק וחושב שהנתונים אבדו. הם לא —
      הם נשארו בדפדפן. מכאן שתי דרכים להביא אותם: החשבון, שעליו
-     מצביע הבלוק שמתחת, וקובץ גיבוי. */
+     מצביע הבלוק שמתחת. */
   function freshAppBlock() {
     if (!window.Install || !Install.standalone()) return '';
     if (Store.state.setupDone) return '';
@@ -59,9 +59,8 @@ Views.onboarding = (function () {
       '<div class="n-ico">📲</div><div>' +
       '<b>הזנתם כבר נתונים בדפדפן?</b>' +
       'האפליקציה שבמסך הבית מקבלת אחסון נפרד מהדפדפן, ולכן היא מתחילה ריקה. ' +
-      'הנתונים לא אבדו — הם נשארו בדפדפן שממנו הוספתם אותה. אפשר להביא אותם ' +
-      'לכאן בהתחברות לחשבון, או בטעינת קובץ גיבוי שייצאתם משם.' +
-      '<button class="btn ghost mt" data-action="set-import">⬆️ טעינת גיבוי מקובץ</button>' +
+      'הנתונים לא אבדו — הם נשארו בדפדפן שממנו הוספתם אותה. התחברות לחשבון ' +
+      'תביא אותם לכאן.' +
       '</div></div>';
   }
 
@@ -143,7 +142,7 @@ Views.onboarding = (function () {
           '<input class="input" data-input="wiz-gan" data-key="address" value="' + UI.esc(g.address) + '" placeholder="רחוב הגן 12, תל אביב"></div>' +
         '<div class="field"><label>שנת לימודים</label>' +
           '<input class="input" data-input="wiz-gan" data-key="yearLabel" value="' + UI.esc(g.yearLabel) + '" placeholder="2025/2026"></div>' +
-        '<div class="grid-2">' +
+        '<div class="grid-2 date-pair">' +
           '<div class="field"><label>תחילת שנה</label>' +
             '<input class="input" type="date" data-input="wiz-set" data-key="yearStart" value="' + UI.esc(s.yearStart) + '"></div>' +
           '<div class="field"><label>סוף שנה</label>' +
