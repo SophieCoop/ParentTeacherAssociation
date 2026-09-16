@@ -111,11 +111,12 @@ Views.dates = (function () {
       art: 'dates', tone: 'blue', back: 'home',
       action: { act: 'date-add', label: 'הוספת תאריך', icon: '+' } });
 
+    html += UI.addBtn({ act: 'date-add', label: 'הוספת תאריך', cls: 'mb-add' });
+
     var list = items();
     if (!list.length) {
       return html + UI.empty({ art: 'dates', title: 'אין תאריכים',
-        text: 'הוסיפו ימי הולדת לילדים או אירועים לגן.',
-        action: { act: 'date-add', label: '+ הוספת תאריך' } });
+        text: 'הוסיפו ימי הולדת לילדים או אירועים לגן.' });
     }
 
     html += nextUp(list[0]);

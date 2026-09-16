@@ -150,14 +150,14 @@ Views.onboarding = (function () {
       '<div class="card">' +
         '<div class="flex-between"><div><b>' + kids.length + ' ילדים</b>' +
         '<div class="small muted">רשומים כרגע</div></div>' +
-        '<button class="btn sm" data-action="child-add">+ הוספת ילד</button></div>' +
+        UI.addBtn({ act: 'child-add', label: 'הוספת ילד', cls: 'soft sm' }) + '</div>' +
       '</div>' +
       (kids.length ? kids.map(function (c) {
         return '<div class="row"><div class="avatar" style="background:' + UI.toneVar(UI.toneFor(c.name)) + '">' + UI.faceFor(c.name) + '</div>' +
           '<div class="r-body"><div class="r-name">' + UI.esc(c.name) + '</div>' +
           '<div class="r-sub">' + (c.birthDate ? UI.dateShort(c.birthDate) : 'ללא תאריך לידה') + '</div></div>' +
           '<button class="iconbtn plain" data-action="child-edit" data-id="' + c.id + '">✏️</button></div>';
-      }).join('') : UI.empty({ art: 'children', title: 'עוד אין ילדים ברשימה', text: 'אפשר להוסיף עכשיו, או לדלג ולהוסיף אחר כך.', action: { act: 'child-add', label: '+ הוספת ילד ראשון' } })) +
+      }).join('') : UI.empty({ art: 'children', title: 'עוד אין ילדים ברשימה', text: 'אפשר להוסיף עכשיו, או לדלג ולהוסיף אחר כך.', action: { act: 'child-add', label: 'הוספת ילד ראשון' } })) +
       footer(n);
   }
 
@@ -168,7 +168,7 @@ Views.onboarding = (function () {
       '<div class="card">' +
         '<div class="flex-between"><div><b>' + staff.length + ' אנשי צוות</b>' +
         '<div class="small muted">רשומים כרגע</div></div>' +
-        '<button class="btn sm" data-action="staff-add">+ הוספת איש צוות</button></div>' +
+        UI.addBtn({ act: 'staff-add', label: 'הוספת איש צוות', cls: 'soft sm' }) + '</div>' +
       '</div>' +
       (staff.length ? staff.map(function (t) {
         var lv = Store.staffLevel(t.level);
@@ -176,7 +176,7 @@ Views.onboarding = (function () {
           '<div class="r-body"><div class="r-name">' + UI.esc(t.name) + '</div>' +
           '<div class="r-sub">' + UI.esc(t.role || lv.name) + '</div></div>' +
           '<button class="iconbtn plain" data-action="staff-edit" data-id="' + t.id + '">✏️</button></div>';
-      }).join('') : UI.empty({ art: 'staff', title: 'עוד לא הוספתם צוות', text: 'השלב הזה אופציונלי לגמרי.', action: { act: 'staff-add', label: '+ הוספת איש צוות' } })) +
+      }).join('') : UI.empty({ art: 'staff', title: 'עוד לא הוספתם צוות', text: 'השלב הזה אופציונלי לגמרי.', action: { act: 'staff-add', label: 'הוספת איש צוות' } })) +
       footer(n);
   }
 
@@ -195,7 +195,7 @@ Views.onboarding = (function () {
           '<div class="r-body"><div class="r-name">' + UI.esc(b.title || cat.name) + '</div>' +
           '<div class="r-sub">' + UI.esc(cat.name) + (b.date ? ' · ' + UI.dateShort(b.date) : '') + '</div></div>' +
           '<div class="r-end"><div class="r-amount">' + UI.money(Calc.itemAmount(Store.state, b)) + '</div></div></div>';
-      }).join('') : UI.empty({ art: 'budget', title: 'עוד אין סעיפי תקציב', text: 'כמו מתנות ליום הולדת, כיבוד, חוגים ועוד.', action: { act: 'budget-add', label: '+ הוספת סעיף תקציב' } })) +
+      }).join('') : UI.empty({ art: 'budget', title: 'עוד אין סעיפי תקציב', text: 'כמו מתנות ליום הולדת, כיבוד, חוגים ועוד.', action: { act: 'budget-add', label: 'הוספת סעיף תקציב' } })) +
       footer(n, 'סיימנו — כניסה לאפליקציה');
   }
 
