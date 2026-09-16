@@ -440,6 +440,26 @@ var UI = (function () {
       'fill="none" aria-hidden="true" focusable="false">' + d + '</svg>';
   }
 
+  /* ---------- כפתור ההוספה ----------
+     פקד אחד לכל מסך: אותו מראה, אותו מקום, אותה אנטומיה — התווית
+     ולצידה סימן החיבור, מופרד בקו. עד כה כל מסך הרכיב אותו בעצמו
+     (btn, btn ghost, btn sm) והדביק את ה-"+" לתוך הטקסט, ולכן אותה
+     פעולה נראתה אחרת בכל עמוד.
+     o: { act, label, cls, data } — data הוא מפת data-* נוספים לפעולה. */
+  function addBtn(o) {
+    o = o || {};
+    var data = o.data || {};
+    var attrs = Object.keys(data).map(function (k) {
+      return ' data-' + k + '="' + esc(data[k]) + '"';
+    }).join('');
+    return '<button class="btn add-btn' + (o.cls ? ' ' + o.cls : '') + '"' +
+      ' data-action="' + esc(o.act) + '"' + attrs +
+      ' aria-label="' + esc(o.label) + '">' +
+      '<span class="ab-label">' + esc(o.label) + '</span>' +
+      '<span class="ab-plus" aria-hidden="true">+</span>' +
+      '</button>';
+  }
+
   function empty(o) {
     return '<div class="empty">' +
       '<div class="e-ico">' + (o.art ? art(o.art) : (o.icon || '🌱')) + '</div>' +
@@ -523,6 +543,7 @@ var UI = (function () {
     toneVar: toneVar, toneInk: toneInk, toneHex: toneHex,
     toneSoftHex: toneSoftHex, toneInkHex: toneInkHex,
     toast: toast, modal: modal, formModal: formModal, confirmBox: confirmBox,
+    addBtn: addBtn,
     pageHead: pageHead, empty: empty, bar: bar, donut: donut, svgIcon: svgIcon, art: art, catIcon: catIcon,
     whatsapp: whatsapp, normalizePhone: normalizePhone, copyText: copyText
   };

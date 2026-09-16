@@ -87,10 +87,10 @@ Views.collection = (function () {
     var st = Store.state;
     var pays = st.payments.slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); });
 
-    var html = '<button class="btn ghost" data-action="pay-add" style="margin-bottom:14px">+ רישום תשלום חדש</button>';
+    var html = '';
 
     if (!pays.length) {
-      return html + UI.empty({ art: 'collection', title: 'עוד לא נרשמו תשלומים', text: 'כל תשלום שנרשם מתעדכן מיד במצב הגבייה.', action: { act: 'pay-add', label: '+ רישום התשלום הראשון' } });
+      return html + UI.empty({ art: 'collection', title: 'עוד לא נרשמו תשלומים', text: 'כל תשלום שנרשם מתעדכן מיד במצב הגבייה.' });
     }
 
     html += pays.map(function (p) {
@@ -417,12 +417,12 @@ Views.collection = (function () {
       '<button data-action="col-tab" data-tab="payments" class="' + (tab === 'payments' ? 'on' : '') + '">תשלומים</button>' +
       '<button data-action="col-tab" data-tab="list" class="' + (tab === 'list' ? 'on' : '') + '">רשימה</button>' +
       '</div>';
+    html += Store.state.children.length
+      ? UI.addBtn({ act: 'pay-add', label: 'הוספת תשלום', cls: 'mb-add' })
+      : UI.addBtn({ act: 'nav', label: 'הוספת ילדים', cls: 'mb-add', data: { view: 'children' } });
     if (tab === 'calc') html += tabCalc();
     else if (tab === 'payments') html += tabPayments();
     else html += tabList();
-    html += Store.state.children.length
-      ? '<button class="btn" style="margin-top:14px" data-action="pay-add">+ רישום תשלום</button>'
-      : '<button class="btn" style="margin-top:14px" data-action="nav" data-view="children">+ הוספת ילדים</button>';
     return html;
   }
 
