@@ -1246,7 +1246,11 @@ table.ye-tbl td:nth-child(2),table.ye-tbl td:nth-child(3){text-align:center}
 /* הזרקור הוא חלון שקוף עם צל ענק סביבו: כך נחשף האלמנט האמיתי
    שעל המסך, ולא עותק שלו, וכל שינוי בו נראה מיד */
 /* מעל המודאל (80), כדי שהזרקור יוכל להאיר גם אלמנט בתוך טופס פתוח */
-.tour-back{position:fixed;inset:0;z-index:95}
+/* ההחשכה מגיעה מהצל הענק שסביב הזרקור, ולכן שכבת הרקע עצמה שקופה.
+   בשלב בלי יעד הזרקור מוסתר — ואיתו נעלמה גם ההחשכה, והמסך נראה
+   פעיל אף שאינו לחיץ. שם ההחשכה עוברת אל השכבה. */
+.tour-back{position:fixed;inset:0;z-index:95;transition:background-color .2s ease}
+.tour-back.no-hole{background:rgba(43,35,66,.62)}
 .tour-hole{
   position:fixed;border-radius:16px;pointer-events:none;
   box-shadow:0 0 0 9999px rgba(43,35,66,.62);

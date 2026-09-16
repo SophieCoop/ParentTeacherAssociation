@@ -297,6 +297,7 @@ var Tour = (function () {
 
     if (!r) {   // בועה ממורכזת, בלי זרקור
       hole.style.display = 'none';
+      back.classList.add('no-hole');   // ההחשכה עוברת לשכבה, במקום הצל שסביב הזרקור
       bubble.className = 'tour-bubble center';
       bubble.style.top = '';
       bubble.style.left = '';
@@ -305,6 +306,7 @@ var Tour = (function () {
     }
 
     hole.style.display = 'block';
+    back.classList.remove('no-hole');
     hole.style.top = r.top + 'px';
     hole.style.left = r.left + 'px';
     hole.style.width = r.width + 'px';
