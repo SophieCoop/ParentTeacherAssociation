@@ -280,6 +280,11 @@ textarea.input{min-height:78px;resize:vertical}
 .input[type="date"]{
   -webkit-appearance:none;appearance:none;
   font:inherit;font-size:15px;line-height:1.55;
+  /* שדה ריק נשען על התוכן שבפנים כדי לקבל גובה, ואחרי איפוס הריפוד
+     של העטיפה הפנימית לא נשאר לו ממה. הגובה המזערי נגזר מאותם מספרים
+     שמרכיבים כל שדה אחר — שורת טקסט ועוד הריפוד והמסגרת — ולכן שדה
+     תאריך יושב באותה שורה עם השאר, מלא או ריק. */
+  min-height:calc(1.55em + 26px);
 }
 .input[type="date"]::-webkit-datetime-edit,
 .input[type="date"]::-webkit-datetime-edit-fields-wrapper{

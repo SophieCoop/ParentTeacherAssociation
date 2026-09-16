@@ -108,8 +108,7 @@ Views.dates = (function () {
   function render() {
     var html = UI.pageHead({ title: 'תאריכים מיוחדים',
       subtitle: 'חגים, ימי הולדת, סוף שנה ואירועי הגן',
-      art: 'dates', tone: 'blue', back: 'home',
-      action: { act: 'date-add', label: 'הוספת תאריך', icon: '+' } });
+      art: 'dates', tone: 'blue', back: 'home' });
 
     html += UI.addBtn({ act: 'date-add', label: 'הוספת תאריך', cls: 'mb-add' });
 
