@@ -111,9 +111,17 @@ var Install = (function () {
       return { tone: 'ok', text: 'הנתונים שלכם שמורים בענן. אחרי ההוספה מתחברים לחשבון גם ' +
                                  'באפליקציה החדשה, והכול נמשך אליה.' };
     }
-    return { tone: 'warn', text: 'שימו לב: האפליקציה שתיווצר מקבלת אחסון נפרד מהדפדפן, ולכן ' +
-                                 'הנתונים שהוזנו כאן לא יעברו אליה מעצמם. כדאי לפתוח קודם חשבון ' +
-                                 'סנכרון בהגדרות ⚙️, או לייצא גיבוי ולטעון אותו שם.' };
+    /* בלי ענן מוגדר אין חשבון להציע, ונשאר רק הגיבוי לקובץ */
+    if (!(window.Cloud && Cloud.enabled())) {
+      return { tone: 'warn',
+               text: 'שימו לב: האפליקציה שתיווצר מקבלת אחסון נפרד מהדפדפן, ולכן הנתונים ' +
+                     'שהוזנו כאן לא יעברו אליה מעצמם. ייצאו גיבוי מההגדרות ⚙️ לפני ההוספה, ' +
+                     'וטענו אותו באפליקציה החדשה.' };
+    }
+    return { tone: 'warn', cta: true,
+             text: 'שימו לב: האפליקציה שתיווצר מקבלת אחסון נפרד מהדפדפן, ולכן הנתונים ' +
+                   'שהוזנו כאן לא יעברו אליה מעצמם. חשבון סנכרון פותר את זה — מתחברים ' +
+                   'בו גם באפליקציה החדשה, והכול נמשך מהענן.' };
   }
 
   /* ---------- ההוראות, לפי המכשיר ---------- */
@@ -207,11 +215,17 @@ var Install = (function () {
       }).join('') + '</ol>';
   }
 
+  /* כשהאחסון נפרד, פתיחת חשבון לפני ההוספה היא מה שמונע אפליקציה
+     ריקה — ולכן היא כפתור, ולא עוד משפט בתוך האזהרה */
   function noteHTML() {
     var n = note();
     return '<div class="inst-note ' + n.tone + '">' +
       '<span class="in-ico">' + (n.tone === 'warn' ? '⚠️' : '☁️') + '</span>' +
-      '<span>' + UI.esc(n.text) + '</span></div>';
+      '<span>' + UI.esc(n.text) + '</span></div>' +
+      (n.cta ? '<button class="btn soft mt js-account">🔄 פתיחת חשבון סנכרון</button>' +
+               '<p class="inst-alt">אין חשבון ואין רצון לפתוח? ייצאו גיבוי מההגדרות ⚙️, ' +
+               'וטענו אותו באפליקציה החדשה.</p>'
+             : '');
   }
 
   function body() {
@@ -289,6 +303,14 @@ var Install = (function () {
 
   /* הכפתורים התחתונים נקשרים מחדש בכל החלפת תוכן של החלון */
   function wire(root, close) {
+    /* טופס החשבון נפתח כחלון בפני עצמו, ולכן ההצעה נסגרת לפניו.
+       ההצעה כבר נדחתה לכמה כניסות, ומההגדרות אפשר לחזור אליה. */
+    var acc = root.querySelector('.js-account');
+    if (acc) acc.addEventListener('click', function () {
+      close();
+      if (window.Views && Views.account) Views.account.actions['acc-signup']();
+    });
+
     var later = root.querySelector('.js-later');
     if (later) later.addEventListener('click', function () { snooze(); close(); });
     var never = root.querySelector('.js-never');

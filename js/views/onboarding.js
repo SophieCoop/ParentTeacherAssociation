@@ -39,9 +39,30 @@ Views.onboarding = (function () {
       '<h1>ועד הורים<br>גן שלנו</h1>' +
       '<p>יחד למען הילדים ❤️<br>ניהול תקציב, גבייה והוצאות במקום אחד</p>' +
       '<button class="btn" data-action="wiz-start">בואו נתחיל</button>' +
+      freshAppBlock() +
       cloudBlock() +
       exitLink() +
       '</div>';
+  }
+
+  /* הפעלה ראשונה של האפליקציה שנוספה למסך הבית, כשאין בה נתונים.
+     באייפון היא מקבלת אחסון נפרד מזה של הדפדפן, ולכן מי שכבר עבד
+     כאן בספארי פוגש מסך פתיחה ריק וחושב שהנתונים אבדו. הם לא —
+     הם נשארו בדפדפן. מכאן שתי דרכים להביא אותם: החשבון, שעליו
+     מצביע הבלוק שמתחת, וקובץ גיבוי. */
+  function freshAppBlock() {
+    if (!window.Install || !Install.standalone()) return '';
+    if (Store.state.setupDone) return '';
+    if (window.Cloud && Cloud.signedIn()) return '';
+
+    return '<div class="note" style="max-width:320px;margin-top:22px;text-align:start">' +
+      '<div class="n-ico">📲</div><div>' +
+      '<b>הזנתם כבר נתונים בדפדפן?</b>' +
+      'האפליקציה שבמסך הבית מקבלת אחסון נפרד מהדפדפן, ולכן היא מתחילה ריקה. ' +
+      'הנתונים לא אבדו — הם נשארו בדפדפן שממנו הוספתם אותה. אפשר להביא אותם ' +
+      'לכאן בהתחברות לחשבון, או בטעינת קובץ גיבוי שייצאתם משם.' +
+      '<button class="btn ghost mt" data-action="set-import">⬆️ טעינת גיבוי מקובץ</button>' +
+      '</div></div>';
   }
 
   /* אזור החשבון במסך הפתיחה.
@@ -52,10 +73,12 @@ Views.onboarding = (function () {
     var i = Cloud.info();
 
     if (!i.signedIn) {
+      // באפליקציה שנוספה למסך הבית המקור הוא לרוב הדפדפן שבאותו מכשיר
+      var from = (window.Install && Install.standalone()) ? 'בדפדפן או במכשיר אחר' : 'במכשיר אחר';
       return '<button class="btn soft" style="max-width:320px;margin-top:10px" data-action="acc-signin">' +
         'כבר יש לי חשבון — התחברות</button>' +
         '<p class="small muted" style="max-width:320px;margin-top:14px">' +
-        'מתחברים כאן כדי למשוך למכשיר הזה נתונים שכבר הזנתם במכשיר אחר.</p>';
+        'מתחברים כאן כדי למשוך לכאן נתונים שכבר הזנתם ' + from + '.</p>';
     }
 
     return '<div class="card" style="max-width:320px;margin-top:20px;text-align:start">' +
