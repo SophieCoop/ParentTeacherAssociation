@@ -58,11 +58,19 @@ var Cloud = (function () {
   }
 
   /* ---------- אחסון מקומי של ההתחברות ---------- */
+  /* מצב הסנכרון מתאר את היחסים של חשבון אחד מול השרת, ולכן הוא נשמר
+     לכל חשבון בנפרד. מפתח משותף היה שולח את החשבון האחד עם הסמן של
+     השני, ו"האחרון מנצח" היה מכריע על סמך השוואה שגויה. */
+  function metaKey() {
+    var id = session && session.user && session.user.id;
+    return id ? META_KEY + ':' + id : META_KEY;
+  }
+
   function loadLocal() {
     try {
       var s = localStorage.getItem(SESSION_KEY);
       if (s) session = JSON.parse(s);
-      var m = localStorage.getItem(META_KEY);
+      var m = localStorage.getItem(metaKey());
       if (m) {
         var parsed = JSON.parse(m);
         Object.keys(parsed).forEach(function (k) { meta[k] = parsed[k]; });
@@ -85,7 +93,42 @@ var Cloud = (function () {
     try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
   }
   function saveMeta() {
-    try { localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch (e) {}
+    try { localStorage.setItem(metaKey(), JSON.stringify(meta)); } catch (e) {}
+  }
+  function readMeta() {
+    try { return JSON.parse(localStorage.getItem(metaKey()) || 'null'); } catch (e) { return null; }
+  }
+
+  /* כניסה לחשבון — משותפת להתחברות, להרשמה ולחזרה מקישור המייל.
+     הגן של החשבון נטען מהמכשיר אם הוא כבר חונה בו, גן מקומי שאין לו
+     בעלים נאמץ לתוכו, ובכל מקרה אחר מתקבל מצב נקי שממנו מתחיל האשף.
+     המצב מול השרת מתחיל מאפס: הענן הוא מקור האמת להשוואה, ומה שכבר
+     במכשיר מסומן כממתין להעלאה כדי שלא ייעלם בשקט. */
+  /* בחירת התא של החשבון. גן מקומי שאין לו בעלים עובר לבעלותו — וזה
+     גם המסלול של מכשיר שהתעדכן לגרסה הזו: הנתונים שכבר היו בו נשמרו
+     לפני שהיו תאים, ולכן הם חסרי בעלים ושייכים למי שמחובר. בלי זה
+     ההתחברות הייתה נראית כאילו מחקה אותם. */
+  function adoptOrUseSlot(id) {
+    if (!id || !window.Store || !Store.useSlot) return;
+    if (!Store.currentOwner() && !Store.hasSlot(id) && hasLocalContent()) Store.adoptInto(id);
+    else Store.useSlot(id);
+  }
+
+  function enterAccount() {
+    var id = session && session.user && session.user.id;
+    adoptOrUseSlot(id);
+    /* הסמן מול השרת נשמר לכל חשבון בנפרד, ולכן אפשר להמשיך ממנו
+       במקום להשוות מאפס: מי שמתנתק ומתחבר בחזרה לא ייראה כאילו שני
+       הצדדים השתנו, ולא יישאל על התנגשות שלא הייתה. שינוי שלא הספיק
+       לעלות לפני ההתנתקות נשאר מסומן, ונדחף בהתחברות הבאה.
+       חשבון שלא היה במכשיר מתחיל בלי סמן — הענן הוא מקור ההשוואה,
+       ומה שכבר במכשיר (גן שנאמץ זה עתה) מסומן להעלאה. */
+    var stored = readMeta();
+    meta = stored
+      ? { lastServerAt: stored.lastServerAt || null, dirty: !!stored.dirty,
+          lastSyncAt: stored.lastSyncAt || null }
+      : { lastServerAt: null, dirty: hasLocalContent(), lastSyncAt: null };
+    saveMeta();
   }
 
   /* ---------- קריאות לשרת ---------- */
@@ -163,9 +206,7 @@ var Cloud = (function () {
       method: 'POST', auth: false, body: { email: email, password: password }
     }).then(function (d) {
       saveSession(d);
-      meta.lastServerAt = null;          // מכשיר חדש — משווים מול הענן מאפס
-      meta.dirty = hasLocalContent();    // יש נתונים מקומיים? הם לא ייעלמו בשקט
-      saveMeta();
+      enterAccount();
       return sync(true).then(function (r) {
         // ההתחברות משנה את המסך שצריך להיות מוצג, לא רק את הנתונים
         if (window.App && App.render) App.render();
@@ -187,8 +228,7 @@ var Cloud = (function () {
     }).then(function (d) {
       if (d && d.access_token) {
         saveSession(d);
-        meta.dirty = hasLocalContent();   // מה שכבר קיים במכשיר עוד לא הועלה
-        saveMeta();
+        enterAccount();
         return sync(true).then(function () { return { confirmed: true }; });
       }
       return { confirmed: false };
@@ -206,6 +246,9 @@ var Cloud = (function () {
   function signOut() {
     var token = session && session.access_token;
     clearSession();
+    /* הגן נשאר על המכשיר, אבל תחת המפתח של בעליו ולא בדרכו של החשבון
+       הבא. המכשיר חוזר לתא המקומי — ריק ברוב המקרים, ואז האשף נפתח. */
+    if (window.Store && Store.useSlot) Store.useSlot('');
     meta = { lastServerAt: null, dirty: false, lastSyncAt: null };
     saveMeta();
     conflict = null;
@@ -398,9 +441,7 @@ var Cloud = (function () {
         expires_in: parseInt(back.expires_in, 10) || 3600,
         user: u
       });
-      meta.lastServerAt = null;          // מכשיר חדש — משווים מול הענן מאפס
-      meta.dirty = hasLocalContent();    // מה שכבר במכשיר לא ייעלם בשקט
-      saveMeta();
+      enterAccount();
       return sync(true).then(function () {
         return { ok: true, type: back.type || '', email: u.email || '' };
       });
@@ -440,6 +481,9 @@ var Cloud = (function () {
     }
 
     if (!signedIn()) { setStatus('signed-out'); return null; }
+    /* התא הפעיל וההתחברות נכתבים תמיד יחד, אבל בטעינה הראשונה אחרי
+       העדכון עוד אין מצביע — והנתונים שבמכשיר שייכים למי שמחובר. */
+    adoptOrUseSlot(session.user && session.user.id);
     setStatus(meta.dirty ? 'pending' : 'synced');
     sync();
     listen();

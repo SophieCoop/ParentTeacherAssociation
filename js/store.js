@@ -3,6 +3,27 @@
    ============================================================ */
 var Store = (function () {
   var KEY = 'vaad-gan-state-v1';
+  /* ---------- תא לכל בעלים ----------
+     הנתונים נשמרים בתא שנושא את מזהה החשבון שהם שייכים לו, ו-KEY
+     לבדו הוא התא המקומי: גן שהוקם לפני שנפתח חשבון. כך התנתקות
+     מחנה את הגן אצל בעליו במקום להשאיר אותו בדרכו של החשבון הבא,
+     והתחברות חוזרת מחזירה אותו.
+
+     המצביע לתא הפעיל נשמר בנפרד, כי Store.load רץ לפני ש-Cloud קורא
+     את ההתחברות — בלעדיו הטעינה הראשונה לא הייתה יודעת איזה תא לפתוח. */
+  var OWNER_KEY = 'vaad-gan-owner-v1';
+  var owner = '';
+
+  function slotKey(id) { return id ? KEY + ':' + id : KEY; }
+  function readOwner() {
+    try { return localStorage.getItem(OWNER_KEY) || ''; } catch (e) { return ''; }
+  }
+  function writeOwner(id) {
+    try {
+      if (id) localStorage.setItem(OWNER_KEY, id);
+      else localStorage.removeItem(OWNER_KEY);
+    } catch (e) {}
+  }
 
   /* ---------- קטגוריות ברירת מחדל של סעיפי הוצאה ---------- */
   var DEFAULT_CATEGORIES = [
@@ -86,16 +107,67 @@ var Store = (function () {
 
   /* ---------- שמירה וטעינה ---------- */
   function load() {
+    owner = readOwner();
+    return loadSlot(owner);
+  }
+
+  /* תא ריק מחזיר מצב נקי ולא את מה שהיה בזיכרון — אחרת מעבר לחשבון
+     שאין לו נתונים במכשיר היה מציג את הגן של החשבון הקודם. */
+  function loadSlot(id) {
     try {
-      var raw = localStorage.getItem(KEY);
-      if (!raw) return false;
-      var parsed = JSON.parse(raw);
-      state = migrate(parsed);
+      var raw = localStorage.getItem(slotKey(id));
+      if (!raw) { state = blankState(); return false; }
+      state = migrate(JSON.parse(raw));
       return true;
     } catch (e) {
       console.warn('טעינת הנתונים נכשלה, מתחילים מחדש', e);
+      state = blankState();
       return false;
     }
+  }
+
+  function hasSlot(id) {
+    try { return !!localStorage.getItem(slotKey(id || '')); } catch (e) { return false; }
+  }
+  function currentOwner() { return owner; }
+
+  /* מעבר לתא של חשבון אחר: מה שבזיכרון נשמר קודם אצל בעליו הנוכחי,
+     ורק אז נטען התא החדש. מחזיר אם נמצאו בו נתונים. */
+  function useSlot(id) {
+    id = id || '';
+    if (id === owner) return hasSlot(id);
+    writeLocal();
+    owner = id;
+    writeOwner(id);
+    return loadSlot(id);
+  }
+
+  /* גן שהוקם בלי חשבון עובר לבעלות החשבון בהתחברות הראשונה, ותא
+     האורח מתפנה — אחרת אותו גן היה נשאר גם כאן וגם שם, ומי שיתחבר
+     בחשבון אחר היה יורש אותו. */
+  function adoptInto(id) {
+    if (!id || owner) return false;
+    owner = id;
+    writeOwner(id);
+    writeLocal();
+    try { localStorage.removeItem(slotKey('')); } catch (e) {}
+    return true;
+  }
+
+  /* ניקוי המכשיר: כל התאים, לא רק הפעיל. אין מסך שמציג מי חונה כאן,
+     ולכן זו הפעולה היחידה שמוודאת שלא נשאר דבר לפני מסירת מכשיר. */
+  function clearAllSlots() {
+    try {
+      var kill = [];
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (k === KEY || (k && k.indexOf(KEY + ':') === 0)) kill.push(k);
+      }
+      kill.forEach(function (k) { localStorage.removeItem(k); });
+    } catch (e) {}
+    owner = '';
+    writeOwner('');
+    reset();
   }
 
   /* שמות קודמים של קטגוריות ברירת המחדל.
@@ -199,7 +271,7 @@ var Store = (function () {
 
   function writeLocal() {
     try {
-      localStorage.setItem(KEY, JSON.stringify(state));
+      localStorage.setItem(slotKey(owner), JSON.stringify(state));
     } catch (e) {
       console.warn('שמירה נכשלה', e);
     }
@@ -388,6 +460,8 @@ var Store = (function () {
     STAFF_ROLES: STAFF_ROLES,
     get state() { return state; },
     load: load, save: save, reset: reset,
+    useSlot: useSlot, adoptInto: adoptInto, hasSlot: hasSlot,
+    currentOwner: currentOwner, clearAllSlots: clearAllSlots,
     uid: uid, list: list, find: find, add: add, update: update, remove: remove,
     replaceState: replaceState,
     exportJSON: exportJSON, importJSON: importJSON, loadDemo: loadDemo,
