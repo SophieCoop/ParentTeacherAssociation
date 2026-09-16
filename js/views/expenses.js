@@ -102,11 +102,9 @@ Views.expenses = (function () {
       '</div>';
   }
 
+  /* הכפתור יושב בתחתית הרשימה, במקומו המקורי במסך הזה */
   function addButton() {
-    return '<button class="exp-add" data-action="exp-add">' +
-      '<span class="ea-btn">' + UI.svgIcon('plus', 24) + '</span>' +
-      '<span class="ea-lab">הוספת הוצאה</span>' +
-      '</button>';
+    return UI.addBtn({ act: 'exp-add', label: 'הוספת הוצאה', cls: 'mt-add' });
   }
 
   function tabActual() {
@@ -120,11 +118,10 @@ Views.expenses = (function () {
         'אפשר לעדכן את סעיפי התקציב או לצמצם הוצאות.</div></div>';
     }
 
-    html += UI.addBtn({ act: 'exp-add', label: 'הוספת הוצאה', cls: 'mb-add' });
-
     var exps = st.expenses.slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); });
     if (!exps.length) {
-      return html + UI.empty({ art: 'expenses', title: 'עוד לא נרשמו הוצאות', text: 'כל הוצאה שנרשמת יורדת מהתקציב באופן מיידי.' });
+      return html + UI.empty({ art: 'expenses', title: 'עוד לא נרשמו הוצאות',
+        text: 'כל הוצאה שנרשמת יורדת מהתקציב באופן מיידי.' }) + addButton();
     }
 
     var groups = AUD_GROUPS.map(function (g) {

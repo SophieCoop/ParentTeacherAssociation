@@ -906,16 +906,6 @@ table.tbl tr td:first-child{font-weight:600}
 .exp-row .r-ico{width:40px;height:40px;border-radius:50%;font-size:17px}
 .exp-row .r-chev{color:var(--muted);opacity:.6;flex:none}
 
-/* הוספת הוצאה */
-.exp-add{display:flex;flex-direction:column;align-items:center;gap:9px;margin:24px auto 6px}
-.exp-add .ea-btn{
-  width:56px;height:56px;border-radius:50%;display:grid;place-items:center;
-  background:var(--ok);color:#fff;box-shadow:0 10px 22px rgba(93,158,114,.34);
-  transition:transform .12s ease;
-}
-.exp-add:active .ea-btn{transform:translateY(2px)}
-.exp-add .ea-lab{font-size:13px;font-weight:700;color:var(--ink-2)}
-
 /* ===================== תכנון תקציב — פילוח שנפתח לסעיפים ===================== */
 .card.sumcat{padding:0;overflow:hidden}
 .sumcat-head{display:block;width:100%;padding:13px 14px;text-align:start;color:var(--ink)}
@@ -1370,17 +1360,10 @@ table.ye-tbl td:nth-child(2),table.ye-tbl td:nth-child(3){text-align:center}
 
 
 /* ===== כפתור ההוספה האחיד =====
-   התווית במרכז וסימן החיבור לצידה, מופרד בקו דק. אותו פקד בכל מסך,
-   כדי שאותה פעולה תיראה ותשב באותו מקום בכל האפליקציה. */
-.btn.add-btn{gap:0}
-.btn.add-btn .ab-label{padding-inline-end:14px}
-.btn.add-btn .ab-plus{
-  padding-inline-start:14px;border-inline-start:1px solid rgba(255,255,255,.35);
-  font-size:20px;font-weight:400;line-height:1;
-}
+   התווית וסימן החיבור לצידה, ממורכזים יחד. אותו פקד בכל מסך, כדי
+   שאותה פעולה תיראה ותשב באותו מקום בכל האפליקציה. */
+.btn.add-btn{gap:10px}
+.btn.add-btn .ab-plus{font-size:20px;font-weight:400;line-height:1}
 /* מרווח אחיד, במקום style מוטבע שהיה שונה בכל מסך */
 .btn.add-btn.mb-add{margin-bottom:14px}
 .btn.add-btn.mt-add{margin-top:14px}
-/* בגרסאות הבהירות של הכפתור הקו כהה, אחרת הוא נעלם על רקע לבן */
-.btn.add-btn.ghost .ab-plus,
-.btn.add-btn.soft .ab-plus{border-inline-start-color:var(--line)}
