@@ -264,7 +264,13 @@ img.art{display:block;width:100%;height:100%;object-fit:contain}
 .input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(155,140,224,.16)}
 select.input{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:left 13px top 50%,left 18px top 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-inline-start:34px}
 textarea.input{min-height:78px;resize:vertical}
-.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* שתי עמודות שוות שאינן נסוגות בפני התוכן. 1fr לבדו הוא minmax(auto,1fr),
+   ולכן שדה עם רוחב מינימלי משלו מרחיב את עמודתו על חשבון השנייה — וכך
+   שדה התאריך, שבספארי של iOS מסרב להתכווץ, נדחף אל השדה שלצידו. */
+.grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.grid-2 > .field{min-width:0}
+/* הפקד עצמו חייב גם הוא רשות להתכווץ, אחרת הוא גולש מהעמודה */
+.grid-2 .input{min-width:0;max-width:100%}
 
 .chips{display:flex;gap:8px;flex-wrap:wrap}
 .chip{
