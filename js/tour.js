@@ -331,6 +331,16 @@ var Tour = (function () {
     else if (fitsAbove)  { top = above; cls = 'above'; }
     else                 { top = vh - bh - 12; cls = 'center'; }
 
+    /* fitsAbove בדק רק את הקצה העליון, ולכן יעד שיושב נמוך במסך הניח
+       את הבועה כך שתחתיתה — ואיתה הכפתורים — יורדת מתחת לקצה. כאן
+       הבועה נצמדת לגבולות בכל מקרה. בועה גבוהה מהמסך נצמדת לתחתית
+       דווקא, כי שם הכפתורים, ומוטב שהכותרת תיחתך מהם. */
+    var fit = (bh > vh - 20) ? vh - bh - 10
+                             : Math.max(10, Math.min(top, vh - bh - 10));
+    /* אם היה צורך להזיז, החץ כבר אינו מצביע על היעד ואין טעם בו */
+    if (Math.abs(fit - top) > 1) cls = 'center';
+    top = fit;
+
     bubble.className = 'tour-bubble ' + cls;
     if (cls === 'center') {
       // מיקום ידני בתחתית, ולכן בלי המרכוז שמגיע עם המחלקה
