@@ -8,6 +8,12 @@ Views.settings = (function () {
   /* נתוני דוגמה מוצעים רק כשאין חשבון שאפשר לדרוס */
   function demoAllowed() { return !(window.Cloud && Cloud.signedIn()); }
 
+  /* הטלפון של בעל האתר, לכתיבה בוואטסאפ. יושב ב-js/config.js;
+     בלעדיו אין למי לפנות, ועדיף בלי כפתור מאשר כפתור שאינו מגיע לאיש. */
+  function supportPhone() {
+    return ((window.SupportConfig && SupportConfig.phone) || '').trim();
+  }
+
   function render() {
     var st = Store.state;
     var html = UI.pageHead({ title: 'הגדרות', subtitle: 'פרטי הגן וגיבוי נתונים', icon: '⚙️', tone: 'mint', back: 'home' });
@@ -81,6 +87,11 @@ Views.settings = (function () {
       '<p class="small muted">סיור קצר שמראה מה יש בכל חלק של האפליקציה. ' +
       'רץ פעם אחת בכניסה הראשונה, ומכאן אפשר להריץ אותו שוב בכל רגע.</p>' +
       '<button class="btn ghost mt" data-action="set-tour">🧭 סיור היכרות</button>' +
+      (supportPhone()
+        ? '<p class="small muted" style="margin-top:16px">משהו לא עובד כמו שצריך, או שיש שאלה? ' +
+          'אפשר לכתוב ישירות לבעל האתר.</p>' +
+          '<button class="btn wa mt" data-action="set-support">כתיבה בוואטסאפ</button>'
+        : '') +
       '</div>';
 
     /* נתוני הדוגמה מחליפים את המצב כולו, והמצב כולו נדחף לענן —
@@ -109,6 +120,13 @@ Views.settings = (function () {
         setTimeout(function () { Tour.start(); }, 260);
       },
       'set-install': function () { Install.open(false); },
+      /* השיחה נפתחת ריקה למעט שורת פתיחה שאומרת מאיפה הפנייה —
+         בעל האתר מקבל הודעה ממספר שאינו מוכר לו */
+      'set-support': function () {
+        var phone = supportPhone();
+        if (!phone) return;
+        UI.whatsapp('שלום, אני פונה בנוגע לאתר "ועד הורים גן שלנו":\n', phone);
+      },
       'set-gan': function (el) { Store.state.gan[el.getAttribute('data-key')] = el.value; Store.save(); UI.toast('נשמר ✓'); },
       'set-cfg': function (el) {
         var key = el.getAttribute('data-key');
