@@ -39,29 +39,9 @@ Views.onboarding = (function () {
       '<h1>ועד הורים<br>גן שלנו</h1>' +
       '<p>יחד למען הילדים ❤️<br>ניהול תקציב, גבייה והוצאות במקום אחד</p>' +
       '<button class="btn" data-action="wiz-start">בואו נתחיל</button>' +
-      freshAppBlock() +
       cloudBlock() +
       exitLink() +
       '</div>';
-  }
-
-  /* הפעלה ראשונה של האפליקציה שנוספה למסך הבית, כשאין בה נתונים.
-     באייפון היא מקבלת אחסון נפרד מזה של הדפדפן, ולכן מי שכבר עבד
-     כאן בספארי פוגש מסך פתיחה ריק וחושב שהנתונים אבדו. הם לא —
-     הם נשארו בדפדפן. מכאן שתי דרכים להביא אותם: החשבון, שעליו
-     מצביע הבלוק שמתחת. */
-  function freshAppBlock() {
-    if (!window.Install || !Install.standalone()) return '';
-    if (Store.state.setupDone) return '';
-    if (window.Cloud && Cloud.signedIn()) return '';
-
-    return '<div class="note" style="max-width:320px;margin-top:22px;text-align:start">' +
-      '<div class="n-ico">📲</div><div>' +
-      '<b>הזנתם כבר נתונים בדפדפן?</b>' +
-      'האפליקציה שבמסך הבית מקבלת אחסון נפרד מהדפדפן, ולכן היא מתחילה ריקה. ' +
-      'הנתונים לא אבדו — הם נשארו בדפדפן שממנו הוספתם אותה. התחברות לחשבון ' +
-      'תביא אותם לכאן.' +
-      '</div></div>';
   }
 
   /* אזור החשבון במסך הפתיחה.
