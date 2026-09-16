@@ -333,11 +333,53 @@ Views.account = (function () {
     actions: {
       'acc-signin':  function () { authForm('signin'); },
       'acc-signup':  function () { authForm('signup'); },
+      /* התנתקות כדי להקים גן אחר, או כדי למסור את המכשיר, אינה אותו
+         דבר כמו יציאה זמנית מהחשבון. הנתונים נשארו כאן תמיד, ואיתם
+         setupDone — ולכן מי שהתנתק כדי להתחיל מחדש נחת בעמוד הבית של
+         הגן הקודם בלי דרך חזרה לאשף. שתי הכוונות מקבלות כפתור משלהן. */
       'acc-signout': function () {
-        UI.confirmBox('להתנתק?', 'הנתונים יישארו על המכשיר הזה, אבל יפסיקו להסתנכרן.', function () {
-          Cloud.signOut();
-          App.render();
-          UI.toast('התנתקת');
+        /* המצב נקרא לפני ההתנתקות: רק "מסונכרן" מבטיח שהנתונים
+           שמורים בחשבון ויחזרו בהתחברות מחדש */
+        var synced = !!(window.Cloud && Cloud.info().status === 'synced');
+        UI.modal({
+          title: 'להתנתק?',
+          subtitle: 'מה לעשות עם הנתונים שעל המכשיר',
+          body:
+            '<div class="so-opt">' +
+              '<b>להשאיר את הגן על המכשיר</b>' +
+              '<small>הגן ימשיך להיות זמין כאן, אבל יפסיק להסתנכרן. ' +
+                'התחברות מחדש תחזיר אותו לחשבון.</small>' +
+              '<button type="button" class="btn js-keep">התנתקות</button>' +
+            '</div>' +
+            '<div class="so-opt">' +
+              '<b>לנקות את המכשיר ולהתחיל מחדש</b>' +
+              '<small>' + (synced
+                ? 'הנתונים שמורים בחשבון ויחזרו בהתחברות מחדש, והאשף ייפתח מההתחלה — להקמת גן חדש או לחשבון אחר.'
+                : 'שימו לב: יש שינויים שעוד לא עלו לחשבון, והם יימחקו מהמכשיר. האשף ייפתח מההתחלה.') +
+              '</small>' +
+              '<button type="button" class="btn ghost js-wipe">התנתקות וניקוי המכשיר</button>' +
+            '</div>' +
+            '<div class="btn-row mt"><button type="button" class="btn soft js-no">ביטול</button></div>',
+          onMount: function (root, close) {
+            root.querySelector('.js-no').addEventListener('click', close);
+            root.querySelector('.js-keep').addEventListener('click', function () {
+              Cloud.signOut();
+              close();
+              App.render();
+              UI.toast('התנתקת');
+            });
+            root.querySelector('.js-wipe').addEventListener('click', function () {
+              Cloud.signOut();
+              /* reset מחזיר את setupDone ל-false, ולכן האשף הוא המסך
+                 הבא. איפוס השלב השמור פותח אותו מההתחלה ולא מאמצע. */
+              Store.reset();
+              App.setVs('resumeWizard', false);
+              App.setVs('wizStep', 0);
+              close();
+              App.setView('home');
+              UI.toast('המכשיר נקי — אפשר להתחיל הקמה חדשה');
+            });
+          }
         });
       },
       'acc-sync': function () {
