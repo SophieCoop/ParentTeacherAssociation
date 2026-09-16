@@ -271,12 +271,26 @@ textarea.input{min-height:78px;resize:vertical}
 .grid-2 > .field{min-width:0}
 /* הפקד עצמו חייב גם הוא רשות להתכווץ, אחרת הוא גולש מהעמודה */
 .grid-2 .input{min-width:0;max-width:100%}
-/* בספארי של iOS שדה תאריך נושא גודל מובנה משלו ואינו נשמע ל-width,
-   ולכן הוא חורג מהעמודה גם כשהיא תחומה. ביטול המראה המובנה הופך אותו
-   לתיבה רגילה שמתנהגת כמו כל שדה אחר. אייקון היומן מוחזר במפורש,
-   כי בדפדפנים שמציגים אותו הוא נעלם יחד עם המראה המובנה. */
-.grid-2 .input[type="date"]{-webkit-appearance:none;appearance:none}
-.grid-2 .input[type="date"]::-webkit-calendar-picker-indicator{opacity:.5}
+/* שדה תאריך הוא פקד מובנה, ולכן הוא חורג מהכללים של שאר הטופס: בספארי
+   של iOS יש לו גודל משלו שאינו נשמע ל-width, והוא מצייר את הערך בגופן
+   המערכת — גדול מהשדות שלצידו ולא באותה שורת בסיס. ביטול המראה המובנה
+   הופך אותו לתיבה רגילה, והקיבוע שאחריו משווה את הטיפוגרפיה ואת הגובה
+   לשאר השדות. ::-webkit-date-and-time-value הוא הטקסט שבתוך הפקד, וזה
+   המקום היחיד שבו אפשר לקבוע את גודלו. */
+.input[type="date"]{
+  -webkit-appearance:none;appearance:none;
+  font:inherit;font-size:15px;line-height:1.55;
+}
+.input[type="date"]::-webkit-datetime-edit,
+.input[type="date"]::-webkit-datetime-edit-fields-wrapper{
+  padding:0;margin:0;line-height:1.55;
+}
+.input[type="date"]::-webkit-date-and-time-value{
+  font-size:15px;line-height:1.55;text-align:start;margin:0;
+}
+.input[type="date"]::-webkit-calendar-picker-indicator{
+  width:16px;height:16px;padding:0;margin:0;opacity:.5;
+}
 /* זוג תאריכים (תחילת שנה וסוף שנה) צפוף במיוחד, ולכן בטלפון צר הוא
    נערם לשתי שורות במקום להידחס לחצי רוחב כל אחד */
 @media (max-width:430px){
