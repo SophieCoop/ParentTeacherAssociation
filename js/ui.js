@@ -386,7 +386,18 @@ var UI = (function () {
     chevron:
       '<path d="M19 9l-7 7 7 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>',
     plus:
-      '<path d="M16 8.5v15M8.5 16h15" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>'
+      '<path d="M16 8.5v15M8.5 16h15" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>',
+    /* כפתור השיתוף של אייפון ומק — הריבוע עם החץ כלפי מעלה */
+    share:
+      '<path d="M16 4.5v15" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>' +
+      '<path d="M11 9.5L16 4.5l5 5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<path d="M9.5 13H8a2.5 2.5 0 0 0-2.5 2.5V25A2.5 2.5 0 0 0 8 27.5h16a2.5 2.5 0 0 0 2.5-2.5v-9.5A2.5 2.5 0 0 0 24 13h-1.5" ' +
+        'stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>',
+    /* תפריט שלוש הנקודות של כרום ואדג׳ */
+    dots:
+      '<circle cx="16" cy="7.5" r="2.4" fill="currentColor"/>' +
+      '<circle cx="16" cy="16" r="2.4" fill="currentColor"/>' +
+      '<circle cx="16" cy="24.5" r="2.4" fill="currentColor"/>'
   };
 
   /* איורי האפליקציה — אותם שמונה איורים של אריחי הבית, בכל מקום שמייצג

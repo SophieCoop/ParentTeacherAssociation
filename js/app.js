@@ -101,6 +101,8 @@ var App = (function () {
 
     // סיור ההיכרות רץ פעם אחת, בהגעה הראשונה למסך הבית אחרי ההקמה
     if (current === 'home' && window.Tour) Tour.maybeStart();
+    // וההצעה להוסיף את האפליקציה למסך הבית — רק אחרי כמה כניסות
+    if (current === 'home' && window.Install) Install.maybeOffer();
   }
 
   /* ---------- אירועים גלובליים בשיטת האצלה (delegation) ---------- */
@@ -142,6 +144,8 @@ var App = (function () {
   function init() {
     Store.load();
     bind();
+    // ספירת הכניסה — לפני הציור, כדי שההצעה שבמסך הבית תראה מספר מעודכן
+    if (window.Install) Install.init();
     // כשמגיעים מקישור האישור שבמייל, init מחזיר הבטחה עם תוצאת ההתחברות
     var fromEmail = null;
     if (window.Cloud) {

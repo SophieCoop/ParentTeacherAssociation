@@ -59,6 +59,23 @@ Views.settings = (function () {
         '<div class="stat"><div class="s-val">' + st.expenses.length + '</div><div class="s-lab">הוצאות</div></div>' +
       '</div></div>';
 
+    /* ההצעה קופצת מעצמה אחרי כמה כניסות, ומי שדחה אותה צריך דרך
+       לחזור אליה — וגם מי שרוצה להתקין את האפליקציה במכשיר נוסף */
+    if (window.Install && Install.canInstall()) {
+      var onHome = Install.standalone();
+      html += '<div class="card">' +
+        '<div class="card-title"><h2>האפליקציה במסך הבית</h2></div>' +
+        '<p class="small muted' + (onHome ? ' mb0' : '') + '">' +
+        (onHome
+          ? 'האפליקציה כבר רצה מהאייקון שבמסך הבית של המכשיר הזה ✓ ' +
+            'במכשיר נוסף מוסיפים אותה מתוך הדפדפן, באותה דרך.'
+          : 'אפשר להוסיף את האתר למסך הבית ולהפעיל אותו כמו אפליקציה — ' +
+            'פתיחה בלחיצה אחת, במסך מלא ובלי סרגלי הדפדפן.') +
+        '</p>' +
+        (onHome ? '' : '<button class="btn ghost mt" data-action="set-install">📲 הוספה למסך הבית</button>') +
+        '</div>';
+    }
+
     html += '<div class="card">' +
       '<div class="card-title"><h2>עזרה</h2></div>' +
       '<p class="small muted">סיור קצר שמראה מה יש בכל חלק של האפליקציה. ' +
@@ -91,6 +108,7 @@ Views.settings = (function () {
         App.setView('home');
         setTimeout(function () { Tour.start(); }, 260);
       },
+      'set-install': function () { Install.open(false); },
       'set-gan': function (el) { Store.state.gan[el.getAttribute('data-key')] = el.value; Store.save(); UI.toast('נשמר ✓'); },
       'set-cfg': function (el) {
         var key = el.getAttribute('data-key');
