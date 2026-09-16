@@ -537,10 +537,19 @@ textarea.input{min-height:78px;resize:vertical}
   backdrop-filter:blur(3px);animation:fade .18s ease;
 }
 .modal{
-  background:#fff;width:100%;max-width:520px;max-height:92vh;overflow:auto;
+  background:#fff;width:100%;max-width:520px;
+  /* dvh הוא הגובה הנראה בפועל. ב-iOS ‏vh מודד את המסך כשסרגלי הדפדפן
+     מוסתרים, ולכן 92vh גדול מהשטח הגלוי והחלון נדחף אל מעבר לקצה. */
+  max-height:92vh;max-height:92dvh;
   border-radius:26px 26px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom));
   animation:up .24s cubic-bezier(.2,.9,.3,1);
+  /* הכותרת וכפתור הסגירה קבועים, והגלילה עוברת לגוף בלבד. כשכל החלון
+     היה אזור הגלילה, ה-✕ — שממוקם ביחס אליו — נגלל החוצה עם התוכן
+     ולא היה דרך לחזור אליו. */
+  display:flex;flex-direction:column;overflow:hidden;
 }
+.modal > .m-body{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.modal > .grab,.modal > h3,.modal > .m-sub{flex:none}
 .modal{position:relative}
 .modal-close{
   position:absolute;inset-inline-end:14px;top:14px;z-index:2;
