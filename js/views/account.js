@@ -337,52 +337,19 @@ Views.account = (function () {
          דבר כמו יציאה זמנית מהחשבון. הנתונים נשארו כאן תמיד, ואיתם
          setupDone — ולכן מי שהתנתק כדי להתחיל מחדש נחת בעמוד הבית של
          הגן הקודם בלי דרך חזרה לאשף. שתי הכוונות מקבלות כפתור משלהן. */
+      /* ההתנתקות מחנה את הגן של החשבון במכשיר ומפנה אותו לחשבון הבא,
+         ולכן אין בה עוד הכרעה — מי שבאמת רוצה למחוק הכול לפני מסירת
+         מכשיר עושה זאת מ"מחיקת כל הנתונים" שבהגדרות. */
       'acc-signout': function () {
-        /* המצב נקרא לפני ההתנתקות: רק "מסונכרן" מבטיח שהנתונים
-           שמורים בחשבון ויחזרו בהתחברות מחדש */
-        var synced = !!(window.Cloud && Cloud.info().status === 'synced');
-        UI.modal({
-          title: 'להתנתק?',
-          subtitle: 'מה לעשות עם הנתונים שעל המכשיר',
-          body:
-            '<div class="so-opt">' +
-              '<b>התנתקות רגילה</b>' +
-              '<small>הגן נשמר במכשיר תחת החשבון שלכם ויחזור בהתחברות מחדש. ' +
-                'עד אז המכשיר פנוי — אפשר להקים בו גן חדש או להתחבר בחשבון אחר, ' +
-                'בלי שהגן הזה יתערבב בהם.</small>' +
-              '<button type="button" class="btn js-keep">התנתקות</button>' +
-            '</div>' +
-            '<div class="so-opt">' +
-              '<b>לנקות את המכשיר ולהתחיל מחדש</b>' +
-              '<small>' + (synced
-                ? 'מוחק מהמכשיר כל גן שחונה בו, גם של חשבונות אחרים. הנתונים שמורים בענן ויחזרו בהתחברות — זו הפעולה למסירת מכשיר.'
-                : 'שימו לב: יש שינויים שעוד לא עלו לחשבון, והם יימחקו. הפעולה מוחקת כל גן שחונה במכשיר, גם של חשבונות אחרים.') +
-              '</small>' +
-              '<button type="button" class="btn ghost js-wipe">התנתקות וניקוי המכשיר</button>' +
-            '</div>' +
-            '<div class="btn-row mt"><button type="button" class="btn soft js-no">ביטול</button></div>',
-          onMount: function (root, close) {
-            root.querySelector('.js-no').addEventListener('click', close);
-            root.querySelector('.js-keep').addEventListener('click', function () {
-              Cloud.signOut();
-              close();
-              App.render();
-              UI.toast('התנתקת');
-            });
-            root.querySelector('.js-wipe').addEventListener('click', function () {
-              Cloud.signOut();
-              /* clearAllSlots מנקה גם גנים של חשבונות אחרים שחונים
-                 במכשיר, ומחזיר את setupDone ל-false — ולכן האשף הוא
-                 המסך הבא. איפוס השלב השמור פותח אותו מההתחלה. */
-              Store.clearAllSlots();
-              App.setVs('resumeWizard', false);
-              App.setVs('wizStep', 0);
-              close();
-              App.setView('home');
-              UI.toast('המכשיר נקי — אפשר להתחיל הקמה חדשה');
-            });
-          }
-        });
+        UI.confirmBox('להתנתק?',
+          'הגן נשמר במכשיר תחת החשבון שלכם ויחזור בהתחברות מחדש. עד אז המכשיר פנוי ' +
+          'להקמת גן חדש או לחשבון אחר.',
+          function () {
+            Cloud.signOut();
+            App.render();
+            UI.toast('התנתקת');
+          },
+          'התנתקות');
       },
       'acc-sync': function () {
         UI.toast('מסנכרן…');

@@ -31,7 +31,7 @@ Views.settings = (function () {
 
     html += '<div class="card">' +
       '<div class="card-title"><h2>שנת הלימודים</h2></div>' +
-      '<div class="grid-2">' +
+      '<div class="grid-2 date-pair">' +
         '<div class="field"><label>תחילת שנה</label>' +
           '<input class="input" type="date" data-change="set-cfg" data-key="yearStart" value="' + UI.esc(st.settings.yearStart) + '"></div>' +
         '<div class="field"><label>סוף שנה</label>' +

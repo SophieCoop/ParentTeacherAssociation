@@ -318,11 +318,17 @@ var UI = (function () {
   }
 
   /* ---------- תיבת אישור ---------- */
-  function confirmBox(title, text, onYes) {
+  /* okLabel — לאישורים שאינם מחיקה. בלעדיו הכפתור האדום היה אומר
+     "מחיקה" גם על שאלה כמו "להתנתק?", ומבטיח משהו שלא עומד לקרות. */
+  function confirmBox(title, text, onYes, okLabel) {
+    var danger = !okLabel;
     modal({
       title: title,
       subtitle: text,
-      body: '<div class="btn-row mt"><button class="btn ghost js-no">ביטול</button><button class="btn danger js-yes" style="background:var(--danger);color:#fff;border:none">מחיקה</button></div>',
+      body: '<div class="btn-row mt"><button class="btn ghost js-no">ביטול</button>' +
+        '<button class="btn js-yes' + (danger ? ' danger' : '') + '"' +
+        (danger ? ' style="background:var(--danger);color:#fff;border:none"' : '') + '>' +
+        esc(okLabel || 'מחיקה') + '</button></div>',
       onMount: function (root, close) {
         root.querySelector('.js-no').addEventListener('click', close);
         root.querySelector('.js-yes').addEventListener('click', function () { onYes(); close(); });
