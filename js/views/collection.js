@@ -358,12 +358,14 @@ Views.collection = (function () {
     UI.formModal({
       title: isNew ? 'רישום תשלום' : 'עריכת תשלום',
       fields: [
-        { name: 'childId', label: 'ההורה של', type: 'select', value: pay.childId, required: true,
+        { name: isNew ? 'childIds' : 'childId', label: isNew ? 'בחרו הורה/ים' : 'ההורה של',
+          type: isNew ? 'multiselect' : 'select', value: isNew ? (presetChild ? [presetChild] : []) : pay.childId, required: true,
           options: kids.map(function (c) {
             var p = c.parents && c.parents[0] ? c.parents[0].name : c.name;
             return { value: c.id, label: p + ' (' + c.name + ')' };
           }) },
-        { name: 'amount', label: 'סכום (₪)', type: 'number', value: pay.amount, required: true, placeholder: '0', min: 0 },
+        { name: 'amount', label: isNew ? 'סכום לכל הורה (₪)' : 'סכום (₪)', type: 'number', value: pay.amount, required: true, placeholder: '0', min: 0,
+          hint: isNew ? 'הסכום ופרטי התשלום יירשמו בנפרד לכל הורה שנבחר.' : '' },
         { name: 'method', label: 'אמצעי תשלום', type: 'chips', value: pay.method,
           options: Store.PAY_METHODS.map(function (m) { return { value: m.id, label: m.name, icon: m.icon }; }) },
         { name: 'date', label: 'תאריך', type: 'date', value: pay.date || UI.todayISO(), half: true },
@@ -372,11 +374,21 @@ Views.collection = (function () {
       ],
       onSubmit: function (v) {
         v.installments = Math.max(1, Calc.num(v.installments) || 1);
-        if (isNew) Store.add('payments', v);
+        if (isNew) {
+          var ids = Array.isArray(v.childIds) ? v.childIds.filter(function (id, i, all) { return all.indexOf(id) === i; }) : [];
+          if (!ids.length || ids.some(function (id) { return !Store.find('children', id); })) {
+            UI.toast('נא לבחור הורה מהרשימה');
+            return false;
+          }
+          ids.forEach(function (id) {
+            Store.add('payments', { childId: id, amount: v.amount, method: v.method,
+              date: v.date, installments: v.installments, note: v.note });
+          });
+        }
         else Store.update('payments', pay.id, v);
         App.render();
         refreshCard();
-        UI.toast('התשלום נשמר ✓');
+        UI.toast(isNew && ids.length > 1 ? 'נשמרו ' + ids.length + ' תשלומים ✓' : 'התשלום נשמר ✓');
       },
       onDelete: isNew ? null : function () {
         Store.remove('payments', pay.id);
