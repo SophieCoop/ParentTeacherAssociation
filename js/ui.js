@@ -174,6 +174,19 @@ var UI = (function () {
           var sel = String(o.value) === String(val) ? ' selected' : '';
           return '<option value="' + esc(o.value) + '"' + sel + '>' + esc(o.label) + '</option>';
         }).join('') + '</select>';
+    } else if (f.type === 'multiselect') {
+      html = '<div class="multi-select" data-multiselect="' + esc(f.name) + '">' +
+        '<div class="multi-control"><div class="multi-tags"></div>' +
+        '<button type="button" class="multi-toggle" id="' + id + '" aria-expanded="false" aria-controls="' + id + '-panel">' +
+        '<span class="multi-placeholder">בחירת הורים…</span><span aria-hidden="true">▾</span></button></div>' +
+        '<div class="multi-panel" id="' + id + '-panel" hidden>' +
+        '<input class="input multi-search" type="search" placeholder="חיפוש הורה או ילד…" aria-label="חיפוש הורה או ילד">' +
+        '<div class="multi-options" role="group" aria-label="' + esc(f.label) + '">' +
+        (f.options || []).map(function (o) {
+          return '<label class="multi-option"><span>' + esc(o.label) + '</span>' +
+            '<input type="checkbox" value="' + esc(o.value) + '"' +
+            (Array.isArray(val) && val.indexOf(o.value) > -1 ? ' checked' : '') + '></label>';
+        }).join('') + '</div><p class="multi-empty muted small" hidden>לא נמצאו הורים</p></div></div>';
     } else if (f.type === 'textarea') {
       html = '<textarea class="input" id="' + id + '" name="' + esc(f.name) + '"' + ph + req + '>' + esc(val) + '</textarea>';
     } else if (f.type === 'checkbox') {
@@ -239,6 +252,67 @@ var UI = (function () {
       onMount: function (root, close) {
         var form = root.querySelector('.js-form');
 
+        root.querySelectorAll('[data-multiselect]').forEach(function (box) {
+          var toggle = box.querySelector('.multi-toggle');
+          var panel = box.querySelector('.multi-panel');
+          var search = box.querySelector('.multi-search');
+          var tags = box.querySelector('.multi-tags');
+          var checks = Array.prototype.slice.call(box.querySelectorAll('input[type="checkbox"]'));
+          function setOpen(open) {
+            panel.hidden = !open;
+            toggle.setAttribute('aria-expanded', String(open));
+            box.classList.toggle('is-open', open);
+            if (open) search.focus();
+          }
+          function refresh() {
+            tags.innerHTML = '';
+            checks.forEach(function (check) {
+              check.closest('label').classList.toggle('is-selected', check.checked);
+              if (!check.checked) return;
+              var label = check.closest('label').querySelector('span').textContent;
+              var tag = document.createElement('button');
+              tag.type = 'button';
+              tag.className = 'multi-tag';
+              tag.setAttribute('aria-label', 'הסרת ' + label);
+              tag.innerHTML = '<span>' + esc(label) + '</span><span class="multi-remove" aria-hidden="true">×</span>';
+              tag.addEventListener('click', function () {
+                check.checked = false;
+                refresh();
+                toggle.focus();
+              });
+              tags.appendChild(tag);
+            });
+            box.classList.toggle('has-selection', checks.some(function (c) { return c.checked; }));
+          }
+          toggle.addEventListener('click', function () { setOpen(panel.hidden); });
+          checks.forEach(function (check) { check.addEventListener('change', refresh); });
+          search.addEventListener('input', function () {
+            var query = search.value.trim().toLocaleLowerCase();
+            var visible = 0;
+            checks.forEach(function (check) {
+              var row = check.closest('label');
+              row.hidden = row.textContent.toLocaleLowerCase().indexOf(query) === -1;
+              if (!row.hidden) visible++;
+            });
+            box.querySelector('.multi-empty').hidden = visible > 0;
+          });
+          box.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && !panel.hidden) {
+              e.stopPropagation();
+              setOpen(false);
+              toggle.focus();
+            }
+            if (e.key === 'Enter' && e.target === search) e.preventDefault();
+          });
+          box.addEventListener('focusout', function (e) {
+            if (!box.contains(e.relatedTarget)) setOpen(false);
+          });
+          root.closest('.modal-back').addEventListener('click', function (e) {
+            if (!box.contains(e.target)) setOpen(false);
+          });
+          refresh();
+        });
+
         // צ׳יפים לבחירה
         root.querySelectorAll('[data-chips]').forEach(function (box) {
           var name = box.getAttribute('data-chips');
@@ -280,13 +354,17 @@ var UI = (function () {
             if (f.type === 'html') return;
             var input = root.querySelector('#f-' + f.name);
             if (!input) return;
-            if (f.type === 'checkbox') values[f.name] = input.checked;
+            if (f.type === 'multiselect') {
+              values[f.name] = Array.prototype.slice.call(input.closest('[data-multiselect]').querySelectorAll('input[type="checkbox"]:checked'))
+                .map(function (check) { return check.value; });
+            } else if (f.type === 'checkbox') values[f.name] = input.checked;
             else if (f.type === 'number') values[f.name] = input.value === '' ? '' : Calc.num(input.value);
             else if (f.type === 'chips' && f.multi) values[f.name] = input.value ? input.value.split(',') : [];
             else values[f.name] = input.value.trim ? input.value.trim() : input.value;
           });
           var missing = fields.filter(function (f) {
-            return f.required && (values[f.name] === '' || values[f.name] === null || values[f.name] === undefined);
+            return f.required && (values[f.name] === '' || values[f.name] === null || values[f.name] === undefined ||
+              (Array.isArray(values[f.name]) && !values[f.name].length));
           });
           if (missing.length) { toast('נא למלא: ' + missing[0].label); return; }
           if (opts.onSubmit(values, close) !== false) close();
