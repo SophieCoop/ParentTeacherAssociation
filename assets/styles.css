@@ -630,13 +630,18 @@ textarea.input{min-height:78px;resize:vertical}
 .wiz-steps i.on{background:var(--primary);width:26px;border-radius:9px}
 .wiz-count{text-align:center;font-size:12.5px;color:var(--muted);margin-bottom:4px}
 /* ---- שלב הילדים והצוות: מספר בלבד ---- */
-.count-block{display:flex;align-items:flex-start;gap:14px}
-.count-block .cb-art{flex:none;width:64px;height:64px}
-.count-block .cb-art img.art{width:64px;height:64px}
+.count-block{display:flex;align-items:center;gap:12px}
+.count-block .cb-art{flex:none;width:104px;height:104px;align-self:flex-end}
+.count-block .cb-art img.art{width:104px;height:104px}
 .count-block .cb-body{flex:1;min-width:0}
 .count-block .cb-q{font-size:15.5px;font-weight:700;color:var(--ink);margin-bottom:2px}
 .count-solo{padding:8px 0 4px}
 .count-sep{height:1px;background:var(--line);margin:16px 0}
+.gan-name{margin-bottom:0}
+.gan-name > label{font-size:15.5px;font-weight:700;color:var(--ink)}
+.input-wrap{position:relative}
+.input-wrap .in-ico{position:absolute;inset-inline-start:12px;top:50%;transform:translateY(-50%);width:32px;height:32px;border-radius:9px;background:#F6F3FA;display:grid;place-items:center;font-size:17px;pointer-events:none}
+.input-wrap .input{padding-inline-start:54px}
 .stepper{display:flex;align-items:center;gap:10px;margin-top:12px;direction:ltr;justify-content:flex-end}
 .stepper .st-btn{width:40px;height:40px;border-radius:50%;background:var(--primary-soft);color:var(--primary-dark);font-size:22px;line-height:1;display:grid;place-items:center;flex:none}
 .stepper .st-btn:disabled{opacity:.35;cursor:default}
@@ -647,7 +652,8 @@ textarea.input{min-height:78px;resize:vertical}
 .more-card .mc-ico{font-size:22px;flex:none}
 .more-card .mc-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .more-card .mc-body b{font-size:14px}
-.more-card .mc-chev{color:var(--muted);font-size:22px;flex:none}
+.more-card .mc-chev{color:var(--primary-dark);font-size:24px;line-height:1;flex:none}
+.more-card .mc-ico{font-size:26px}
 .wiz-note{text-align:center;font-size:12.5px;color:var(--muted);margin:12px 0 0}
 .wiz-row .iconbtn + .iconbtn{margin-inline-start:6px}
 .wiz-row .iconbtn.del{width:30px;height:30px;font-size:13px}
