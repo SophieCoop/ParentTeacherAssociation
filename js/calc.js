@@ -117,9 +117,22 @@ var Calc = (function () {
   /* ---------- קהל יעד של סעיף תקציב ---------- */
   /* סעיף יכול להיות סכום כולל, או סכום לאדם שמוכפל במספר הילדים
      או אנשי הצוות. כשמתווסף ילד לרשימה, הסעיף מתעדכן מאליו. */
+  /* ---------- כמה ילדים ואנשי צוות יש ----------
+     בהקמה המהירה מזינים רק מספר, בלי רשימה שמית. הרשימה, כשהיא קיימת
+     וארוכה יותר, גוברת על המספר — ומי שהזין 25 והוסיף שלושה שמות
+     עדיין מתקצב לפי 25. */
+  function childCount(state) {
+    var s = (state && state.settings) || {};
+    return Math.max((state && state.children || []).length, num(s.childrenCount));
+  }
+  function staffCount(state) {
+    var s = (state && state.settings) || {};
+    return Math.max((state && state.staff || []).length, num(s.staffCount));
+  }
+
   var AUDIENCE_COUNTS = {
-    children:  function (state) { return (state.children || []).length; },
-    staff_edu: function (state) { return (state.staff || []).length; }
+    children:  childCount,
+    staff_edu: staffCount
   };
 
   function audienceCount(state, audience) {
@@ -678,21 +691,21 @@ var Calc = (function () {
   function ideaSplit(state, idea) {
     var total = ideaTotal(idea, state);
     var aud = idea.audiences && idea.audiences.length ? idea.audiences : ['children'];
-    var childCount = (state.children || []).length;
-    var staffCount = (state.staff || []).length;
+    var kids = childCount(state);
+    var team = staffCount(state);
 
     var heads = 0;
-    if (aud.indexOf('children') > -1) heads += childCount;
-    if (aud.indexOf('staff') > -1) heads += staffCount;
+    if (aud.indexOf('children') > -1) heads += kids;
+    if (aud.indexOf('staff') > -1) heads += team;
     // "כיבוד" אינו לפי נפש — הוא מחושב כמנה אחת לכלל הגן
     var foodOnly = aud.length === 1 && aud[0] === 'food';
 
     var parts = [];
     if (aud.indexOf('children') > -1) {
-      parts.push({ id: 'children', count: childCount, share: heads > 0 ? round2(total / heads) : 0 });
+      parts.push({ id: 'children', count: kids, share: heads > 0 ? round2(total / heads) : 0 });
     }
     if (aud.indexOf('staff') > -1) {
-      parts.push({ id: 'staff', count: staffCount, share: heads > 0 ? round2(total / heads) : 0 });
+      parts.push({ id: 'staff', count: team, share: heads > 0 ? round2(total / heads) : 0 });
     }
     if (aud.indexOf('food') > -1) {
       parts.push({ id: 'food', count: 1, share: foodOnly ? round2(total) : 0 });
@@ -702,12 +715,12 @@ var Calc = (function () {
       total: round2(total),
       heads: heads,
       perHead: heads > 0 ? round2(total / heads) : 0,
-      perChild: childCount > 0 && aud.indexOf('children') > -1 ? round2(total / Math.max(1, heads)) : 0,
+      perChild: kids > 0 && aud.indexOf('children') > -1 ? round2(total / Math.max(1, heads)) : 0,
       parts: parts,
       /* כמה זה מוסיף לכל משפחה. רעיון הוא הוצאה עתידית, ולכן הוא
          מתחלק שווה בשווה בין כל הילדים שברשימה — גם מי שהצטרף
          באמצע השנה משתתף בו במלואו. */
-      perParent: childCount > 0 ? round2(total / childCount) : 0
+      perParent: kids > 0 ? round2(total / kids) : 0
     };
   }
 
@@ -826,6 +839,7 @@ var Calc = (function () {
     ideaTotal: ideaTotal, lineTotal: lineTotal, lineQty: lineQty,
     staffIdea: staffIdea, lineTotalFor: lineTotalFor, lineQtyFor: lineQtyFor,
     ideaAudience: ideaAudience,
+    childCount: childCount, staffCount: staffCount,
     staffAtLevel: staffAtLevel,
     levelWeight: levelWeight, staffWeightUnits: staffWeightUnits, levelShare: levelShare, levelPerPerson: levelPerPerson,
     levelRank: levelRank, rankToWeight: rankToWeight, lowestRank: lowestRank,

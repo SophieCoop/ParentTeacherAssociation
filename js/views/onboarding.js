@@ -1,5 +1,5 @@
 /* ============================================================
-   אשף ההקמה — מסך פתיחה וחמישה שלבים (אפשר לדלג על כל אחד)
+   אשף ההקמה — מסך פתיחה ושלושה או ארבעה שלבים (אפשר לדלג על כל אחד)
    ------------------------------------------------------------
    החשבון הוא השלב הראשון: מרגע שהוא נפתח, כל מה שנכנס בשלבים
    הבאים נשמר בענן תוך כדי ההקמה, ואין שלב שמירה נפרד בסוף.
@@ -21,7 +21,7 @@ Views.onboarding = (function () {
   /* סדר השלבים. שלב החשבון קיים רק כשמוגדר ענן להתחבר אליו. */
   function stepList() {
     var list = (window.Cloud && Cloud.enabled()) ? [stepAccount] : [];
-    return list.concat([stepGan, stepChildren, stepStaff, stepBudget]);
+    return list.concat([stepGan, stepPeople, stepBudget]);
   }
   function lastStep() { return stepList().length; }
   function accountStep() { return (window.Cloud && Cloud.enabled()) ? 1 : 0; }
@@ -93,13 +93,16 @@ Views.onboarding = (function () {
       '</div>';
   }
 
-  function footer(n, nextLabel) {
+  function footer(n, nextLabel, o) {
+    o = o || {};
     // בשלב האחרון אין על מה לדלג — כפתור אחד בלבד, אחרת שני הכפתורים
     // אומרים את אותו הדבר
     return '<div class="mt">' +
-      '<button class="btn" data-action="wiz-next">' + UI.esc(nextLabel || 'המשך') + '</button>' +
+      '<button class="btn" data-action="' + (o.nextAct || 'wiz-next') + '">' + UI.esc(nextLabel || 'המשך') + '</button>' +
       (n === lastStep() ? '' :
-        '<button class="btn soft" style="margin-top:9px" data-action="wiz-skip">דילוג על השלב הזה</button>') +
+        '<button class="btn soft" style="margin-top:9px" data-action="' + (o.skipAct || 'wiz-skip') + '">' +
+          UI.esc(o.skipLabel || 'דילוג על השלב הזה') + '</button>') +
+      (o.note ? '<p class="wiz-note">' + o.note + '</p>' : '') +
       exitLink() +
       '</div>';
   }
@@ -143,41 +146,146 @@ Views.onboarding = (function () {
       footer(n);
   }
 
-  /* ---------- ילדי הגן ---------- */
-  function stepChildren(n) {
-    var kids = Store.state.children;
-    return head(n, 'ילדי הגן', 'אפשר להוסיף עכשיו או בהמשך, מתוך לשונית "ילדי הגן"') +
-      '<div class="card">' +
-        '<div class="flex-between"><div><b>' + kids.length + ' ילדים</b>' +
-        '<div class="small muted">רשומים כרגע</div></div>' +
-        UI.addBtn({ act: 'child-add', label: 'הוספת ילד', cls: 'soft sm' }) + '</div>' +
-      '</div>' +
-      (kids.length ? kids.map(function (c) {
-        return '<div class="row"><div class="avatar" style="background:' + UI.toneVar(UI.toneFor(c.name)) + '">' + UI.faceFor(c.name) + '</div>' +
-          '<div class="r-body"><div class="r-name">' + UI.esc(c.name) + '</div>' +
-          '<div class="r-sub">' + (c.birthDate ? UI.dateShort(c.birthDate) : 'ללא תאריך לידה') + '</div></div>' +
-          '<button class="iconbtn plain" data-action="child-edit" data-id="' + c.id + '">✏️</button></div>';
-      }).join('') : UI.empty({ art: 'children', title: 'עוד אין ילדים ברשימה', text: 'אפשר להוסיף עכשיו, או לדלג ולהוסיף אחר כך.', action: { act: 'child-add', label: 'הוספת ילד ראשון' } })) +
-      footer(n);
+  /* ============================================================
+     ילדים וצוות — שלב אחד, מספר בלבד
+     ------------------------------------------------------------
+     ההקמה מבקשת רק כמה ילדים וכמה אנשי צוות יש. מי שרוצה יכול
+     להיכנס למסך הפירוט ולהוסיף שמות — אבל זה לא חובה, והרשימות
+     נשארות זמינות בכל עת באפליקציה. המספר נשמר בהגדרות ומשמש את
+     התקציב עד שיש רשימה שמית ארוכה ממנו (ראו Calc.childCount).
+     ============================================================ */
+
+  /* איזה מסך פירוט פתוח בתוך השלב: '' (המסך הראשי), 'children' או 'staff' */
+  function detail() { return App.vs('wizDetail', ''); }
+  /* הלשונית במסך הפירוט: 'count' או 'list'. ברירת המחדל — רשימה אם כבר יש שמות */
+  function detailTab(kind) {
+    var saved = App.vs('wizTab_' + kind, '');
+    if (saved) return saved;
+    return (kind === 'children' ? Store.state.children : Store.state.staff).length ? 'list' : 'count';
   }
 
-  /* ---------- צוות הגן ---------- */
-  function stepStaff(n) {
-    var staff = Store.state.staff;
-    return head(n, 'צוות הגן', 'שמות הצוות והיררכיה — אופציונלי, עוזר בחישוב מתנות') +
-      '<div class="card">' +
-        '<div class="flex-between"><div><b>' + staff.length + ' אנשי צוות</b>' +
-        '<div class="small muted">רשומים כרגע</div></div>' +
-        UI.addBtn({ act: 'staff-add', label: 'הוספת איש צוות', cls: 'soft sm' }) + '</div>' +
+  function COUNTS() {
+    return {
+      children: { key: 'childrenCount', art: 'children', q: 'כמה ילדים יש בגן?',
+                  sub: 'רק מספר, בלי שמות (ניתן לעדכן בהמשך)', list: Store.state.children },
+      staff:    { key: 'staffCount', art: 'staff', q: 'כמה אנשי צוות בגן?',
+                  sub: 'רק מספר, בלי פירוט (ניתן לעדכן בהמשך)', list: Store.state.staff }
+    };
+  }
+
+  /* המספר שמוצג: מה שהוזן, ואם הרשימה השמית ארוכה יותר — אורכה */
+  function countOf(kind) {
+    var c = COUNTS()[kind];
+    return Math.max(c.list.length, Calc.num(Store.state.settings[c.key]));
+  }
+
+  function stepper(kind) {
+    var c = COUNTS()[kind];
+    var v = countOf(kind);
+    var locked = c.list.length > 0;
+    return '<div class="stepper" data-stepper="' + kind + '">' +
+      '<button type="button" class="st-btn" data-action="wiz-count-step" data-kind="' + kind + '" data-d="-1" ' +
+        'aria-label="פחות אחד"' + (v <= c.list.length ? ' disabled' : '') + '>−</button>' +
+      '<input class="st-val" type="number" inputmode="numeric" min="' + c.list.length + '" max="999" ' +
+        'value="' + v + '" data-input="wiz-count" data-kind="' + kind + '" aria-label="' + UI.esc(c.q) + '">' +
+      '<button type="button" class="st-btn" data-action="wiz-count-step" data-kind="' + kind + '" data-d="1" aria-label="עוד אחד">+</button>' +
       '</div>' +
-      (staff.length ? staff.map(function (t) {
-        var lv = Store.staffLevel(t.level);
-        return '<div class="row"><div class="avatar" style="background:' + UI.toneVar(lv.tone) + '">' + lv.icon + '</div>' +
-          '<div class="r-body"><div class="r-name">' + UI.esc(t.name) + '</div>' +
-          '<div class="r-sub">' + UI.esc(t.role || lv.name) + '</div></div>' +
-          '<button class="iconbtn plain" data-action="staff-edit" data-id="' + t.id + '">✏️</button></div>';
-      }).join('') : UI.empty({ art: 'staff', title: 'עוד לא הוספתם צוות', text: 'השלב הזה אופציונלי לגמרי.', action: { act: 'staff-add', label: 'הוספת איש צוות' } })) +
-      footer(n);
+      (locked ? '<div class="hint">ברשימה יש כבר ' + c.list.length + ' שמות, ולכן המספר לא יורד מתחת לזה.</div>' : '');
+  }
+
+  function countBlock(kind) {
+    var c = COUNTS()[kind];
+    return '<div class="count-block">' +
+      '<div class="cb-art">' + UI.art(c.art) + '</div>' +
+      '<div class="cb-body">' +
+        '<div class="cb-q">' + UI.esc(c.q) + '</div>' +
+        '<div class="small muted">' + UI.esc(c.sub) + '</div>' +
+        stepper(kind) +
+      '</div></div>';
+  }
+
+  function stepPeople(n) {
+    if (detail() === 'children') return detailScreen(n, 'children');
+    if (detail() === 'staff') return detailScreen(n, 'staff');
+    return head(n, 'פרטי הגן שלך', 'אפשר להתחיל עם פרטים בסיסיים ותמיד אפשר לעדכן אחר כך.') +
+      '<div class="card">' +
+        countBlock('children') +
+        '<div class="count-sep"></div>' +
+        countBlock('staff') +
+        '<button type="button" class="more-card" data-action="wiz-detail" data-kind="children">' +
+          '<span class="mc-ico" aria-hidden="true">⚙️</span>' +
+          '<span class="mc-body"><b>רוצה להוסיף פרטים נוספים?</b>' +
+          '<span class="small muted">שמות ילדים, היררכיית צוות ועוד</span></span>' +
+          '<span class="mc-chev" aria-hidden="true">‹</span>' +
+        '</button>' +
+      '</div>' +
+      footer(n, 'המשך', { skipLabel: 'דלג על שלב זה עכשיו', note: '⚙️ אפשר לעדכן בכל שלב באפליקציה' });
+  }
+
+  /* ---------- מסך הפירוט: ילדים או צוות, מספר בלבד או רשימה ---------- */
+  function detailScreen(n, kind) {
+    var c = COUNTS()[kind];
+    var tab = detailTab(kind);
+    var isKids = kind === 'children';
+    var html = '<div style="padding-top:18px">' +
+      '<button class="iconbtn plain" data-action="wiz-detail" data-kind="' + (isKids ? '' : 'children') + '" ' +
+        'aria-label="חזרה" style="margin-bottom:6px">→</button>' +
+      stepsBar(n) +
+      '<h1 style="font-size:24px;text-align:center;margin-top:10px">' + (isKids ? 'פרטי הילדים' : 'פרטי הצוות') + '</h1>' +
+      '<p class="center muted small" style="margin:6px 0 20px">' +
+        (isKids ? 'ניתן להוסיף רק את הכמות, או להוסיף ילדים בפירוט.' : 'ניתן להוסיף רק את הכמות, או להוסיף את אנשי הצוות בפירוט.') +
+      '</p></div>';
+
+    html += '<div class="card">' +
+      '<div class="segment" style="box-shadow:none;background:#F6F3FA">' +
+        '<button data-action="wiz-tab" data-kind="' + kind + '" data-tab="list" class="' + (tab === 'list' ? 'on' : '') + '">הוספה מפורטת</button>' +
+        '<button data-action="wiz-tab" data-kind="' + kind + '" data-tab="count" class="' + (tab === 'count' ? 'on' : '') + '">' +
+          (isKids ? 'רק מספר ילדים' : 'רק מספר צוות') + '</button>' +
+      '</div>';
+
+    if (tab === 'count') {
+      html += '<div class="count-block count-solo"><div class="cb-body">' +
+        '<div class="cb-q">' + UI.esc(c.q) + '</div>' +
+        '<div class="small muted">ניתן לעדכן בהמשך</div>' +
+        stepper(kind) + '</div></div>';
+    } else {
+      html += UI.addBtn({ act: isKids ? 'child-add' : 'staff-add', label: isKids ? 'הוספת ילד' : 'הוספת איש צוות', cls: 'soft' });
+      html += c.list.length ? c.list.map(function (x) { return detailRow(kind, x); }).join('') :
+        '<p class="small muted center" style="margin:12px 0 4px">' +
+          (isKids ? 'עוד אין ילדים ברשימה.' : 'עוד אין אנשי צוות ברשימה.') + '</p>';
+    }
+    html += '</div>';
+
+    return html + footer(n, 'המשך', {
+      nextAct: isKids ? 'wiz-detail-next' : 'wiz-next',
+      skipAct: isKids ? 'wiz-detail-next' : 'wiz-skip',
+      skipLabel: 'דלג על שלב זה עכשיו'
+    });
+  }
+
+  function detailRow(kind, x) {
+    var isKids = kind === 'children';
+    var lv = isKids ? null : Store.staffLevel(x.level);
+    var sub = isKids
+      ? [x.parents && x.parents[0] && x.parents[0].name ? 'הורה: ' + x.parents[0].name : '',
+         x.birthDate ? UI.ageText(x.birthDate) : ''].filter(Boolean).join(' · ') || 'ללא פרטים נוספים'
+      : (x.role || lv.name);
+    return '<div class="row wiz-row">' +
+      '<div class="avatar" style="background:' + UI.toneVar(isKids ? UI.toneFor(x.name) : lv.tone) + '">' +
+        (isKids ? UI.faceFor(x.name) : lv.icon) + '</div>' +
+      '<div class="r-body"><div class="r-name">' + UI.esc(x.name) + '</div>' +
+      '<div class="r-sub">' + UI.esc(sub) + '</div></div>' +
+      '<button class="iconbtn plain" data-action="' + (isKids ? 'child-edit' : 'staff-edit') + '" data-id="' + x.id + '" aria-label="עריכה">✏️</button>' +
+      '<button class="iconbtn del" data-action="wiz-del" data-kind="' + kind + '" data-id="' + x.id + '" aria-label="מחיקה">🗑</button>' +
+      '</div>';
+  }
+
+  function setCount(kind, value) {
+    var c = COUNTS()[kind];
+    var v = Math.round(Calc.num(value));
+    if (!isFinite(v)) v = 0;
+    Store.state.settings[c.key] = Math.max(c.list.length, Math.min(999, v));
+    Store.save();
   }
 
   /* ---------- תכנון תקציב (השלב האחרון) ---------- */
@@ -424,6 +532,7 @@ Views.onboarding = (function () {
   /* מעבר לשלב הבא, או סיום אם זה היה האחרון */
   function advance() {
     var n = step();
+    App.setVs('wizDetail', '');
     if (n >= lastStep()) return finish();
     App.setVs('wizStep', n + 1);
     App.render();
@@ -461,11 +570,40 @@ Views.onboarding = (function () {
       /* המידע נשמר ב-Store תוך כדי ההקלדה, ולכן חזרה אחורה מציגה אותו
          כפי שהוא — אין כאן מה לשחזר */
       'wiz-back': function () {
+        App.setVs('wizDetail', '');
         App.setVs('wizStep', Math.max(firstStep(), step() - 1));
         App.render();
       },
       'wiz-next': advance,
       'wiz-skip': advance,
+      /* מסכי הפירוט של שלב הילדים והצוות */
+      'wiz-detail': function (el) {
+        App.setVs('wizDetail', el.getAttribute('data-kind') || '');
+        App.render();
+      },
+      'wiz-detail-next': function () { App.setVs('wizDetail', 'staff'); App.render(); },
+      'wiz-tab': function (el) {
+        App.setVs('wizTab_' + el.getAttribute('data-kind'), el.getAttribute('data-tab'));
+        App.render();
+      },
+      'wiz-count-step': function (el) {
+        var kind = el.getAttribute('data-kind');
+        setCount(kind, countOf(kind) + Calc.num(el.getAttribute('data-d')));
+        App.render();
+      },
+      /* הקלדה ישירה — נשמרת בלי לצייר מחדש, כדי לא לאבד את הסמן */
+      'wiz-count': function (el) {
+        if (el.value === '') return;
+        setCount(el.getAttribute('data-kind'), el.value);
+      },
+      'wiz-del': function (el) {
+        var kind = el.getAttribute('data-kind'), id = el.getAttribute('data-id');
+        var name = (Store.find(kind, id) || {}).name || '';
+        UI.confirmBox('למחוק את ' + name + '?', 'הרשומה תימחק מהרשימה.', function () {
+          Store.remove(kind, id);
+          App.render();
+        });
+      },
       'wiz-cloud': function (el) { cloud[el.getAttribute('data-key')] = el.value; },
       'wiz-cloud-signup': signup,
       'wiz-cloud-check': function () { check(true); },
