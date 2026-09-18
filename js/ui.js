@@ -262,7 +262,8 @@ var UI = (function () {
             panel.hidden = !open;
             toggle.setAttribute('aria-expanded', String(open));
             box.classList.toggle('is-open', open);
-            if (open) search.focus();
+            /* במכשיר מגע המקלדת הייתה מכסה את הרשימה, ולכן החיפוש לא מקבל פוקוס אוטומטית. */
+            if (open && !('ontouchstart' in window)) search.focus();
           }
           function refresh() {
             tags.innerHTML = '';
@@ -304,10 +305,13 @@ var UI = (function () {
             }
             if (e.key === 'Enter' && e.target === search) e.preventDefault();
           });
+          /* סגירה רק במעבר מקלדת אל מחוץ לתיבה. לחיצה על שורה ברשימה מאבדת את הפוקוס
+             מהחיפוש בלי יעד (relatedTarget ריק), ובספארי גם תיבת הסימון עצמה אינה מקבלת פוקוס —
+             סגירה במקרה הזה הסתירה את השורה לפני שהלחיצה הגיעה אליה. */
           box.addEventListener('focusout', function (e) {
-            if (!box.contains(e.relatedTarget)) setOpen(false);
+            if (e.relatedTarget && !box.contains(e.relatedTarget)) setOpen(false);
           });
-          root.closest('.modal-back').addEventListener('click', function (e) {
+          root.closest('.modal-back').addEventListener('pointerdown', function (e) {
             if (!box.contains(e.target)) setOpen(false);
           });
           refresh();
