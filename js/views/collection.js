@@ -420,6 +420,244 @@ Views.collection = (function () {
       '</div></div></div>';
   }
 
+  /* ---------- הוספה ידנית לצד ייבוא מקובץ ---------- */
+  function payActions(tab) {
+    var html = '<div class="pay-actions">' +
+      '<button class="btn add-btn manual" data-action="pay-add" aria-label="הוספת תשלום ידנית">' +
+        '<span class="ab-plus" aria-hidden="true">+</span><span class="ab-label">הוספת תשלום ידנית</span></button>' +
+      '<button class="btn import-btn" data-action="pay-import" aria-label="ייבוא תשלומים מקובץ">' +
+        '<span class="imp-ico" aria-hidden="true">' + UI.svgIcon('upload', 22) + '</span>' +
+        '<span class="imp-txt"><b>ייבוא תשלומים</b><small>מ-PayBox או מקובץ Excel</small></span></button>' +
+      '</div>';
+    if (tab === 'list') {
+      html += '<button type="button" class="import-note" data-action="pay-import">' +
+        '<span class="in-art" aria-hidden="true">' + UI.svgIcon('file-up', 44) + '</span>' +
+        '<span class="in-body"><b>ייבוא תשלומים מקובץ</b>' +
+          '<span>יש לך קובץ תשלומים מ-PayBox? אפשר לייבא אותו ולחסוך הזנה ידנית.</span>' +
+          '<span class="in-hint">ℹ️ תומך בקבצי CSV, Excel ובטבלאות תשלומים.</span></span>' +
+        '</button>';
+    }
+    return html;
+  }
+
+  /* ============================================================
+     ייבוא תשלומים מקובץ (PayBox / Excel / CSV)
+     ------------------------------------------------------------
+     שלב 1: בחירת קובץ. CSV נקרא ישירות; Excel דרך ספריית SheetJS
+     שנטענת רק כשצריך. שלב 2: תצוגה מקדימה — כל שורה עם ההורה שזוהה
+     (ניתן לשינוי), כפילויות מסומנות ומדולגות, ואז ייבוא בלחיצה.
+     ============================================================ */
+  var XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  function loadXLSX() {
+    if (window.XLSX) return Promise.resolve(window.XLSX);
+    return new Promise(function (resolve, reject) {
+      var sc = document.createElement('script');
+      sc.src = XLSX_URL;
+      sc.onload = function () { window.XLSX ? resolve(window.XLSX) : reject(new Error('no XLSX')); };
+      sc.onerror = function () { reject(new Error('load failed')); };
+      document.head.appendChild(sc);
+    });
+  }
+
+  /* קובץ טקסט: UTF-8, ואם יצא ג׳יבריש — Windows-1255 (ייצוא ישן מאקסל) */
+  function readText(file) {
+    return new Promise(function (resolve, reject) {
+      var r = new FileReader();
+      r.onerror = function () { reject(r.error); };
+      r.onload = function () {
+        var t = String(r.result || '');
+        if ((t.match(/\uFFFD/g) || []).length > 3) {
+          var r2 = new FileReader();
+          r2.onload = function () { resolve(String(r2.result || '')); };
+          r2.onerror = function () { resolve(t); };
+          r2.readAsText(file, 'windows-1255');
+        } else resolve(t);
+      };
+      r.readAsText(file);
+    });
+  }
+
+  function readRows(file) {
+    var name = (file.name || '').toLowerCase();
+    if (/\.(csv|txt|tsv)$/.test(name) || /text\/(csv|plain)/.test(file.type)) {
+      return readText(file).then(function (t) { return PayImport.parseCSV(t); });
+    }
+    return loadXLSX().then(function (XLSX) {
+      return new Promise(function (resolve, reject) {
+        var r = new FileReader();
+        r.onerror = function () { reject(r.error); };
+        r.onload = function () {
+          try {
+            var wb = XLSX.read(new Uint8Array(r.result), { type: 'array', cellDates: true });
+            var ws = wb.Sheets[wb.SheetNames[0]];
+            resolve(XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' }));
+          } catch (e) { reject(e); }
+        };
+        r.readAsArrayBuffer(file);
+      });
+    });
+  }
+
+  function importModal() {
+    var kids = Store.state.children;
+    var rows = null, detected = null, plan = null, method = 'paybox';
+
+    var m = UI.modal({
+      title: 'ייבוא תשלומים',
+      subtitle: 'מ-PayBox, מ-Excel או מקובץ CSV',
+      body: stepFileHTML(),
+      onMount: function (root, close) { mountStepFile(root, close); }
+    });
+
+    function stepFileHTML() {
+      return '<label class="drop" for="imp-pay-file">' +
+          '<span class="drop-ico" aria-hidden="true">' + UI.svgIcon('file-up', 40) + '</span>' +
+          '<b>בחירת קובץ</b><span class="small muted">Excel ‏(xlsx) או CSV — כמו הייצוא מ-PayBox</span>' +
+          '<input type="file" id="imp-pay-file" accept=".xlsx,.xls,.csv,.txt,.tsv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv">' +
+        '</label>' +
+        '<p class="imp-status small muted" aria-live="polite"></p>' +
+        '<div class="hint">הקובץ צריך עמודה של שם המשלם ועמודה של סכום; תאריך והערה — אם יש. ' +
+          'שם המשלם מותאם אוטומטית להורים שברשימת הילדים, ואפשר לתקן לפני הייבוא.</div>';
+    }
+
+    function mountStepFile(root, close) {
+      var input = root.querySelector('#imp-pay-file');
+      var status = root.querySelector('.imp-status');
+      input.addEventListener('change', function () {
+        var f = input.files && input.files[0];
+        if (!f) return;
+        status.textContent = 'קורא את הקובץ…';
+        readRows(f).then(function (rs) {
+          rows = rs;
+          detected = PayImport.detectColumns(rows);
+          if (detected.map.amount === undefined) throw new Error('no-amount');
+          rebuildPlan();
+          root.innerHTML = stepPreviewHTML();
+          mountStepPreview(root, close);
+        }).catch(function (e) {
+          status.textContent = e && e.message === 'no-amount'
+            ? 'לא נמצאה עמודת סכום בקובץ. אפשר לבדוק שהקובץ הוא דוח התשלומים ולא דף אחר.'
+            : e && e.message === 'load failed'
+              ? 'לא הצלחנו לטעון את קורא ה-Excel (אין חיבור?). אפשר לשמור את הקובץ כ-CSV ולנסות שוב.'
+              : 'לא הצלחנו לקרוא את הקובץ. אפשר לשמור אותו כ-CSV ולנסות שוב.';
+          input.value = '';
+        });
+      });
+    }
+
+    function rebuildPlan() {
+      var recs = PayImport.toRecords(rows, detected);
+      plan = PayImport.importPlan(recs, kids, Store.state.payments);
+      plan.forEach(function (r) { r.include = !r.skipped && !!r.childId; });
+    }
+
+    function childLabel(c) {
+      var p = c.parents && c.parents[0] && c.parents[0].name;
+      return (p ? p + ' (' + c.name + ')' : c.name);
+    }
+
+    function columnSelect(kind, label) {
+      var header = detected.headerRow > -1 ? rows[detected.headerRow] : null;
+      var width = rows.reduce(function (w, r) { return Math.max(w, r.length); }, 0);
+      var opts = '<option value="">—</option>';
+      for (var i = 0; i < width; i++) {
+        var text = header && header[i] !== '' && header[i] != null ? String(header[i]) : 'עמודה ' + (i + 1);
+        opts += '<option value="' + i + '"' + (detected.map[kind] === i ? ' selected' : '') + '>' + UI.esc(text) + '</option>';
+      }
+      return '<label class="imp-col"><span>' + label + '</span><select class="input" data-col="' + kind + '">' + opts + '</select></label>';
+    }
+
+    function stepPreviewHTML() {
+      var ready = plan.filter(function (r) { return r.include; }).length;
+      var dups = plan.filter(function (r) { return r.skipped === 'duplicate'; }).length;
+      var unmatched = plan.filter(function (r) { return !r.childId && !r.skipped; }).length;
+      var html = '<div class="imp-cols">' +
+          columnSelect('name', 'שם המשלם') + columnSelect('amount', 'סכום') + columnSelect('date', 'תאריך') +
+        '</div>' +
+        '<div class="imp-method"><span class="small muted">אמצעי תשלום לכל השורות</span>' +
+          '<select class="input" data-method>' + Store.PAY_METHODS.map(function (pm) {
+            return '<option value="' + pm.id + '"' + (pm.id === method ? ' selected' : '') + '>' + pm.icon + ' ' + pm.name + '</option>';
+          }).join('') + '</select></div>' +
+        '<p class="small muted imp-summary">' +
+          'נמצאו <b>' + plan.length + '</b> תשלומים בקובץ' +
+          (dups ? ' · <b>' + dups + '</b> כבר רשומים' : '') +
+          (unmatched ? ' · <b>' + unmatched + '</b> ללא הורה מזוהה' : '') + '</p>';
+
+      if (!plan.length) {
+        html += '<p class="small muted center" style="margin:14px 0">לא נמצאו שורות עם סכום. אפשר לבחור עמודות אחרות למעלה.</p>';
+      }
+      html += '<div class="imp-list">' + plan.map(function (r, i) {
+        var badge = r.skipped === 'duplicate' ? '<span class="badge warn">כבר קיים</span>'
+          : r.skipped === 'status' ? '<span class="badge no">' + UI.esc(r.status || 'בוטל') + '</span>'
+          : r.skipped === 'total' ? '<span class="badge">שורת סיכום</span>'
+          : r.level === 'exact' ? '<span class="badge ok">זוהה</span>'
+          : r.level === 'partial' ? '<span class="badge info">זוהה חלקית</span>'
+          : '<span class="badge no">לבדיקה</span>';
+        var opts = '<option value="">— לא לייבא —</option>' + kids.map(function (c) {
+          return '<option value="' + c.id + '"' + (r.childId === c.id ? ' selected' : '') + '>' + UI.esc(childLabel(c)) + '</option>';
+        }).join('');
+        return '<div class="imp-row' + (r.include ? '' : ' off') + '" data-i="' + i + '">' +
+          '<div class="imp-top"><span class="imp-name">' + UI.esc(r.name || 'ללא שם') + '</span>' +
+            '<span class="imp-amt">' + UI.money(r.amount) + '</span></div>' +
+          '<div class="imp-sub"><span class="small muted">' + (r.date ? UI.dateShort(r.date) : 'ללא תאריך') +
+            (r.note ? ' · ' + UI.esc(r.note) : '') + '</span>' + badge + '</div>' +
+          '<select class="input imp-pick" data-pick="' + i + '" aria-label="שיוך להורה">' + opts + '</select>' +
+          '</div>';
+      }).join('') + '</div>' +
+      '<div class="btn-row mt">' +
+        '<button type="button" class="btn soft js-back">קובץ אחר</button>' +
+        '<button type="button" class="btn js-import"' + (ready ? '' : ' disabled') + '>ייבוא ' + ready + ' תשלומים</button>' +
+      '</div>';
+      return html;
+    }
+
+    function mountStepPreview(root, close) {
+      root.querySelectorAll('[data-col]').forEach(function (sel) {
+        sel.addEventListener('change', function () {
+          var kind = sel.getAttribute('data-col');
+          if (sel.value === '') delete detected.map[kind]; else detected.map[kind] = parseInt(sel.value, 10);
+          if (detected.map.amount === undefined) { UI.toast('צריך לבחור עמודת סכום'); return; }
+          rebuildPlan();
+          root.innerHTML = stepPreviewHTML();
+          mountStepPreview(root, close);
+        });
+      });
+      var ms = root.querySelector('[data-method]');
+      ms.addEventListener('change', function () { method = ms.value; });
+      root.querySelectorAll('[data-pick]').forEach(function (sel) {
+        sel.addEventListener('change', function () {
+          var r = plan[parseInt(sel.getAttribute('data-pick'), 10)];
+          r.childId = sel.value;
+          r.include = !!sel.value;
+          if (r.skipped === 'duplicate' && sel.value) r.skipped = '';   // בחירה מפורשת גוברת על אזהרת הכפילות
+          sel.closest('.imp-row').classList.toggle('off', !r.include);
+          var ready = plan.filter(function (x) { return x.include; }).length;
+          var btn = root.querySelector('.js-import');
+          btn.disabled = !ready;
+          btn.textContent = 'ייבוא ' + ready + ' תשלומים';
+        });
+      });
+      root.querySelector('.js-back').addEventListener('click', function () {
+        rows = null; plan = null;
+        root.innerHTML = stepFileHTML();
+        mountStepFile(root, close);
+      });
+      root.querySelector('.js-import').addEventListener('click', function () {
+        var picked = plan.filter(function (r) { return r.include && r.childId && Store.find('children', r.childId); });
+        if (!picked.length) return;
+        picked.forEach(function (r) {
+          Store.add('payments', { childId: r.childId, amount: r.amount, method: method,
+            date: r.date || UI.todayISO(), installments: 1, note: r.note || '' });
+        });
+        close();
+        App.render();
+        refreshCard();
+        UI.toast('יובאו ' + picked.length + ' תשלומים ✓');
+      });
+    }
+    return m;
+  }
+
   function render() {
     var tab = App.vs('colTab', 'list');
     var html = UI.pageHead({ title: 'גבייה מההורים', subtitle: 'מי שילם, כמה, ובאיזה אמצעי', art: 'collection', tone: 'green', back: 'home' });
@@ -430,7 +668,7 @@ Views.collection = (function () {
       '<button data-action="col-tab" data-tab="list" class="' + (tab === 'list' ? 'on' : '') + '">רשימה</button>' +
       '</div>';
     html += Store.state.children.length
-      ? UI.addBtn({ act: 'pay-add', label: 'הוספת תשלום', cls: 'mb-add' })
+      ? payActions(tab)
       : UI.addBtn({ act: 'nav', label: 'הוספת ילדים', cls: 'mb-add', data: { view: 'children' } });
     if (tab === 'calc') html += tabCalc();
     else if (tab === 'payments') html += tabPayments();
@@ -452,6 +690,7 @@ Views.collection = (function () {
       },
       'col-open': function (el) { openChild(el.getAttribute('data-id')); },
       'pay-add': function (el) { payForm(null, el.getAttribute('data-child')); },
+      'pay-import': function () { importModal(); },
       'pay-edit': function (el, ev) {
         if (ev) ev.stopPropagation();
         payForm(Store.find('payments', el.getAttribute('data-id')));

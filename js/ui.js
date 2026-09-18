@@ -471,6 +471,18 @@ var UI = (function () {
       '<path d="M9.4 17a3.9 3.9 0 0 1 2.3-6.6 4.7 4.7 0 0 1 8.6 0A3.9 3.9 0 0 1 22.6 17" ' +
         'stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>' +
       '<circle cx="16" cy="6.2" r="1.7" fill="currentColor"/>',
+    /* ייבוא: חץ עולה מתוך מגש, ומסמך עם חץ עולה */
+    upload:
+      '<path d="M16 21V7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>' +
+      '<path d="M10.5 12.5 16 7l5.5 5.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<path d="M6 19v4.5A2.5 2.5 0 0 0 8.5 26h15a2.5 2.5 0 0 0 2.5-2.5V19" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
+    'file-up':
+      '<path d="M8 4.5h11l6 6V26a2.5 2.5 0 0 1-2.5 2.5h-14A2.5 2.5 0 0 1 6 26V7A2.5 2.5 0 0 1 8.5 4.5Z" fill="currentColor" opacity=".14"/>' +
+      '<path d="M8.5 4.5h10.5l6 6V26a2.5 2.5 0 0 1-2.5 2.5h-14A2.5 2.5 0 0 1 6 26V7a2.5 2.5 0 0 1 2.5-2.5Z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>' +
+      '<path d="M19 4.5v6h6" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>' +
+      '<path d="M11 15.5h6M11 19.5h9" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" opacity=".55"/>' +
+      '<circle cx="23" cy="22" r="5.5" fill="#fff" stroke="currentColor" stroke-width="2.2"/>' +
+      '<path d="M23 25v-6M20.6 21.4 23 19l2.4 2.4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
     chevron:
       '<path d="M19 9l-7 7 7 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>',
     plus:
