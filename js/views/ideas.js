@@ -787,7 +787,10 @@ Views.ideas = (function () {
                 'aria-label="עלות ליחידה">' +
             '</div>' +
             '<span>₪ =</span>' +
-            '<b data-ln-sum="' + i + '">' + UI.money(lineSum(l, false)) + '</b>' +
+            '<div class="lc-field lc-sum">' +
+              '<span class="lc-lab">סה״כ</span>' +
+              '<b data-ln-sum="' + i + '">' + UI.money(lineSum(l, false)) + '</b>' +
+            '</div>' +
           '</div>' +
           '</div>';
       }).join('');
