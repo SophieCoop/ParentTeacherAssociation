@@ -759,9 +759,13 @@ table.tbl tr td:first-child{font-weight:600}
 .line-tbl table{width:100%;border-collapse:collapse;min-width:330px}
 .line-tbl th{
   font-size:11px;font-weight:600;color:var(--muted);text-align:start;
-  padding:0 5px 7px;white-space:nowrap;
+  /* הריפוד הצידי שווה לריפוד הטקסט שבתיבה שמתחת, כך שהכותרת מתחילה בדיוק מעל הטקסט */
+  padding:0 9px 7px;white-space:nowrap;
 }
 .line-tbl th.end{text-align:end}
+/* "למי?" ו"מחיר לאדם" ממורכזים מעל התיבות שלהם, והמחיר ממורכז בתיבה כמו הכותרת */
+.line-tbl th:nth-child(2),.line-tbl th:nth-child(3){text-align:center;padding-inline:2px}
+.line-tbl td:nth-child(3) .input.end{text-align:center}
 /* כל הפקדים בשורה מתחילים באותו גובה. שורת ההמלצה שמתחת לשדה המחיר
    מגביהה את התא, ובמרכוז אנכי היא הייתה מרימה את השדה עצמו ומוציאה
    אותו מהיישור עם שם המוצר ועם "למי?". */
@@ -1160,7 +1164,8 @@ table.tbl tr td:first-child{font-weight:600}
      במקום להימתח לפי התוכן ולדרוש גרירה */
   .line-tbl table{min-width:0;table-layout:fixed;width:100%}
   .line-tbl td{padding:6px 2px}
-  .line-tbl th{padding:0 2px 7px}
+  .line-tbl th{padding:0 6px 7px}
+  .line-tbl th:nth-child(2),.line-tbl th:nth-child(3){padding-inline:1px}
   .line-tbl .iconbtn{width:24px;height:24px;font-size:11px}
 }
 
@@ -1172,7 +1177,8 @@ table.tbl tr td:first-child{font-weight:600}
   .line-tbl{overflow-x:auto}
   .line-tbl table{table-layout:fixed;width:100%;min-width:0}
 
-  .line-tbl th{font-size:9.5px;padding:0 1px 6px;letter-spacing:-.2px}
+  .line-tbl th{font-size:9.5px;padding:0 4px 6px;letter-spacing:-.2px}
+  .line-tbl th:nth-child(2),.line-tbl th:nth-child(3){padding-inline:1px}
   .line-tbl th small{font-size:8.5px}
   .line-tbl td{padding:5px 1px}
   /* הריפוד העליון קטן כאן, ולכן ההזחה של הסכום מתקצרת איתו */
