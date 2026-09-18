@@ -61,6 +61,7 @@ var Store = (function () {
     { id: 'assistant',  name: 'סייעת',              icon: '🧑‍🍼', tone: 'pink',   weight: 2, plural: 'סייעות', edu: true },
     { id: 'aide',       name: 'מטפלת / עוזרת',      icon: '🤱',   tone: 'green',  weight: 2, plural: 'מטפלות / עוזרות', edu: true },
     { id: 'paramedic',  name: 'מטפל/ת פרא-רפואי',   icon: '🩺',   tone: 'mint',   weight: 2, plural: 'מטפלי פרא-רפואי', edu: true },
+    { id: 'afternoon',  name: 'צהרון',              icon: '🌤️',  tone: 'orange', weight: 2, plural: 'צוות הצהרון', edu: true },
     { id: 'external',   name: 'מורה לחוג',          icon: '🎵',   tone: 'blue',   weight: 1, plural: 'מורים לחוגים', edu: false },
     { id: 'volunteer',  name: 'מתנדב/ת',            icon: '🤝',   tone: 'yellow', weight: 1, plural: 'מתנדבים', edu: false }
   ];
@@ -69,8 +70,41 @@ var Store = (function () {
   var STAFF_ROLES = [
     'מנהלת', 'גננת', 'סייעת', 'מטפלת', 'אב/אם בית',
     'מטפל/ת פרא-רפואי', 'קלינאי/ת תקשורת', 'מרפא/ה בעיסוק', 'פיזיותרפיסט/ית',
-    'מורה לחוג', 'מתנדב/ת'
+    'צוות צהרון', 'מורה לחוג', 'מתנדב/ת'
   ];
+
+  /* ---------- קטגוריות צוות שהוסיפו ידנית ----------
+     נשמרות במצב (state.staffLevels) ומצטרפות לדרגות הקבועות בכל מקום
+     שקורא ל-Store.STAFF_LEVELS. הן תמיד חלק מהצוות החינוכי. */
+  var LEVEL_TONES = ['purple', 'pink', 'yellow', 'green', 'blue', 'peach', 'mint', 'orange'];
+  var LEVEL_ICONS = ['👤', '🧑‍🏫', '🧑‍🍳', '🧹', '🚌', '🎨', '⚽', '📚', '🎭', '🩹', '🌱', '⭐'];
+
+  function cleanLevel(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    var name = String(raw.name || '').trim();
+    if (!raw.id || !name) return null;
+    var w = Math.round(Number(raw.weight));
+    return {
+      id: String(raw.id), name: name,
+      icon: String(raw.icon || LEVEL_ICONS[0]).trim() || LEVEL_ICONS[0],
+      tone: LEVEL_TONES.indexOf(raw.tone) > -1 ? raw.tone : LEVEL_TONES[0],
+      weight: isFinite(w) ? Math.max(0, Math.min(4, w)) : 2,
+      plural: String(raw.plural || '').trim() || name,
+      edu: true, custom: true
+    };
+  }
+  function migrateStaffLevels(list) {
+    if (!Array.isArray(list)) return [];
+    var seen = {};
+    return list.map(cleanLevel).filter(function (l) {
+      if (!l || seen[l.id] || STAFF_LEVELS.some(function (b) { return b.id === l.id; })) return false;
+      seen[l.id] = true;
+      return true;
+    });
+  }
+  function allLevels() {
+    return STAFF_LEVELS.concat((state && state.staffLevels) || []);
+  }
 
   /* ---------- שנת לימודים ברירת מחדל ---------- */
   function defaultYear() {
@@ -94,6 +128,8 @@ var Store = (function () {
                   levelWeights: {} },
       children: [],
       staff: [],
+      /* קטגוריות צוות נוספות שהוגדרו ידנית, לצד הדרגות הקבועות */
+      staffLevels: [],
       categories: DEFAULT_CATEGORIES.slice(),
       budgetItems: [],
       payments: [],
@@ -264,6 +300,7 @@ var Store = (function () {
     data.gan = Object.assign({}, base.gan, data.gan || {});
     data.settings = Object.assign({}, base.settings, data.settings || {});
     migrateLevelWeights(data.settings);
+    data.staffLevels = migrateStaffLevels(data.staffLevels);
     if (!Array.isArray(data.categories) || !data.categories.length) data.categories = base.categories;
     else migrateCategories(data.categories);
     migrateBudgetItems(data.budgetItems);
@@ -468,8 +505,40 @@ var Store = (function () {
     DEFAULT_CATEGORIES: DEFAULT_CATEGORIES,
     PAY_METHODS: PAY_METHODS,
     AUDIENCES: AUDIENCES,
-    STAFF_LEVELS: STAFF_LEVELS,
+    /* הדרגות הקבועות ואחריהן הקטגוריות שהוסיפו ידנית */
+    get STAFF_LEVELS() { return allLevels(); },
+    BUILTIN_STAFF_LEVELS: STAFF_LEVELS,
     STAFF_ROLES: STAFF_ROLES,
+    LEVEL_TONES: LEVEL_TONES,
+    LEVEL_ICONS: LEVEL_ICONS,
+    addStaffLevel: function (obj) {
+      var used = allLevels().length;
+      var lv = cleanLevel(Object.assign({ tone: LEVEL_TONES[used % LEVEL_TONES.length] }, obj, { id: uid('lvl') }));
+      if (!lv) return null;
+      state.staffLevels = state.staffLevels || [];
+      state.staffLevels.push(lv);
+      save();
+      return lv;
+    },
+    updateStaffLevel: function (id, patch) {
+      var cur = (state.staffLevels || []).filter(function (l) { return l.id === id; })[0];
+      if (!cur) return null;
+      var lv = cleanLevel(Object.assign({}, cur, patch, { id: id }));
+      if (!lv) return null;
+      Object.assign(cur, lv);
+      save();
+      return cur;
+    },
+    /* מחיקה רק כשאין אנשי צוות בקטגוריה — אחרת הם היו נשארים בלי דרגה */
+    removeStaffLevel: function (id) {
+      if ((state.staff || []).some(function (t) { return t.level === id; })) return false;
+      var before = (state.staffLevels || []).length;
+      state.staffLevels = (state.staffLevels || []).filter(function (l) { return l.id !== id; });
+      if (state.staffLevels.length === before) return false;
+      if (state.settings && state.settings.levelWeights) delete state.settings.levelWeights[id];
+      save();
+      return true;
+    },
     get state() { return state; },
     load: load, save: save, reset: reset,
     useSlot: useSlot, adoptInto: adoptInto, hasSlot: hasSlot,
@@ -495,11 +564,11 @@ var Store = (function () {
     /* הצוות החינוכי — מי שעובד עם הילדים ביום-יום ונמצא בצוות הקבוע של הגן.
        מורים לחוגים ומתנדבים אינם נכללים. */
     eduLevelIds: function () {
-      return STAFF_LEVELS.filter(function (l) { return l.edu; })
-                         .map(function (l) { return l.id; });
+      return allLevels().filter(function (l) { return l.edu; })
+                        .map(function (l) { return l.id; });
     },
     staffLevel: function (id) {
-      var l = STAFF_LEVELS.filter(function (x) { return x.id === id; })[0];
+      var l = allLevels().filter(function (x) { return x.id === id; })[0];
       return l || { id: id, name: 'צוות', icon: '👤', tone: 'purple', weight: 1 };
     }
   };

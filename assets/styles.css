@@ -340,6 +340,9 @@ textarea.input{min-height:78px;resize:vertical}
   font-size:13px;font-weight:500;border:1px solid transparent;
 }
 .chip.on{background:var(--primary);color:#fff;font-weight:700;box-shadow:0 4px 12px rgba(155,140,224,.28)}
+/* צ'יפ שמוסיף קטגוריית צוות — נבדל מצ'יפי הסינון שלצידו */
+.chip.chip-add{background:#fff;border:1px dashed var(--primary);color:var(--primary-dark);font-weight:600}
+.level-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:-4px 4px 12px}
 
 /* מתגי לשוניות (Segmented) */
 .segment{
