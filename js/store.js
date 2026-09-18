@@ -125,10 +125,7 @@ var Store = (function () {
       gan: { name: '', address: '', yearLabel: yr.label, contactName: '', phone: '', email: '' },
       settings: { yearStart: yr.start, yearEnd: yr.end, currency: '₪', roundShare: 10,
                   /* רמת התקציב של כל דרגת צוות, כששונתה מברירת המחדל שב-STAFF_LEVELS */
-                  levelWeights: {},
-                  /* מספר הילדים ואנשי הצוות כשעדיין אין רשימה שמית — מההקמה המהירה.
-                     ברגע שיש רשימה ארוכה יותר, הרשימה קובעת. */
-                  childrenCount: 0, staffCount: 0 },
+                  levelWeights: {} },
       children: [],
       staff: [],
       /* קטגוריות צוות נוספות שהוגדרו ידנית, לצד הדרגות הקבועות */
@@ -303,10 +300,6 @@ var Store = (function () {
     data.gan = Object.assign({}, base.gan, data.gan || {});
     data.settings = Object.assign({}, base.settings, data.settings || {});
     migrateLevelWeights(data.settings);
-    ['childrenCount', 'staffCount'].forEach(function (k) {
-      var v = Math.round(Number(data.settings[k]));
-      data.settings[k] = isFinite(v) ? Math.max(0, Math.min(999, v)) : 0;
-    });
     data.staffLevels = migrateStaffLevels(data.staffLevels);
     if (!Array.isArray(data.categories) || !data.categories.length) data.categories = base.categories;
     else migrateCategories(data.categories);
@@ -364,9 +357,76 @@ var Store = (function () {
   function update(name, id, patch) {
     var item = find(name, id);
     if (!item) return null;
+    /* רשומה זמנית ("ילד 3") שקיבלה שם אמיתי הופכת לרשומה רגילה */
+    if (item.placeholder && patch && patch.name && patch.name !== item.name) patch = Object.assign({}, patch, { placeholder: false });
     Object.assign(item, patch);
     save();
     return item;
+  }
+
+  /* ---------- רשומות זמניות לפי מספר ----------
+     באשף ההקמה מזינים רק כמה ילדים וכמה אנשי צוות יש. כדי שהתקציב
+     והגבייה יעבדו מיד, נוצרות רשומות עם שמות זמניים ("ילד 1", "גננת",
+     "סייעת 2") שאפשר לשנות אחר כך. הורדת המספר מוחקת רק רשומות זמניות,
+     מהסוף, ולעולם לא רשומה עם שם אמיתי או ילד שכבר רשום לו תשלום. */
+  var PLACEHOLDER_NAME = { children: 'ילד', staff: 'צוות' };
+
+  function isPlaceholder(x) { return !!(x && x.placeholder); }
+
+  function removablePlaceholder(name, x) {
+    if (!isPlaceholder(x)) return false;
+    if (name !== 'children') return true;
+    return !(state.payments || []).some(function (p) { return p.childId === x.id; });
+  }
+
+  /* המספר שמתחתיו אי אפשר לרדת: הרשומות שאינן זמניות */
+  function headcountFloor(name) {
+    return (state[name] || []).filter(function (x) { return !removablePlaceholder(name, x); }).length;
+  }
+
+  function setHeadcount(name, n) {
+    if (!PLACEHOLDER_NAME[name]) return 0;
+    var items = state[name] || (state[name] = []);
+    var v = Math.round(Number(n));
+    if (!isFinite(v)) v = items.length;
+    v = Math.max(headcountFloor(name), Math.min(999, v));
+
+    for (var i = items.length - 1; i >= 0 && items.length > v; i--) {
+      if (removablePlaceholder(name, items[i])) items.splice(i, 1);
+    }
+
+    var used = {};
+    items.forEach(function (x) { used[x.name] = true; });
+    var k = 1;
+    while (items.length < v) {
+      if (name === 'children') {
+        var nm = PLACEHOLDER_NAME.children + ' ' + k++;
+        if (used[nm]) continue;
+        used[nm] = true;
+        items.push({ id: uid('chi'), name: nm, birthDate: '', joinDate: state.settings.yearStart,
+                     sharePercentOverride: null, note: '', parents: [], placeholder: true });
+      } else {
+        items.push(placeholderStaff(items, used));
+      }
+    }
+    save();
+    return items.length;
+  }
+
+  /* צוות זמני לפי מבנה גן טיפוסי: גננת אחת, מנהלת אחת, והשאר סייעות.
+     אם כבר יש גננת או מנהלת ברשימה (זמנית או אמיתית) — לא נוספת עוד אחת. */
+  function placeholderStaff(items, used) {
+    function has(level) { return items.some(function (t) { return t.level === level; }); }
+    var level, nm;
+    if (!has('lead')) { level = 'lead'; nm = 'גננת'; }
+    else if (!has('manager')) { level = 'manager'; nm = 'מנהלת'; }
+    else {
+      level = 'assistant';
+      for (var k = 1; ; k++) { nm = 'סייעת ' + k; if (!used[nm]) break; }
+    }
+    if (used[nm]) nm += ' ' + (items.length + 1);   // שם תפוס אצל עובד/ת אמיתי/ת
+    used[nm] = true;
+    return { id: uid('stf'), name: nm, role: nm.replace(/ \d+$/, ''), level: level, phone: '', birthDate: '', placeholder: true };
   }
 
   function remove(name, id) {
@@ -551,6 +611,7 @@ var Store = (function () {
     useSlot: useSlot, adoptInto: adoptInto, hasSlot: hasSlot,
     currentOwner: currentOwner, clearAllSlots: clearAllSlots, dropSlot: dropSlot,
     uid: uid, list: list, find: find, add: add, update: update, remove: remove,
+    setHeadcount: setHeadcount, headcountFloor: headcountFloor, isPlaceholder: isPlaceholder,
     replaceState: replaceState,
     exportJSON: exportJSON, importJSON: importJSON, loadDemo: loadDemo,
     methodName: function (id) {

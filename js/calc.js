@@ -118,17 +118,10 @@ var Calc = (function () {
   /* סעיף יכול להיות סכום כולל, או סכום לאדם שמוכפל במספר הילדים
      או אנשי הצוות. כשמתווסף ילד לרשימה, הסעיף מתעדכן מאליו. */
   /* ---------- כמה ילדים ואנשי צוות יש ----------
-     בהקמה המהירה מזינים רק מספר, בלי רשימה שמית. הרשימה, כשהיא קיימת
-     וארוכה יותר, גוברת על המספר — ומי שהזין 25 והוסיף שלושה שמות
-     עדיין מתקצב לפי 25. */
-  function childCount(state) {
-    var s = (state && state.settings) || {};
-    return Math.max((state && state.children || []).length, num(s.childrenCount));
-  }
-  function staffCount(state) {
-    var s = (state && state.settings) || {};
-    return Math.max((state && state.staff || []).length, num(s.staffCount));
-  }
+     הרשימה היא המקור היחיד: בהקמה המהירה נוצרות רשומות זמניות לפי
+     המספר שהוזן (Store.setHeadcount), ולכן אין מונה נפרד. */
+  function childCount(state) { return ((state && state.children) || []).length; }
+  function staffCount(state) { return ((state && state.staff) || []).length; }
 
   var AUDIENCE_COUNTS = {
     children:  childCount,

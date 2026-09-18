@@ -26,7 +26,7 @@ Views.budget = (function () {
       '<button class="btn sm soft" data-action="nav" data-view="children">ניהול הרשימה</button></div>' +
       '<div class="flex-between">' +
         '<div><div class="sum-value">' + Calc.childCount(st) + '</div>' +
-        '<div class="small muted">' + (st.children.length ? 'ילדים רשומים' : 'ילדים לפי המספר שהוזן') + '</div></div>' +
+        '<div class="small muted">ילדים רשומים</div></div>' +
         '<div class="flex" style="gap:6px">' +
           '<span class="badge ok">' + full + ' מלא</span>' +
           (partial ? '<span class="badge warn">' + partial + ' יחסי</span>' : '') +
@@ -40,7 +40,7 @@ Views.budget = (function () {
       '<button class="btn sm soft" data-action="nav" data-view="staff">ניהול הצוות</button></div>' +
       '<div class="flex-between">' +
         '<div><div class="sum-value">' + Calc.staffCount(st) + '</div>' +
-        '<div class="small muted">' + (st.staff.length ? 'אנשי צוות' : 'אנשי צוות לפי המספר שהוזן') + '</div></div>' +
+        '<div class="small muted">אנשי צוות</div></div>' +
       '</div>' +
       (st.staff.length ? '<div class="flex wrap mt" style="gap:6px">' +
         Store.STAFF_LEVELS.filter(function (l) { return levels[l.id]; }).map(function (l) {
