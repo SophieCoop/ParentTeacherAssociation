@@ -1,5 +1,7 @@
 /* ============================================================
-   אשף ההקמה — מסך פתיחה ושלושה או ארבעה שלבים (אפשר לדלג על כל אחד)
+   אשף ההקמה — מסך פתיחה ושניים או שלושה שלבים (אפשר לדלג על כל אחד)
+   ------------------------------------------------------------
+   כתובת, איש קשר ותאריכי השנה אינם חלק מההקמה — הם נערכים בהגדרות.
    ------------------------------------------------------------
    החשבון הוא השלב הראשון: מרגע שהוא נפתח, כל מה שנכנס בשלבים
    הבאים נשמר בענן תוך כדי ההקמה, ואין שלב שמירה נפרד בסוף.
@@ -21,7 +23,7 @@ Views.onboarding = (function () {
   /* סדר השלבים. שלב החשבון קיים רק כשמוגדר ענן להתחבר אליו. */
   function stepList() {
     var list = (window.Cloud && Cloud.enabled()) ? [stepAccount] : [];
-    return list.concat([stepGan, stepPeople, stepBudget]);
+    return list.concat([stepPeople, stepBudget]);
   }
   function lastStep() { return stepList().length; }
   function accountStep() { return (window.Cloud && Cloud.enabled()) ? 1 : 0; }
@@ -114,38 +116,6 @@ Views.onboarding = (function () {
       'לדלג על ההקמה ולהיכנס לאפליקציה</button>';
   }
 
-  /* ---------- פרטי הגן ---------- */
-  function stepGan(n) {
-    var g = Store.state.gan, s = Store.state.settings;
-    return head(n, 'פרטי הגן', 'בואו נתחיל עם הפרטים של הגן שלנו') +
-      '<div class="card">' +
-        '<div class="field"><label>שם הגן</label>' +
-          '<input class="input" data-input="wiz-gan" data-key="name" value="' + UI.esc(g.name) + '" placeholder="גן צבעוני"></div>' +
-        '<div class="field"><label>כתובת הגן</label>' +
-          '<input class="input" data-input="wiz-gan" data-key="address" value="' + UI.esc(g.address) + '" placeholder="רחוב הגן 12, תל אביב"></div>' +
-        '<div class="field"><label>שנת לימודים</label>' +
-          '<input class="input" data-input="wiz-gan" data-key="yearLabel" value="' + UI.esc(g.yearLabel) + '" placeholder="2025/2026"></div>' +
-        '<div class="grid-2 date-pair">' +
-          '<div class="field"><label>תחילת שנה</label>' +
-            '<input class="input" type="date" data-input="wiz-set" data-key="yearStart" value="' + UI.esc(s.yearStart) + '"></div>' +
-          '<div class="field"><label>סוף שנה</label>' +
-            '<input class="input" type="date" data-input="wiz-set" data-key="yearEnd" value="' + UI.esc(s.yearEnd) + '"></div>' +
-        '</div>' +
-        '<div class="hint">תאריכי השנה משמשים לחישוב היחסי של ילדים שמצטרפים באמצע שנה.</div>' +
-      '</div>' +
-      '<div class="card">' +
-        '<div class="field"><label>איש קשר בוועד</label>' +
-          '<input class="input" data-input="wiz-gan" data-key="contactName" value="' + UI.esc(g.contactName) + '" placeholder="דנה לוי"></div>' +
-        '<div class="grid-2">' +
-          '<div class="field"><label>טלפון</label>' +
-            '<input class="input" type="tel" data-input="wiz-gan" data-key="phone" value="' + UI.esc(g.phone) + '" placeholder="050-1234567"></div>' +
-          '<div class="field"><label>אימייל</label>' +
-            '<input class="input" type="email" data-input="wiz-gan" data-key="email" value="' + UI.esc(g.email) + '" placeholder="dana@example.com"></div>' +
-        '</div>' +
-      '</div>' +
-      footer(n);
-  }
-
   /* ============================================================
      ילדים וצוות — שלב אחד, מספר בלבד
      ------------------------------------------------------------
@@ -170,9 +140,9 @@ Views.onboarding = (function () {
   function COUNTS() {
     return {
       children: { art: 'children', q: 'כמה ילדים יש בגן?',
-                  sub: 'רק מספר, בלי שמות (ניתן לעדכן בהמשך)', list: Store.state.children },
-      staff:    { art: 'staff', q: 'כמה אנשי צוות בגן?',
-                  sub: 'רק מספר, בלי פירוט (ניתן לעדכן בהמשך)', list: Store.state.staff }
+                  sub: 'רק מספר, ניתן לעדכן בהמשך', list: Store.state.children },
+      staff:    { art: 'staff', q: 'כמה אנשי צוות יש בגן?',
+                  sub: 'רק מספר, ניתן לעדכן בהמשך', list: Store.state.staff }
     };
   }
 
@@ -195,31 +165,38 @@ Views.onboarding = (function () {
 
   function countBlock(kind) {
     var c = COUNTS()[kind];
+    /* האיור בצד שמאל של השורה, אחרי הטקסט — כמו בעיצוב */
     return '<div class="count-block">' +
-      '<div class="cb-art">' + UI.art(c.art) + '</div>' +
       '<div class="cb-body">' +
         '<div class="cb-q">' + UI.esc(c.q) + '</div>' +
         '<div class="small muted">' + UI.esc(c.sub) + '</div>' +
         stepper(kind) +
-      '</div></div>';
+      '</div>' +
+      '<div class="cb-art">' + UI.art(c.art) + '</div></div>';
   }
 
   function stepPeople(n) {
     if (detail() === 'children') return detailScreen(n, 'children');
     if (detail() === 'staff') return detailScreen(n, 'staff');
-    return head(n, 'פרטי הגן שלך', 'אפשר להתחיל עם פרטים בסיסיים ותמיד אפשר לעדכן אחר כך.') +
+    return head(n, 'פרטי הגן', 'רק כמה פרטים כדי שנוכל להתאים את האפליקציה לגן שלכם') +
       '<div class="card">' +
+        '<div class="field gan-name"><label for="wiz-gan-name">שם הגן</label>' +
+          '<div class="input-wrap"><span class="in-ico" aria-hidden="true">🏫</span>' +
+          '<input class="input" id="wiz-gan-name" data-input="wiz-gan" data-key="name" ' +
+            'value="' + UI.esc(Store.state.gan.name) + '" placeholder="גן צבעוני" autocomplete="organization"></div></div>' +
+        '<div class="count-sep"></div>' +
         countBlock('children') +
         '<div class="count-sep"></div>' +
         countBlock('staff') +
+        /* בעיצוב החץ בצד ימין והגלגל בצד שמאל */
         '<button type="button" class="more-card" data-action="wiz-detail" data-kind="children">' +
-          '<span class="mc-ico" aria-hidden="true">⚙️</span>' +
-          '<span class="mc-body"><b>רוצה להוסיף פרטים נוספים?</b>' +
-          '<span class="small muted">שמות ילדים, היררכיית צוות ועוד</span></span>' +
           '<span class="mc-chev" aria-hidden="true">‹</span>' +
+          '<span class="mc-body"><b>רוצים להוסיף פרטים נוספים?</b>' +
+          '<span class="small muted">שמות הילדים, אנשי הצוות והיררכיה<br>אפשר לעשות זאת גם בהמשך</span></span>' +
+          '<span class="mc-ico" aria-hidden="true">⚙️</span>' +
         '</button>' +
       '</div>' +
-      footer(n, 'המשך', { skipLabel: 'דלג על שלב זה עכשיו', note: '⚙️ אפשר לעדכן בכל שלב באפליקציה' });
+      footer(n, 'המשך', { skipLabel: 'דילוג על שלב זה עכשיו' });
   }
 
   /* ---------- מסך הפירוט: ילדים או צוות, מספר בלבד או רשימה ---------- */
@@ -259,7 +236,7 @@ Views.onboarding = (function () {
     return html + footer(n, 'המשך', {
       nextAct: isKids ? 'wiz-detail-next' : 'wiz-next',
       skipAct: isKids ? 'wiz-detail-next' : 'wiz-skip',
-      skipLabel: 'דלג על שלב זה עכשיו'
+      skipLabel: 'דילוג על שלב זה עכשיו'
     });
   }
 
