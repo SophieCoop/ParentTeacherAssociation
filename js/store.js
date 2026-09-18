@@ -122,7 +122,7 @@ var Store = (function () {
     return {
       version: 1,
       setupDone: false,
-      gan: { name: '', address: '', yearLabel: yr.label, contactName: '', phone: '', email: '' },
+      gan: { name: '', yearLabel: yr.label },
       settings: { yearStart: yr.start, yearEnd: yr.end, currency: '₪', roundShare: 10,
                   /* רמת התקציב של כל דרגת צוות, כששונתה מברירת המחדל שב-STAFF_LEVELS */
                   levelWeights: {} },
@@ -460,9 +460,6 @@ var Store = (function () {
 
     s.setupDone = true;
     s.gan.name = 'גן צבעוני';
-    s.gan.address = 'רחוב הגן 12, תל אביב';
-    s.gan.contactName = 'דנה לוי';
-    s.gan.phone = '050-1234567';
 
     // [שם, תאריך לידה, הורה 1, טלפון, הורה 2, טלפון, תאריך הצטרפות]
     var kids = [

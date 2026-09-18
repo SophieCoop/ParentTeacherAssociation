@@ -762,10 +762,13 @@ Views.ideas = (function () {
 
     function lineCardsHTML() {
       return lines.map(function (l, i) {
+        /* שורה גמישה: השם והחישוב באותה שורה כשיש מקום, והשם מקבל את
+           כל הרוחב הפנוי. במסך צר השם עובר לשורה משלו והחישוב מתחתיו. */
         return '<div class="line-card">' +
           '<div class="lc-top">' +
+            '<div class="lc-field lc-name"><span class="lc-lab">מוצר / שירות</span>' +
             '<input class="input" data-ln="label" data-i="' + i + '" placeholder="שם המתנה" ' +
-              'value="' + UI.esc(l.label || '') + '">' +
+              'value="' + UI.esc(l.label || '') + '"></div>' +
             '<button type="button" class="iconbtn del" data-ln-del="' + i + '" ' +
               'aria-label="מחיקת שורה">✕</button>' +
           '</div>' +
@@ -777,9 +780,12 @@ Views.ideas = (function () {
                 'aria-label="כמות">' +
             '</div>' +
             '<span>×</span>' +
-            '<input class="input" data-ln="amount" data-i="' + i + '" type="number" inputmode="decimal" min="0" ' +
-              'placeholder="0" value="' + UI.esc(l.amount === '' || l.amount === undefined ? '' : l.amount) + '" ' +
-              'aria-label="סכום ליחידה">' +
+            '<div class="lc-field">' +
+              '<span class="lc-lab">עלות</span>' +
+              '<input class="input" data-ln="amount" data-i="' + i + '" type="number" inputmode="decimal" min="0" ' +
+                'placeholder="0" value="' + UI.esc(l.amount === '' || l.amount === undefined ? '' : l.amount) + '" ' +
+                'aria-label="עלות ליחידה">' +
+            '</div>' +
             '<span>₪ =</span>' +
             '<b data-ln-sum="' + i + '">' + UI.money(lineSum(l, false)) + '</b>' +
           '</div>' +
@@ -866,6 +872,7 @@ Views.ideas = (function () {
     UI.formModal({
       title: isNew ? 'רעיון חדש' : 'עריכת רעיון',
       subtitle: 'סעיף התקציב, קהל יעד ופירוט ההוצאות',
+      wide: true,   // במסך רחב שורת ההוצאה נכנסת בשורה אחת
       fields: [
         { name: 'title', label: 'שם הרעיון', value: idea.title, required: true,
           placeholder: 'למשל: מתנת סוף שנה — ספר וכוס' },
@@ -874,7 +881,9 @@ Views.ideas = (function () {
           hint: (Store.state.budgetItems || []).length
                   ? 'הרעיון מוצמד לסעיף שתוכנן בתקציב, והחישוב נעשה מולו'
                   : 'עוד לא הוגדרו סעיפי תקציב — אפשר להוסיף בלשונית "תקציב"' },
-        { name: 'audiences', label: 'קהל יעד', type: 'chips', multi: true, value: idea.audiences,
+        /* קהל יעד אחד בלבד: ילדים, צוות או כיבוד. רעיון ישן שנשמר עם כמה
+           קהלים נפתח על הראשון שבהם. */
+        { name: 'audiences', label: 'קהל יעד', type: 'chips', value: (idea.audiences || [])[0] || 'children',
           options: Store.AUDIENCES.map(function (a) {
             return { value: a.id, label: audienceLabel(a.id), icon: a.icon };
           }),
@@ -917,7 +926,9 @@ Views.ideas = (function () {
         var clean = lines.filter(function (l) {
           return (l.label && l.label.trim()) || Calc.num(l.amount) > 0;
         });
-        var forStaff = (v.audiences || []).indexOf('staff') > -1;
+        /* הצ'יפ הבודד מחזיר מחרוזת; הרעיון שומר רשימה כמו תמיד */
+        v.audiences = v.audiences ? [v.audiences] : ['children'];
+        var forStaff = v.audiences.indexOf('staff') > -1;
         clean = clean.map(function (l) {
           var out = { id: l.id, label: l.label,
                       qty: (l.qty === '' || l.qty === undefined) ? 1 : Calc.num(l.qty),

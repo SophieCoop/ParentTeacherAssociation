@@ -882,11 +882,17 @@ table.tbl tr td:first-child{font-weight:600}
 .idea-total .donut .hole b{font-size:15px}
 .idea-total .donut .hole small{font-size:9px;line-height:1.2;display:block;max-width:54px}
 
-.line-card{background:#FAF8FD;border-radius:14px;padding:10px 12px;margin-bottom:8px}
-.line-card .lc-top{display:flex;align-items:center;gap:6px}
-.line-card .lc-top .input{flex:1;min-width:0;padding:8px 10px;font-size:13px}
-.line-card .lc-top .iconbtn{width:26px;height:26px;font-size:12px;flex:none}
-.line-card .lc-calc{display:flex;align-items:flex-end;gap:6px;margin-top:8px}
+/* כרטיס שורת הוצאה על כל רוחב המסך. השם והחישוב יושבים באותה שורה
+   כשיש מקום, והשם מקבל את כל הרוחב הפנוי; במסך צר השם נשבר לשורה
+   משלו והחישוב נפרש מתחתיו על כל הרוחב. */
+.line-card{background:#FAF8FD;border-radius:14px;padding:10px 12px;margin-bottom:8px;display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 12px}
+.line-card .lc-top{display:flex;align-items:flex-end;gap:6px;flex:999 1 180px;min-width:0}
+.line-card .lc-field.lc-name{flex:1 1 auto;min-width:0}
+.line-card .lc-name .lc-lab{text-align:start;padding-inline-start:2px}
+.line-card .lc-top .input{width:100%;min-width:0;padding:8px 10px;font-size:13px}
+.line-card .lc-top .iconbtn{width:26px;height:26px;font-size:12px;flex:none;margin-bottom:5px}
+/* החישוב גדל רק כשהוא לבד בשורה; לצד השם — השם לוקח את הרוחב הפנוי */
+.line-card .lc-calc{display:flex;align-items:flex-end;gap:6px;flex:1 0 auto}
 .line-card .lc-calc .input{width:64px;flex:none;padding:7px 8px;font-size:13px;text-align:center}
 .line-card .lc-calc .input[data-ln="amount"]{width:86px;text-align:end;font-weight:700}
 .line-card .lc-calc span{font-size:12px;color:var(--muted)}
@@ -1119,6 +1125,9 @@ table.tbl tr td:first-child{font-weight:600}
   .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
   .modal-back{align-items:center}
   .modal{border-radius:26px;max-height:86vh}
+  .modal.modal-wide{max-width:680px}
+  .line-card .lc-calc .input{width:72px}
+  .line-card .lc-calc .input[data-ln="amount"]{width:96px}
 }
 @media (max-width:899px){
   .cols > *{min-width:0}

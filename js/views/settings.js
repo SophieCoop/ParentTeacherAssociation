@@ -24,16 +24,9 @@ Views.settings = (function () {
       '<div class="card-title"><h2>פרטי הגן</h2></div>' +
       '<div class="field"><label>שם הגן</label>' +
         '<input class="input" data-change="set-gan" data-key="name" value="' + UI.esc(st.gan.name) + '" placeholder="גן צבעוני"></div>' +
-      '<div class="field"><label>כתובת</label>' +
-        '<input class="input" data-change="set-gan" data-key="address" value="' + UI.esc(st.gan.address) + '"></div>' +
-      '<div class="field"><label>שנת לימודים</label>' +
+      '<div class="field mb0"><label>שנת לימודים</label>' +
         '<input class="input" data-change="set-gan" data-key="yearLabel" value="' + UI.esc(st.gan.yearLabel) + '"></div>' +
-      '<div class="grid-2">' +
-        '<div class="field mb0"><label>איש קשר</label>' +
-          '<input class="input" data-change="set-gan" data-key="contactName" value="' + UI.esc(st.gan.contactName) + '"></div>' +
-        '<div class="field mb0"><label>טלפון</label>' +
-          '<input class="input" type="tel" data-change="set-gan" data-key="phone" value="' + UI.esc(st.gan.phone) + '"></div>' +
-      '</div></div>';
+      '</div>';
 
     html += '<div class="card">' +
       '<div class="card-title"><h2>שנת הלימודים</h2></div>' +
