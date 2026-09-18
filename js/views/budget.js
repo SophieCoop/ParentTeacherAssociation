@@ -25,8 +25,8 @@ Views.budget = (function () {
       '<div class="card-title"><h2>כמות הילדים בגן</h2>' +
       '<button class="btn sm soft" data-action="nav" data-view="children">ניהול הרשימה</button></div>' +
       '<div class="flex-between">' +
-        '<div><div class="sum-value">' + st.children.length + '</div>' +
-        '<div class="small muted">ילדים רשומים</div></div>' +
+        '<div><div class="sum-value">' + Calc.childCount(st) + '</div>' +
+        '<div class="small muted">' + (st.children.length ? 'ילדים רשומים' : 'ילדים לפי המספר שהוזן') + '</div></div>' +
         '<div class="flex" style="gap:6px">' +
           '<span class="badge ok">' + full + ' מלא</span>' +
           (partial ? '<span class="badge warn">' + partial + ' יחסי</span>' : '') +
@@ -39,8 +39,8 @@ Views.budget = (function () {
       '<div class="card-title"><h2>צוות הגן <span class="sub">אופציונלי</span></h2>' +
       '<button class="btn sm soft" data-action="nav" data-view="staff">ניהול הצוות</button></div>' +
       '<div class="flex-between">' +
-        '<div><div class="sum-value">' + st.staff.length + '</div>' +
-        '<div class="small muted">אנשי צוות</div></div>' +
+        '<div><div class="sum-value">' + Calc.staffCount(st) + '</div>' +
+        '<div class="small muted">' + (st.staff.length ? 'אנשי צוות' : 'אנשי צוות לפי המספר שהוזן') + '</div></div>' +
       '</div>' +
       (st.staff.length ? '<div class="flex wrap mt" style="gap:6px">' +
         Store.STAFF_LEVELS.filter(function (l) { return levels[l.id]; }).map(function (l) {

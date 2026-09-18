@@ -9,8 +9,8 @@ Views.ideas = (function () {
   /* כמה נפשות יש בכל קהל יעד — מוצג בסוגריים כדי שהחישוב יהיה גלוי.
      "כיבוד" אינו נספר לפי נפש ולכן אינו מקבל מספר. */
   function audienceSize(id) {
-    if (id === 'children') return (Store.state.children || []).length;
-    if (id === 'staff')    return (Store.state.staff || []).length;
+    if (id === 'children') return Calc.childCount(Store.state);
+    if (id === 'staff')    return Calc.staffCount(Store.state);
     return null;
   }
 

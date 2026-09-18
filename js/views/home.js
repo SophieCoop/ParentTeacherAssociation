@@ -44,8 +44,8 @@ Views.home = (function () {
       tile('collection', 't-green', 'collection', 'גבייה', col.pct + '% נגבו') +
       tile('expenses', 't-yellow', 'expenses', 'הוצאות', money(ov.spent)) +
       tile('ideas', 't-purple', 'ideas', 'רעיונות', (st.ideas.length || 0) + ' רעיונות') +
-      tile('children', 't-blue', 'children', 'ילדי הגן', st.children.length + ' ילדים') +
-      tile('staff', 't-mint', 'staff', 'צוות הגן', st.staff.length + ' אנשי צוות') +
+      tile('children', 't-blue', 'children', 'ילדי הגן', Calc.childCount(st) + ' ילדים') +
+      tile('staff', 't-mint', 'staff', 'צוות הגן', Calc.staffCount(st) + ' אנשי צוות') +
       tile('dates', 't-peach', 'dates', 'תאריכים', up.length ? UI.relativeDays(up[0].next) : 'אין אירועים') +
       tile('yearend', 't-pink', 'yearend', 'סוף שנה', 'חישוב החזרים') +
       '</div>';

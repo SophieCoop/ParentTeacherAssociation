@@ -125,7 +125,10 @@ var Store = (function () {
       gan: { name: '', address: '', yearLabel: yr.label, contactName: '', phone: '', email: '' },
       settings: { yearStart: yr.start, yearEnd: yr.end, currency: '₪', roundShare: 10,
                   /* רמת התקציב של כל דרגת צוות, כששונתה מברירת המחדל שב-STAFF_LEVELS */
-                  levelWeights: {} },
+                  levelWeights: {},
+                  /* מספר הילדים ואנשי הצוות כשעדיין אין רשימה שמית — מההקמה המהירה.
+                     ברגע שיש רשימה ארוכה יותר, הרשימה קובעת. */
+                  childrenCount: 0, staffCount: 0 },
       children: [],
       staff: [],
       /* קטגוריות צוות נוספות שהוגדרו ידנית, לצד הדרגות הקבועות */
@@ -300,6 +303,10 @@ var Store = (function () {
     data.gan = Object.assign({}, base.gan, data.gan || {});
     data.settings = Object.assign({}, base.settings, data.settings || {});
     migrateLevelWeights(data.settings);
+    ['childrenCount', 'staffCount'].forEach(function (k) {
+      var v = Math.round(Number(data.settings[k]));
+      data.settings[k] = isFinite(v) ? Math.max(0, Math.min(999, v)) : 0;
+    });
     data.staffLevels = migrateStaffLevels(data.staffLevels);
     if (!Array.isArray(data.categories) || !data.categories.length) data.categories = base.categories;
     else migrateCategories(data.categories);
