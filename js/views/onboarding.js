@@ -151,8 +151,9 @@ Views.onboarding = (function () {
      ------------------------------------------------------------
      ההקמה מבקשת רק כמה ילדים וכמה אנשי צוות יש. מי שרוצה יכול
      להיכנס למסך הפירוט ולהוסיף שמות — אבל זה לא חובה, והרשימות
-     נשארות זמינות בכל עת באפליקציה. המספר נשמר בהגדרות ומשמש את
-     התקציב עד שיש רשימה שמית ארוכה ממנו (ראו Calc.childCount).
+     נשארות זמינות בכל עת באפליקציה. לפי המספר נוצרות מיד רשומות עם
+     שמות זמניים ("ילד 1"), כדי שהתקציב והגבייה יעבדו בלי להמתין לשמות
+     (ראו Store.setHeadcount).
      ============================================================ */
 
   /* איזה מסך פירוט פתוח בתוך השלב: '' (המסך הראשי), 'children' או 'staff' */
@@ -161,36 +162,35 @@ Views.onboarding = (function () {
   function detailTab(kind) {
     var saved = App.vs('wizTab_' + kind, '');
     if (saved) return saved;
-    return (kind === 'children' ? Store.state.children : Store.state.staff).length ? 'list' : 'count';
+    return namedCount(kind) ? 'list' : 'count';
   }
+  /* כמה רשומות עם שם אמיתי יש — מתחת לזה הסטפר לא יורד */
+  function namedCount(kind) { return Store.headcountFloor(kind); }
 
   function COUNTS() {
     return {
-      children: { key: 'childrenCount', art: 'children', q: 'כמה ילדים יש בגן?',
+      children: { art: 'children', q: 'כמה ילדים יש בגן?',
                   sub: 'רק מספר, בלי שמות (ניתן לעדכן בהמשך)', list: Store.state.children },
-      staff:    { key: 'staffCount', art: 'staff', q: 'כמה אנשי צוות בגן?',
+      staff:    { art: 'staff', q: 'כמה אנשי צוות בגן?',
                   sub: 'רק מספר, בלי פירוט (ניתן לעדכן בהמשך)', list: Store.state.staff }
     };
   }
 
-  /* המספר שמוצג: מה שהוזן, ואם הרשימה השמית ארוכה יותר — אורכה */
-  function countOf(kind) {
-    var c = COUNTS()[kind];
-    return Math.max(c.list.length, Calc.num(Store.state.settings[c.key]));
-  }
+  /* המספר שמוצג הוא אורך הרשימה — כולל הרשומות הזמניות */
+  function countOf(kind) { return COUNTS()[kind].list.length; }
 
   function stepper(kind) {
     var c = COUNTS()[kind];
     var v = countOf(kind);
-    var locked = c.list.length > 0;
+    var floor = namedCount(kind);
     return '<div class="stepper" data-stepper="' + kind + '">' +
       '<button type="button" class="st-btn" data-action="wiz-count-step" data-kind="' + kind + '" data-d="-1" ' +
-        'aria-label="פחות אחד"' + (v <= c.list.length ? ' disabled' : '') + '>−</button>' +
-      '<input class="st-val" type="number" inputmode="numeric" min="' + c.list.length + '" max="999" ' +
+        'aria-label="פחות אחד"' + (v <= floor ? ' disabled' : '') + '>−</button>' +
+      '<input class="st-val" type="number" inputmode="numeric" min="' + floor + '" max="999" ' +
         'value="' + v + '" data-input="wiz-count" data-kind="' + kind + '" aria-label="' + UI.esc(c.q) + '">' +
       '<button type="button" class="st-btn" data-action="wiz-count-step" data-kind="' + kind + '" data-d="1" aria-label="עוד אחד">+</button>' +
       '</div>' +
-      (locked ? '<div class="hint">ברשימה יש כבר ' + c.list.length + ' שמות, ולכן המספר לא יורד מתחת לזה.</div>' : '');
+      (floor ? '<div class="hint">ברשימה יש כבר ' + (floor === 1 ? 'שם אחד' : floor + ' שמות') + ', ולכן המספר לא יורד מתחת לזה.</div>' : '');
   }
 
   function countBlock(kind) {
@@ -266,7 +266,8 @@ Views.onboarding = (function () {
   function detailRow(kind, x) {
     var isKids = kind === 'children';
     var lv = isKids ? null : Store.staffLevel(x.level);
-    var sub = isKids
+    var sub = Store.isPlaceholder(x) ? 'שם זמני — אפשר לערוך'
+      : isKids
       ? [x.parents && x.parents[0] && x.parents[0].name ? 'הורה: ' + x.parents[0].name : '',
          x.birthDate ? UI.ageText(x.birthDate) : ''].filter(Boolean).join(' · ') || 'ללא פרטים נוספים'
       : (x.role || lv.name);
@@ -280,13 +281,7 @@ Views.onboarding = (function () {
       '</div>';
   }
 
-  function setCount(kind, value) {
-    var c = COUNTS()[kind];
-    var v = Math.round(Calc.num(value));
-    if (!isFinite(v)) v = 0;
-    Store.state.settings[c.key] = Math.max(c.list.length, Math.min(999, v));
-    Store.save();
-  }
+  function setCount(kind, value) { Store.setHeadcount(kind, value); }
 
   /* ---------- תכנון תקציב (השלב האחרון) ---------- */
   function stepBudget(n) {
