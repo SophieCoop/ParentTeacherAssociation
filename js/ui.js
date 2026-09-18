@@ -117,7 +117,7 @@ var UI = (function () {
     var back = document.createElement('div');
     back.className = 'modal-back';
     back.innerHTML =
-      '<div class="modal" role="dialog" aria-modal="true">' +
+      '<div class="modal' + (opts.wide ? ' modal-wide' : '') + '" role="dialog" aria-modal="true">' +
         '<div class="grab"></div>' +
         '<button type="button" class="modal-close" aria-label="סגירה ללא שמירה">✕</button>' +
         (opts.title ? '<h3>' + esc(opts.title) + '</h3>' : '') +
@@ -248,7 +248,7 @@ var UI = (function () {
       '</div></form>';
 
     var m = modal({
-      title: opts.title, subtitle: opts.subtitle, body: body,
+      title: opts.title, subtitle: opts.subtitle, body: body, wide: opts.wide,
       onMount: function (root, close) {
         var form = root.querySelector('.js-form');
 
