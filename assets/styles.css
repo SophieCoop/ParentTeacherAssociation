@@ -763,8 +763,8 @@ table.tbl tr td:first-child{font-weight:600}
   padding:0 9px 7px;white-space:nowrap;
 }
 .line-tbl th.end{text-align:end}
-/* "למי?" ו"מחיר לאדם" ממורכזים מעל התיבות שלהם, והמחיר ממורכז בתיבה כמו הכותרת */
-.line-tbl th:nth-child(2),.line-tbl th:nth-child(3){text-align:center;padding-inline:2px}
+/* כל הכותרות ממורכזות מעל התיבות שלהן, והמחיר ממורכז בתיבה כמו הכותרת */
+.line-tbl th:nth-child(1),.line-tbl th:nth-child(2),.line-tbl th:nth-child(3){text-align:center;padding-inline:2px}
 .line-tbl td:nth-child(3) .input.end{text-align:center}
 /* כל הפקדים בשורה מתחילים באותו גובה. שורת ההמלצה שמתחת לשדה המחיר
    מגביהה את התא, ובמרכוז אנכי היא הייתה מרימה את השדה עצמו ומוציאה
@@ -778,9 +778,10 @@ table.tbl tr td:first-child{font-weight:600}
 /* שם המוצר, "למי?" והמחיר הם שלושה שדות של אותה שורה, ולכן אותו עיגול פינות */
 .line-tbl .input,.line-tbl .who-btn{border-radius:14px}
 .line-tbl .input.end{text-align:end;font-weight:700}
-.line-tbl td:nth-child(1){width:28%}
-.line-tbl td:nth-child(2){width:36%}
-.line-tbl td:nth-child(3){width:18%}
+/* שם המוצר מקבל את כל מה שנשאר; הסה״כ צר כמו המספר שבו */
+.line-tbl td:nth-child(2){width:30%}
+.line-tbl td:nth-child(3){width:15%}
+.line-tbl td:nth-child(4){width:1%}
 /* חצי המספר גוזלים רוחב יקר בטבלה צרה */
 .line-tbl .input[type=number]{-moz-appearance:textfield;appearance:textfield}
 .line-tbl .input[type=number]::-webkit-outer-spin-button,
@@ -1189,10 +1190,10 @@ table.tbl tr td:first-child{font-weight:600}
      "למי?" מקבל את הרוחב הגדול ביותר: שם דרגה נחתך מהר יותר משם מוצר. */
   /* שם המוצר הוא הטקסט הארוך ביותר בשורה, ולכן הוא מקבל את הנתח
      הגדול. שדה המחיר מחזיק שלוש ספרות ודי לו במעט. */
-  .line-tbl th:nth-child(1){width:34%}
-  .line-tbl th:nth-child(2){width:26%}
-  .line-tbl th:nth-child(3){width:21%}
-  .line-tbl th:nth-child(4){width:19%}
+  .line-tbl th:nth-child(1){width:42%}
+  .line-tbl th:nth-child(2){width:25%}
+  .line-tbl th:nth-child(3){width:18%}
+  .line-tbl th:nth-child(4){width:15%}
   .line-tbl th:last-child{width:24px}
   .line-tbl td:nth-child(4){font-size:12px}
 
