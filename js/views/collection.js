@@ -420,7 +420,10 @@ Views.collection = (function () {
       '</div></div></div>';
   }
 
-  /* ---------- הוספה ידנית לצד ייבוא מקובץ ---------- */
+  /* ---------- הוספה ידנית לצד ייבוא מקובץ ----------
+     הייבוא מקובץ (PayBox / Excel) מוסתר בינתיים מהמסך; הלוגיקה נשארת
+     (importModal, PayImport) ומופעלת שוב על ידי הפיכת הדגל ל-true. */
+  var IMPORT_ENABLED = false;
   function payActions(tab) {
     var html = '<div class="pay-actions">' +
       '<button class="btn add-btn manual" data-action="pay-add" aria-label="הוספת תשלום ידנית">' +
@@ -667,9 +670,11 @@ Views.collection = (function () {
       '<button data-action="col-tab" data-tab="payments" class="' + (tab === 'payments' ? 'on' : '') + '">תשלומים</button>' +
       '<button data-action="col-tab" data-tab="list" class="' + (tab === 'list' ? 'on' : '') + '">רשימה</button>' +
       '</div>';
-    html += Store.state.children.length
-      ? payActions(tab)
-      : UI.addBtn({ act: 'nav', label: 'הוספת ילדים', cls: 'mb-add', data: { view: 'children' } });
+    html += !Store.state.children.length
+      ? UI.addBtn({ act: 'nav', label: 'הוספת ילדים', cls: 'mb-add', data: { view: 'children' } })
+      : IMPORT_ENABLED
+        ? payActions(tab)
+        : UI.addBtn({ act: 'pay-add', label: 'הוספת תשלום', cls: 'mb-add' });
     if (tab === 'calc') html += tabCalc();
     else if (tab === 'payments') html += tabPayments();
     else html += tabList();
