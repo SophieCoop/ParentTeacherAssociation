@@ -119,7 +119,7 @@ Views.budget = (function () {
       '</div>';
   }
 
-  /* ניהול הקטגוריות — יושב בלשונית הקטגוריות, גם כשעוד אין סעיפים */
+  /* ניהול הקטגוריות — יושב בלשונית התכנון, גם כשעוד אין סעיפים */
   function categoryManager(st) {
     return '<div class="section-title"><span>ניהול קטגוריות</span>' +
       UI.addBtn({ act: 'cat-add', label: 'הוספת קטגוריה', cls: 'soft sm' }) + '</div>' +
@@ -266,7 +266,7 @@ Views.budget = (function () {
 
     html += '<div class="segment">' +
       seg('settings', 'הגדרות', tab) +
-      seg('items', 'קטגוריות', tab) +
+      seg('items', 'תכנון', tab) +
       seg('summary', 'סיכום', tab) +
       '</div>';
 
