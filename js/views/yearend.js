@@ -105,9 +105,9 @@ Views.yearend = (function () {
     html += '<div class="card mt"><div class="card-title"><h2>איך זה מחושב?</h2></div>' +
       '<ol class="small muted" style="padding-inline-start:18px;margin:0;line-height:1.9">' +
       '<li>סוכמים את כל ההוצאות בפועל: <b>' + UI.money(rf.spent) + '</b>.</li>' +
-      '<li>כל הוצאה מתחלקת בין הילדים שכבר היו בגן <b>בתאריך שלה</b>. ' +
+      '<li>כל הוצאה מתחלקת בין הילדים שכבר היו ' + Lang.t('placeIn') + ' <b>בתאריך שלה</b>. ' +
       'ילד שהצטרף אחרי אותה הוצאה אינו משתתף בה כלל.</li>' +
-      '<li>ילד שהיה בגן כל השנה יוצא <b>' + UI.money(rf.costPerUnit) + '</b>.</li>' +
+      '<li>' + Lang.t('wasAllYear') + ' יוצא <b>' + UI.money(rf.costPerUnit) + '</b>.</li>' +
       '<li>לכל הורה מסכמים את חלקו בהוצאות שהיה נוכח בהן, ומחסרים ממה ששילם בפועל.</li>' +
       '<li>מי ששילם יותר מחלקו — מקבל החזר. מי ששילם פחות — משלים את ההפרש.</li>' +
       '</ol>' +
@@ -157,7 +157,7 @@ Views.yearend = (function () {
         if (!row) return;
         var parent = row.child.parents && row.child.parents[0] ? row.child.parents[0] : null;
         var text = 'היי' + (parent ? ' ' + parent.name : '') + ',\n' +
-          'סיכום סוף שנה בוועד ההורים של ' + (st.gan.name || 'הגן') + ':\n\n' +
+          'סיכום סוף שנה בוועד ההורים של ' + (st.gan.name || Lang.t('placeThe')) + ':\n\n' +
           'שילמתם: ' + UI.money(row.paid) + '\n' +
           'חלקכם בהוצאות בפועל: ' + UI.money(row.fairCost) +
           (row.percent < 100 ? ' (מותאם לתאריך ההצטרפות)' : '') + '\n' +

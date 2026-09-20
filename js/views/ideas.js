@@ -214,7 +214,7 @@ Views.ideas = (function () {
       }).join('') + '</div>';
       html += '<div class="small muted center" style="margin-top:8px">' +
         (split.heads > 0 ? split.heads + ' נפשות · ' + UI.money(split.perHead) + ' ' + perHeadLabel(idea)
-                         : 'הוצאה כללית לגן') +
+                         : Lang.t('generalExpense')) +
         ' · ' + UI.money(split.perParent) + ' לכל הורה</div>';
     }
 
@@ -429,7 +429,7 @@ Views.ideas = (function () {
       if (!mix.length) {
         return '<div class="note"><div class="n-ico">\ud83d\udc65</div><div>' +
           '<b>עוד לא נוספו אנשי צוות</b>' +
-          'אפשר להוסיף אותם בלשונית "צוות הגן", ואז הכמויות יתמלאו כאן מעצמן.' +
+          'אפשר להוסיף אותם בלשונית "' + Lang.t('staffTeam') + '", ואז הכמויות יתמלאו כאן מעצמן.' +
           '</div></div>';
       }
 
@@ -437,7 +437,7 @@ Views.ideas = (function () {
 
       return '<div class="staff-mix">' +
         '<div class="sm-head">' +
-          '<b>\ud83d\udc65 הרכב צוות הגן</b>' +
+          '<b>\ud83d\udc65 ' + Lang.t('staffComposition') + '</b>' +
           '<span class="sm-total">סה״כ ' + total + ' אנשי צוות</span>' +
         '</div>' +
         /* עמודה לכל דרגה, כך שכולן בשורה אחת ואין דרגה שנופלת לשורה משלה */
@@ -613,7 +613,7 @@ Views.ideas = (function () {
 
             if (!html) {
               html = '<p class="small muted" style="text-align:center;margin:18px 0">' +
-                (query ? 'אין תוצאות לחיפוש.' : 'עוד לא נוספו אנשי צוות בלשונית "צוות הגן".') + '</p>';
+                (query ? 'אין תוצאות לחיפוש.' : 'עוד לא נוספו אנשי צוות בלשונית "' + Lang.t('staffTeam') + '".') + '</p>';
             }
             list.innerHTML = html;
             wireList();
@@ -705,7 +705,7 @@ Views.ideas = (function () {
     function addNameModal(onAdd) {
       UI.formModal({
         title: 'הוספת שם חופשי',
-        subtitle: 'שם של מי שאינו ברשימת הצוות — למשל גננת מחליפה או ספק חיצוני',
+        subtitle: 'שם של מי שאינו ברשימת הצוות — למשל ' + Lang.t('leadSubstitute') + ' או ספק חיצוני',
         submitLabel: 'הוסף',
         fields: [{ name: 'pname', label: 'שם', value: '', required: true,
                    placeholder: 'הקלידו שם…' }],

@@ -342,8 +342,7 @@ Views.account = (function () {
          מכשיר עושה זאת מ"מחיקת כל הנתונים" שבהגדרות. */
       'acc-signout': function () {
         UI.confirmBox('להתנתק?',
-          'הגן נשמר במכשיר תחת החשבון שלכם ויחזור בהתחברות מחדש. עד אז המכשיר פנוי ' +
-          'להקמת גן חדש או לחשבון אחר.',
+          Lang.t('parkedOnDevice') + ' ' + Lang.t('freeForNew'),
           function () {
             Cloud.signOut();
             App.render();

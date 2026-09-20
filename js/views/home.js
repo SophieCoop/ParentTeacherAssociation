@@ -10,7 +10,7 @@ Views.home = (function () {
     var ov = Calc.overview(st);
     var col = Calc.collectionSummary(st);
     var up = Calc.upcoming(st, 4);
-    var name = st.gan.name || 'הגן שלנו';
+    var name = st.gan.name || Lang.t('placeOurs');
 
     var html = '';
 
@@ -26,8 +26,8 @@ Views.home = (function () {
     /* ההקמה נעצרה באמצע — מזכירים אותה כל עוד נשאר שלב לחזור אליו */
     if (!st.setupDone || App.savedWizStep()) {
       html += '<div class="note"><div class="n-ico">🌱</div><div>' +
-        '<b>ההקמה של הגן לא הושלמה</b>' +
-        'ההקמה ממתינה מהשלב שבו עצרת — פרטי הגן, ילדים, צוות ותקציב. ' +
+        '<b>' + Lang.t('setupIncomplete') + '</b>' +
+        'ההקמה ממתינה מהשלב שבו עצרת — פרטי הוועד, ילדים, צוות ותקציב. ' +
         'אם הנתונים כבר קיימים במכשיר אחר, ודאו שהוא מחובר ומסונכרן.' +
         '<div class="btn-row mt">' +
           '<button class="btn ghost" data-action="acc-sync">🔄 סנכרון עכשיו</button>' +
@@ -44,8 +44,8 @@ Views.home = (function () {
       tile('collection', 't-green', 'collection', 'גבייה', col.pct + '% נגבו') +
       tile('expenses', 't-yellow', 'expenses', 'הוצאות', money(ov.spent)) +
       tile('ideas', 't-purple', 'ideas', 'רעיונות', (st.ideas.length || 0) + ' רעיונות') +
-      tile('children', 't-blue', 'children', 'ילדי הגן', Calc.childCount(st) + ' ילדים') +
-      tile('staff', 't-mint', 'staff', 'צוות הגן', Calc.staffCount(st) + ' אנשי צוות') +
+      tile('children', 't-blue', 'children', Lang.t('childrenOf'), Calc.childCount(st) + ' ילדים') +
+      tile('staff', 't-mint', 'staff', Lang.t('staffTeam'), Calc.staffCount(st) + ' אנשי צוות') +
       tile('dates', 't-peach', 'dates', 'תאריכים', up.length ? UI.relativeDays(up[0].next) : 'אין אירועים') +
       tile('yearend', 't-pink', 'yearend', 'סוף שנה', 'חישוב החזרים') +
       '</div>';

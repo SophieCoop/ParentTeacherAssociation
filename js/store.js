@@ -102,8 +102,69 @@ var Store = (function () {
       return true;
     });
   }
+  /* ---------- סוג הוועד: גן או כיתה ----------
+     המזהים של הדרגות קבועים ואין לשנותם — רשומות צוות קיימות מפנות
+     אליהם. מה שמתחלף הוא רק השם המוצג. */
+  var CLASS_LEVEL_NAMES = {
+    lead: { name: 'מורה', plural: 'מורות' }
+  };
+
+  function kind() {
+    return (state && state.gan && state.gan.kind === 'class') ? 'class' : 'gan';
+  }
+
+  function localizeLevel(lv) {
+    var o = (kind() === 'class') && CLASS_LEVEL_NAMES[lv.id];
+    return o ? Object.assign({}, lv, o) : lv;
+  }
+
+  function builtinLevels() { return STAFF_LEVELS.map(localizeLevel); }
+
+  /* שם הדרגה כפי שהוא מוצג כרגע — משמש גם לשמות הזמניים */
+  function levelName(id) {
+    var lv = builtinLevels().filter(function (l) { return l.id === id; })[0];
+    return lv ? lv.name : id;
+  }
+
   function allLevels() {
-    return STAFF_LEVELS.concat((state && state.staffLevels) || []);
+    return builtinLevels().concat((state && state.staffLevels) || []);
+  }
+
+  /* הצעות לשדה התפקיד, לפי סוג הוועד */
+  var CLASS_STAFF_ROLES = [
+    'מחנכת', 'מורה', 'סייעת', 'מורה מקצועית', 'אב/אם בית',
+    'מטפל/ת פרא-רפואי', 'קלינאי/ת תקשורת', 'מרפא/ה בעיסוק', 'פיזיותרפיסט/ית',
+    'צוות צהרון', 'מורה לחוג', 'מתנדב/ת'
+  ];
+  function staffRoles() { return kind() === 'class' ? CLASS_STAFF_ROLES : STAFF_ROLES; }
+
+  /* שינוי סוג הוועד. רשומות הצוות הזמניות נושאות את שם הדרגה
+     ("גננת"), ולכן הן מתעדכנות יחד איתו — אחרת ועד כיתה היה נשאר עם
+     גננת ברשימה. רשומה עם שם אמיתי אינה נוגעת. */
+  function setKind(next) {
+    next = (next === 'class') ? 'class' : 'gan';
+    var prev = kind();
+    if (!state.gan) state.gan = {};
+    if (prev === next) { state.gan.kind = next; return next; }
+
+    var from = prev === 'class' ? CLASS_LEVEL_NAMES : null;
+    state.gan.kind = next;
+    var to = next === 'class' ? CLASS_LEVEL_NAMES : null;
+
+    Object.keys(CLASS_LEVEL_NAMES).forEach(function (id) {
+      var base = STAFF_LEVELS.filter(function (l) { return l.id === id; })[0];
+      if (!base) return;
+      var was = (from && from[id] && from[id].name) || base.name;
+      var now = (to && to[id] && to[id].name) || base.name;
+      if (was === now) return;
+      (state.staff || []).forEach(function (t) {
+        if (!t.placeholder || t.level !== id) return;
+        if (t.name === was) t.name = now;
+        if (t.role === was) t.role = now;
+      });
+    });
+    save();
+    return next;
   }
 
   /* ---------- שנת לימודים ברירת מחדל ---------- */
@@ -122,7 +183,9 @@ var Store = (function () {
     return {
       version: 1,
       setupDone: false,
-      gan: { name: '', yearLabel: yr.label },
+      /* kind — סוג הוועד: 'gan' (ועד גן) או 'class' (ועד כיתה).
+         קובע את השפה בכל האפליקציה, ראו js/lang.js */
+      gan: { name: '', kind: 'gan', yearLabel: yr.label },
       settings: { yearStart: yr.start, yearEnd: yr.end, currency: '₪', roundShare: 10,
                   /* רמת התקציב של כל דרגת צוות, כששונתה מברירת המחדל שב-STAFF_LEVELS */
                   levelWeights: {} },
@@ -298,6 +361,8 @@ var Store = (function () {
     });
     // שמירה על מבנה אובייקטים מקוננים
     data.gan = Object.assign({}, base.gan, data.gan || {});
+    /* נתונים שנשמרו לפני שנוספה הבחירה הם של ועד גן — כך הם נראו */
+    if (data.gan.kind !== 'class') data.gan.kind = 'gan';
     data.settings = Object.assign({}, base.settings, data.settings || {});
     migrateLevelWeights(data.settings);
     data.staffLevels = migrateStaffLevels(data.staffLevels);
@@ -418,8 +483,8 @@ var Store = (function () {
   function placeholderStaff(items, used) {
     function has(level) { return items.some(function (t) { return t.level === level; }); }
     var level, nm;
-    if (!has('lead')) { level = 'lead'; nm = 'גננת'; }
-    else if (!has('manager')) { level = 'manager'; nm = 'מנהלת'; }
+    if (!has('lead')) { level = 'lead'; nm = levelName('lead'); }
+    else if (!has('manager')) { level = 'manager'; nm = levelName('manager'); }
     else {
       level = 'assistant';
       for (var k = 1; ; k++) { nm = 'סייעת ' + k; if (!used[nm]) break; }
@@ -571,8 +636,9 @@ var Store = (function () {
     AUDIENCES: AUDIENCES,
     /* הדרגות הקבועות ואחריהן הקטגוריות שהוסיפו ידנית */
     get STAFF_LEVELS() { return allLevels(); },
-    BUILTIN_STAFF_LEVELS: STAFF_LEVELS,
-    STAFF_ROLES: STAFF_ROLES,
+    get BUILTIN_STAFF_LEVELS() { return builtinLevels(); },
+    get STAFF_ROLES() { return staffRoles(); },
+    kind: kind, setKind: setKind,
     LEVEL_TONES: LEVEL_TONES,
     LEVEL_ICONS: LEVEL_ICONS,
     addStaffLevel: function (obj) {

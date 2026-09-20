@@ -48,7 +48,7 @@ var Tour = (function () {
               'בכניסה הראשונה לשם יחכה סיור קצר על הרעיון עצמו.' },
 
       { view: 'home', target: ['.tile[data-view="children"]', '.tile[data-view="staff"]'],
-        title: 'ילדי הגן והצוות',
+        title: Lang.t('childrenOf') + ' והצוות',
         text: 'הרשימות שמזינות את כל השאר: מספר הילדים קובע את הגבייה, והצוות קובע את חישובי המתנות.' },
       { view: 'home', target: ['.tile[data-view="dates"]', '.tile[data-view="yearend"]'],
         title: 'תאריכים וסוף שנה',
@@ -92,13 +92,13 @@ var Tour = (function () {
         text: 'למי המתנה — ילדים, צוות או כיבוד. הבחירה קובעת לפי כמה אנשים מחושבת העלות.' },
 
       { view: 'ideas', modals: form, target: '.staff-mix', soft: true,
-        title: 'הרכב צוות הגן',
+        title: Lang.t('staffComposition'),
         text: 'כמה אנשים בכל דרגה, ומה הסכום המומלץ לכל אחד מהם. הפס שמעל הסכום מתמלא לפי שורות ההוצאה שיועדו לאותה דרגה.' },
 
       { view: 'ideas', modals: form, target: '#f-lines',
         title: 'שורות ההוצאה',
         text: 'כל פריט בשורה משלו: מה קונים, למי בצוות, וכמה זה עולה לאדם.' +
-              (demo ? ' בדוגמה — שי לגננת ומזכרת לסייעות.' : '') },
+              (demo ? ' בדוגמה — שי ל' + Lang.t('lead') + ' ומזכרת לסייעות.' : '') },
 
       { view: 'ideas', modals: picker, target: '.pk-list', soft: true,
         title: 'בחירת אנשי הצוות',

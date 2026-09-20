@@ -1,5 +1,5 @@
 /* ============================================================
-   תכנון תקציב — הגדרות הגן, סעיפי הוצאה מתוכננים וסיכום
+   תכנון תקציב — הגדרות הוועד, סעיפי הוצאה מתוכננים וסיכום
    ============================================================ */
 var Views = (typeof Views === 'undefined') ? {} : Views;
 
@@ -22,7 +22,7 @@ Views.budget = (function () {
     var html = '';
 
     html += '<div class="card">' +
-      '<div class="card-title"><h2>כמות הילדים בגן</h2>' +
+      '<div class="card-title"><h2>' + Lang.t('childrenCount') + '</h2>' +
       '<button class="btn sm soft" data-action="nav" data-view="children">ניהול הרשימה</button></div>' +
       '<div class="flex-between">' +
         '<div><div class="sum-value">' + Calc.childCount(st) + '</div>' +
@@ -36,7 +36,7 @@ Views.budget = (function () {
       '</div>';
 
     html += '<div class="card">' +
-      '<div class="card-title"><h2>צוות הגן <span class="sub">אופציונלי</span></h2>' +
+      '<div class="card-title"><h2>' + Lang.t('staffTeam') + ' <span class="sub">אופציונלי</span></h2>' +
       '<button class="btn sm soft" data-action="nav" data-view="staff">ניהול הצוות</button></div>' +
       '<div class="flex-between">' +
         '<div><div class="sum-value">' + Calc.staffCount(st) + '</div>' +
@@ -67,14 +67,18 @@ Views.budget = (function () {
   /* ---------- לשונית: סעיפי תקציב ---------- */
 
   /* הרשימה מחולקת לפי קהל היעד, עם קו הפרדה וסכום ביניים לכל קבוצה */
-  var GROUPS = [
-    { id: 'children',  icon: '🧒',    name: 'מתנות לילדים',
-      desc: 'ימי הולדת, מתנות אישיות ואירועים לילדים' },
-    { id: 'staff_edu', icon: '👩‍🏫',  name: 'מתנות לצוות החינוכי',
-      desc: 'מתנות ואירועים לצוות הגן' },
-    { id: '',          icon: '💰',    name: 'סעיפים כלליים',
-      desc: 'הוצאות שאינן מתחלקות לפי נפש' }
-  ];
+  /* נבנית בכל ציור ולא פעם אחת, כי הניסוח תלוי בסוג הוועד וזה נקבע
+     אחרי טעינת הסקריפטים */
+  function groups() {
+    return [
+      { id: 'children',  icon: '🧒',    name: 'מתנות לילדים',
+        desc: 'ימי הולדת, מתנות אישיות ואירועים לילדים' },
+      { id: 'staff_edu', icon: '👩‍🏫',  name: 'מתנות לצוות החינוכי',
+        desc: Lang.t('staffGifts') },
+      { id: '',          icon: '💰',    name: 'סעיפים כלליים',
+        desc: 'הוצאות שאינן מתחלקות לפי נפש' }
+    ];
+  }
 
   function groupHead(group, sum, count) {
     return '<div class="group-head">' +
@@ -147,7 +151,7 @@ Views.budget = (function () {
       }) + categoryManager(st);
     }
 
-    GROUPS.forEach(function (g) {
+    groups().forEach(function (g) {
       var group = items.filter(function (b) { return (b.audience || '') === g.id; });
       if (!group.length) return;
       var sum = group.reduce(function (acc, b) { return acc + Calc.itemAmount(st, b); }, 0);
@@ -215,7 +219,7 @@ Views.budget = (function () {
       '</div></div>';
 
     html += '<div class="note"><div class="n-ico">' + UI.art('budget') + '</div><div><b>כמה כל הורה משלם?</b>' +
-      'כל סעיף מתחלק בין הילדים שכבר היו בגן בתאריך שלו. ילד שהיה בגן מתחילת השנה ' +
+      Lang.t('splitByDate') + ' ילד שהיה ' + Lang.t('placeIn') + ' מתחילת השנה ' +
       'משלם ' + UI.money(perFull) + ', וילד שהצטרף באמצע משלם רק על מה שבא אחריו.</div></div>';
 
     html += '<div class="section-title"><span>פילוח לפי קטגוריה</span></div>';

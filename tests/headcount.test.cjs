@@ -9,7 +9,7 @@ function setup() {
     window: {}, console, setTimeout: () => 1, clearTimeout() {},
     localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} }
   });
-  for (const file of ['js/store.js', 'js/calc.js']) {
+  for (const file of ['js/lang.js', 'js/store.js', 'js/calc.js']) {
     vm.runInContext(fs.readFileSync(path.join(__dirname, '..', file), 'utf8'), context);
   }
   return context;

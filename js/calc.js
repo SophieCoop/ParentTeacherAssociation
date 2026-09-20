@@ -773,7 +773,7 @@ var Calc = (function () {
     (state.events || []).forEach(function (e) {
       out.push({ id: 'ev-' + e.id, type: e.type || 'event', title: e.title,
                  date: e.date, icon: e.icon || '📅', tone: e.tone || 'blue',
-                 kind: e.note || 'אירוע הגן', refId: e.id });
+                 kind: e.note || Lang.t('eventOf'), refId: e.id });
     });
     if (state.settings && state.settings.yearEnd) {
       out.push({ id: 'year-end', type: 'year', title: 'סוף שנת הלימודים',

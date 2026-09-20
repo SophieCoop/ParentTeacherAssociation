@@ -1,5 +1,5 @@
 /* ============================================================
-   הגדרות — פרטי הגן, גיבוי נתונים ואיפוס
+   הגדרות — פרטי הוועד, גיבוי נתונים ואיפוס
    ============================================================ */
 var Views = (typeof Views === 'undefined') ? {} : Views;
 
@@ -14,16 +14,37 @@ Views.settings = (function () {
     return ((window.SupportConfig && SupportConfig.phone) || '').trim();
   }
 
+  /* בחירת סוג הוועד — אותה בחירה שבאשף ההקמה, כדי שאפשר יהיה לתקן
+     אותה בלי להריץ את ההקמה מחדש. שינוי כאן מחליף את השפה מיד. */
+  function kindPicker() {
+    var cur = Lang.kind();
+    return '<div class="kind-pick compact" role="radiogroup" aria-label="סוג הוועד">' +
+      '<div class="cb-q">סוג הוועד</div>' +
+      '<div class="small muted">השפה באפליקציה מותאמת לבחירה</div>' +
+      '<div class="kind-grid">' + Lang.KINDS.map(function (k) {
+        var on = k.id === cur;
+        return '<button type="button" class="kind-card' + (on ? ' on' : '') + '" role="radio" ' +
+          'aria-checked="' + (on ? 'true' : 'false') + '" ' +
+          'data-action="set-kind" data-kind="' + k.id + '">' +
+          '<span class="kc-radio" aria-hidden="true"></span>' +
+          '<span class="kc-art" aria-hidden="true">' + k.icon + '</span>' +
+          '<span class="kc-name">' + UI.esc(k.label) + '</span>' +
+          '</button>';
+      }).join('') + '</div></div>';
+  }
+
   function render() {
     var st = Store.state;
-    var html = UI.pageHead({ title: 'הגדרות', subtitle: 'פרטי הגן וגיבוי נתונים', icon: '⚙️', tone: 'mint', back: 'home' });
+    var html = UI.pageHead({ title: 'הגדרות', subtitle: 'פרטי הוועד וגיבוי נתונים', icon: '⚙️', tone: 'mint', back: 'home' });
 
     html += Views.account.panel();
 
     html += '<div class="card">' +
-      '<div class="card-title"><h2>פרטי הגן</h2></div>' +
-      '<div class="field"><label>שם הגן</label>' +
-        '<input class="input" data-change="set-gan" data-key="name" value="' + UI.esc(st.gan.name) + '" placeholder="גן צבעוני"></div>' +
+      '<div class="card-title"><h2>פרטי הוועד</h2></div>' +
+      kindPicker() +
+      '<div class="count-sep"></div>' +
+      '<div class="field"><label>' + Lang.t('placeName') + '</label>' +
+        '<input class="input" data-change="set-gan" data-key="name" value="' + UI.esc(st.gan.name) + '" placeholder="' + UI.esc(Lang.t('placeNamePh')) + '"></div>' +
       '<div class="field mb0"><label>שנת לימודים</label>' +
         '<input class="input" data-change="set-gan" data-key="yearLabel" value="' + UI.esc(st.gan.yearLabel) + '"></div>' +
       '</div>';
@@ -37,7 +58,7 @@ Views.settings = (function () {
           '<input class="input" type="date" data-change="set-cfg" data-key="yearEnd" value="' + UI.esc(st.settings.yearEnd) + '"></div>' +
       '</div>' +
       '<div class="hint mb0">התאריכים קובעים את חודשי הפעילות של סעיפים חודשיים. ' +
-        'החלוקה בין ההורים נעשית סעיף-סעיף: כל סעיף מתחלק בין הילדים שכבר היו בגן ' +
+        'החלוקה בין ההורים נעשית סעיף-סעיף: כל סעיף מתחלק בין הילדים שכבר היו ' + Lang.t('placeIn') + ' ' +
         'בתאריך שלו, כך שילד שהצטרף באמצע אינו משלם על מה שקדם לו.</div>' +
       '</div>';
 
@@ -110,7 +131,7 @@ Views.settings = (function () {
         : '') +
       '</div>';
 
-    html += '<p class="center small muted mt">ועד הורים גן שלנו · יחד למען הילדים ❤️<br>' +
+    html += '<p class="center small muted mt">' + Lang.t('brand') + ' · יחד למען הילדים ❤️<br>' +
       'גרסה ' + UI.esc(window.APP_VERSION || '—') + '</p>';
     return html;
   }
@@ -129,7 +150,16 @@ Views.settings = (function () {
       'set-support': function () {
         var phone = supportPhone();
         if (!phone) return;
-        UI.whatsapp('שלום, אני פונה בנוגע לאתר "ועד הורים גן שלנו":\n', phone);
+        UI.whatsapp('שלום, אני פונה בנוגע לאתר "' + Lang.t('brand') + '":\n', phone);
+      },
+      /* שינוי סוג הוועד — השפה מתחלפת מיד, ורשומות הצוות הזמניות
+         מתעדכנות איתה (Store.setKind) */
+      'set-kind': function (el) {
+        var k = el.getAttribute('data-kind');
+        if (k === Lang.kind()) return;
+        Store.setKind(k);
+        App.render();
+        UI.toast('השפה עודכנה ל' + Lang.kindInfo().label + ' ✓');
       },
       'set-gan': function (el) { Store.state.gan[el.getAttribute('data-key')] = el.value; Store.save(); UI.toast('נשמר ✓'); },
       'set-cfg': function (el) {
@@ -208,7 +238,7 @@ Views.settings = (function () {
             '<ul class="bullets" style="margin-bottom:14px">' +
               '<li>החשבון עצמו, ואיתו האפשרות להתחבר איתו שוב.</li>' +
               '<li>כל הנתונים ששמורים בענן — ילדים, הורים, תשלומים והוצאות.</li>' +
-              '<li>הגן ששמור במכשיר הזה.</li>' +
+              '<li>' + Lang.t('savedOnDevice') + '</li>' +
             '</ul>' +
             '<div class="note" style="background:#FDF0F2;margin-bottom:14px"><div class="n-ico">⚠️</div><div>' +
             'הפעולה מיידית ואינה הפיכה. מכשיר אחר שמחובר לחשבון יינתק בפעם ' +
