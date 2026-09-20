@@ -95,6 +95,7 @@ var Confirm = (function () {
       '</div></div>' +
       '<button class="btn mt js-resend">שליחת המייל שוב</button>' +
       '<button class="btn soft js-signin" style="margin-top:9px">כבר אישרתי — התחברות</button>' +
+      '<button class="linkbtn js-forgot" style="margin-top:11px">שכחתי את הסיסמה</button>' +
       '<div class="inst-foot">' +
         '<button class="btn ghost js-later">אולי אחר כך</button>' +
         '<button class="inst-never js-never">לא להציג שוב</button>' +
@@ -123,6 +124,11 @@ var Confirm = (function () {
         root.querySelector('.js-signin').addEventListener('click', function () {
           close();
           Views.account.signInForm(p.email);
+          if (window.Analytics) Analytics.confirmReminder('signin');
+        });
+        root.querySelector('.js-forgot').addEventListener('click', function () {
+          close();
+          Views.account.recoverForm(p.email);
           if (window.Analytics) Analytics.confirmReminder('signin');
         });
         root.querySelector('.js-later').addEventListener('click', function () {

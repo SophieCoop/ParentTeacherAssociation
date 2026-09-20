@@ -257,6 +257,8 @@ var Cloud = (function () {
     var wait = m.match(/only request this after (\d+) second/i);
     if (wait)                                        return 'אפשר לבקש מייל נוסף רק בעוד ' + wait[1] + ' שניות';
     if (/already confirmed|already been confirmed/i.test(m)) return 'החשבון כבר מאושר — אפשר פשוט להתחבר';
+    if (/should be different|same.*password/i.test(m))        return 'הסיסמה החדשה זהה לקודמת — בחרו אחרת';
+    if (/weak|pwned|compromised/i.test(m))                    return 'הסיסמה חלשה מדי — בחרו סיסמה אחרת';
     if (/signups? not allowed|not found/i.test(m))   return 'לא מצאנו חשבון עם הכתובת הזו';
     if (code === 401 || code === 403)                return 'תוקף ההתחברות פג';
     return m;
@@ -335,6 +337,29 @@ var Cloud = (function () {
       if (/כבר מאושר/.test((err && err.message) || '')) markConfirmed(email);
       throw err;
     });
+  }
+
+  /* ---------- שחזור סיסמה ----------
+     הסיסמה נבחרת באשף ההקמה ונשכחת מיד: היא נכתבת פעם אחת ולא
+     נדרשת שוב כל עוד ההתחברות מחזיקה. מי שהקישור שבמייל פג אצלו
+     נשאר בלי שום דרך להיכנס לחשבון — והנתונים שהזין יושבים אצלו
+     במכשיר בלי להסתנכרן לעולם. לכן יש כאן שחזור.
+
+     הקישור חוזר לאותה כתובת כמו קישור האישור, עם type=recovery,
+     ומגיע עם סשן — ולכן אפשר לקבוע איתו סיסמה חדשה. */
+  function sendRecovery(email) {
+    var back = returnUrl();
+    return api('/auth/v1/recover' + (back ? '?redirect_to=' + encodeURIComponent(back) : ''), {
+      method: 'POST', auth: false, body: { email: email }
+    }).then(function () { return true; });
+  }
+
+  /* קביעת סיסמה חדשה. דורשת סשן פעיל — זה שהגיע מקישור השחזור. */
+  function updatePassword(password) {
+    if (!signedIn()) return Promise.reject(new Error('צריך להיכנס מקישור השחזור שבמייל'));
+    return fresh().then(function () {
+      return api('/auth/v1/user', { method: 'PUT', body: { password: String(password || '') } });
+    }).then(function () { return true; });
   }
 
   function signOut() {
@@ -623,6 +648,7 @@ var Cloud = (function () {
     init: init, info: info, onChange: onChange,
     enabled: enabled, signedIn: signedIn,
     signIn: signIn, signUp: signUp, signOut: signOut, resendConfirm: resendConfirm,
+    sendRecovery: sendRecovery, updatePassword: updatePassword,
     pendingSignup: pendingSignup, clearPendingSignup: clearPendingSignup,
     isConfirmed: isConfirmed, markConfirmed: markConfirmed,
     deleteAccount: deleteAccount,

@@ -53,7 +53,8 @@ Views.account = (function () {
           '<div class="btn-row mt">' +
             '<button class="btn ghost" data-action="acc-resend">שליחת המייל שוב</button>' +
             '<button class="btn" data-action="acc-signin">כבר אישרתי — התחברות</button>' +
-          '</div>';
+          '</div>' +
+          '<button class="linkbtn" data-action="acc-recover" style="margin-top:10px">שכחתי את הסיסמה</button>';
       }
 
       return '<p class="small muted">כרגע הנתונים נשמרים במכשיר הזה בלבד. ' +
@@ -62,7 +63,8 @@ Views.account = (function () {
         '<div class="btn-row mt">' +
           '<button class="btn ghost" data-action="acc-signup">פתיחת חשבון</button>' +
           '<button class="btn" data-action="acc-signin">התחברות</button>' +
-        '</div>';
+        '</div>' +
+        '<button class="linkbtn" data-action="acc-recover" style="margin-top:10px">שכחתי את הסיסמה</button>';
     }
 
     var when = i.lastSyncAt ? new Date(i.lastSyncAt) : null;
@@ -126,6 +128,73 @@ Views.account = (function () {
     });
   }
 
+  /* ---------- שכחתי סיסמה ----------
+     הסיסמה נבחרת באשף ההקמה ולא נדרשת שוב כל עוד ההתחברות מחזיקה,
+     ולכן היא נשכחת. בלי שחזור, מי שההתחברות שלו נפלה נשאר בחוץ —
+     והנתונים שהזין נשארים במכשיר בלי להסתנכרן לעולם. */
+  function recoverForm(email) {
+    UI.formModal({
+      title: 'שחזור סיסמה',
+      subtitle: 'נשלח קישור למייל, וממנו קובעים סיסמה חדשה',
+      submitLabel: 'שליחת קישור',
+      fields: [
+        { name: 'email', label: 'אימייל', type: 'email', required: true,
+          value: email || '', placeholder: 'dana@example.com',
+          hint: 'הכתובת שאיתה נפתח החשבון' }
+      ],
+      onSubmit: function (v, close) {
+        UI.toast('שולח…');
+        Cloud.sendRecovery(v.email).then(function () {
+          close();
+          UI.modal({
+            title: 'הקישור בדרך 📬',
+            body: '<div class="state-box" role="status" aria-live="polite">' +
+                    '<div class="state-ico info">📬</div>' +
+                    '<b>שלחנו קישור לשחזור</b>' +
+                    '<p>אל <span class="mail">' + UI.esc(v.email) + '</span><br>' +
+                    'הקישור מחזיר לכאן, ואז אפשר לקבוע סיסמה חדשה.</p>' +
+                  '</div>' +
+                  '<div class="note"><div class="n-ico">💡</div><div>' +
+                  'לא רואים אותו? כדאי לבדוק בספאם או ב"קידומי מכירות". ' +
+                  'הקישור תקף לזמן מוגבל — עדיף ללחוץ עליו מיד.' +
+                  '</div></div>'
+          });
+        }, function (err) {
+          UI.toast((err && err.message) || 'השליחה נכשלה');
+        });
+        return false;
+      }
+    });
+  }
+
+  /* קביעת סיסמה חדשה — אחרי שקישור השחזור החזיר סשן */
+  function newPasswordForm() {
+    UI.formModal({
+      title: 'בחירת סיסמה חדשה',
+      subtitle: 'מכאן ואילך זו הסיסמה לחשבון',
+      submitLabel: 'שמירת הסיסמה',
+      fields: [
+        { name: 'password', label: 'סיסמה חדשה', type: 'password', required: true,
+          placeholder: '••••••', hint: 'לפחות 6 תווים' }
+      ],
+      onSubmit: function (v, close) {
+        if (String(v.password || '').length < 6) {
+          UI.toast('הסיסמה צריכה להיות באורך 6 תווים לפחות');
+          return false;
+        }
+        UI.toast('שומר…');
+        Cloud.updatePassword(v.password).then(function () {
+          close();
+          App.render();
+          UI.toast('הסיסמה עודכנה ✓ הנתונים מסונכרנים');
+        }, function (err) {
+          UI.toast((err && err.message) || 'עדכון הסיסמה נכשל');
+        });
+        return false;
+      }
+    });
+  }
+
   function notConfirmed(err) {
     return !!err && (err.code === 'email_not_confirmed' ||
                      /not confirmed|לאשר את המייל/i.test(err.message || ''));
@@ -138,10 +207,14 @@ Views.account = (function () {
       subtitle: 'צריך ללחוץ על הקישור שבמייל האישור',
       body: '<p class="small">פתחנו את החשבון, אבל האישור במייל עדיין לא בוצע. ' +
             'אם המייל לא הגיע — אפשר לשלוח אותו שוב.</p>' +
-            '<button class="btn mt js-resend">שליחת המייל שוב</button>',
+            '<button class="btn mt js-resend">שליחת המייל שוב</button>' +
+            '<button class="linkbtn" style="margin-top:11px" data-x="forgot">שכחתי את הסיסמה</button>',
       onMount: function (root, close) {
         root.querySelector('.js-resend').addEventListener('click', function () {
           close(); resendForm(email);
+        });
+        root.querySelector('[data-x="forgot"]').addEventListener('click', function () {
+          close(); recoverForm(email);
         });
       }
     });
@@ -164,12 +237,27 @@ Views.account = (function () {
           placeholder: '••••••', hint: isSignup ? 'לפחות 6 תווים' : '' },
         { name: 'resend', type: 'html',
           html: '<button type="button" class="linkbtn js-resend">' +
-                'מייל האישור לא הגיע? שליחה מחדש</button>' }
+                'מייל האישור לא הגיע? שליחה מחדש</button>' +
+                (isSignup ? '' :
+                  '<button type="button" class="linkbtn js-forgot">שכחתי את הסיסמה</button>') }
       ],
-      onMount: function (root) {
-        root.querySelector('.js-resend').addEventListener('click', function () {
+      /* כל מעבר לטופס אחר סוגר קודם את הזה — אחרת שני חלונות נערמים
+         זה על זה, והראשון ממשיך להציץ מאחורי השני */
+      onMount: function (root, close) {
+        function typedEmail() {
           var f = root.querySelector('#f-email');
-          resendForm(f ? f.value.trim() : '');
+          return f ? f.value.trim() : '';
+        }
+        root.querySelector('.js-resend').addEventListener('click', function () {
+          var mail = typedEmail();
+          close();
+          resendForm(mail);
+        });
+        var forgot = root.querySelector('.js-forgot');
+        if (forgot) forgot.addEventListener('click', function () {
+          var mail = typedEmail();
+          close();
+          recoverForm(mail);
         });
       },
       onSubmit: function (v, close) {
@@ -226,6 +314,12 @@ Views.account = (function () {
     if (!res) return;
 
     if (res.ok) {
+      /* קישור שחזור מחזיר סשן, אבל הסיסמה עדיין הישנה והנשכחת —
+         ולכן הצעד הבא הוא לקבוע חדשה, לא הודעת "התחברת" */
+      if (res.type === 'recovery') {
+        newPasswordForm();
+        return;
+      }
       var isSignup = res.type === 'signup' || res.type === 'invite';
       // אישור באמצע ההקמה — חוזרים לשלב שבו עצרנו, לא לעמוד הראשי
       var inSetup = !Store.state.setupDone;
@@ -282,20 +376,26 @@ Views.account = (function () {
       body:
         '<p class="small">' +
         (expired
-          ? 'הקישור שבמייל פג תוקף או שכבר נעשה בו שימוש. אפשר פשוט להתחבר עם האימייל והסיסמה שבחרת — ואם החשבון עדיין לא אושר, נשלח מייל חדש.'
-          : 'משהו השתבש בדרך חזרה מהמייל. אפשר להתחבר ידנית עם האימייל והסיסמה.') +
+          ? 'הקישור שבמייל פג תוקף או שכבר נעשה בו שימוש. זה לא אומר שמשהו אבד — החשבון קיים, והנתונים שהזנתם נמצאים כאן במכשיר וממתינים לעלות.'
+          : 'משהו השתבש בדרך חזרה מהמייל. החשבון והנתונים שבמכשיר לא נפגעו.') +
         '</p>' +
-        // הודעת השרת מגיעה באנגלית — מציגים אותה רק כשאין לנו הסבר טוב ממנה
         (!expired && res.message ? '<div class="hint">' + UI.esc(res.message) + '</div>' : '') +
-        '<div class="btn-row mt">' +
-          '<button class="btn ghost js-signin">התחברות</button>' +
-          '<button class="btn js-resend">שליחת קישור חדש</button>' +
-        '</div>',
+        '<div class="note"><div class="n-ico">🔑</div><div>' +
+          '<b>איך ממשיכים מכאן</b>' +
+          'אם הסיסמה שבחרתם בהרשמה זכורה — פשוט מתחברים, והנתונים יעלו לענן. ' +
+          'ואם לא, שחזור הסיסמה שולח קישור חדש שממנו קובעים אחת חדשה.' +
+        '</div></div>' +
+        '<button class="btn mt js-signin">התחברות עם הסיסמה</button>' +
+        '<button class="btn soft js-forgot" style="margin-top:9px">שכחתי את הסיסמה</button>' +
+        '<button class="linkbtn" style="margin-top:11px" data-x="resend">שליחת קישור אישור חדש</button>',
       onMount: function (root, close) {
         root.querySelector('.js-signin').addEventListener('click', function () {
           close(); authForm('signin');
         });
-        root.querySelector('.js-resend').addEventListener('click', function () {
+        root.querySelector('.js-forgot').addEventListener('click', function () {
+          close(); recoverForm('');
+        });
+        root.querySelector('[data-x="resend"]').addEventListener('click', function () {
           close(); resendForm('');
         });
       }
@@ -354,10 +454,15 @@ Views.account = (function () {
     showAuthResult: showAuthResult, resendForm: resendForm,
     /* טופס ההתחברות, עם כתובת ידועה מראש — לשימוש התזכורת שב-confirm.js */
     signInForm: function (email) { authForm('signin', email); },
+    recoverForm: recoverForm,
     actions: {
       'acc-signin':  function () {
         var w = (window.Confirm && Confirm.pending()) || null;
         authForm('signin', w ? w.email : '');
+      },
+      'acc-recover': function () {
+        var w = (window.Confirm && Confirm.pending()) || null;
+        recoverForm(w ? w.email : '');
       },
       'acc-resend':  function () {
         var w = (window.Confirm && Confirm.pending()) || null;
