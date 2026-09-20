@@ -20,6 +20,15 @@ Views.onboarding = (function () {
      ============================================================ */
   var cloud = { mode: 'form', email: '', password: '', busyText: '', error: '' };
 
+  /* ---------- כמה זמן מסכי הביניים נשארים ----------
+     שני המסכים האלה מודיעים משהו ואז ממשיכים הלאה מעצמם. הזמן נמדד
+     לפי מה שיש בהם לקרוא, לא לפי תחושת קצב: "המייל בדרך" מכיל כתובת
+     מייל שצריך לזהות ומשפט שלם שמסביר מה קורה עכשיו — ושלוש שניות לא
+     הספיקו לזה. בשני המסכים יש כפתור המשך, ולכן מי שסיים לקרוא אינו
+     ממתין לטיימר. */
+  var SENT_MS = 9000;   // "המייל בדרך" — כתובת מייל ועוד משפט הסבר
+  var DONE_MS = 4000;   // "החשבון נפתח 🎉" — שורה אחת
+
   /* סדר השלבים. שלב החשבון קיים רק כשמוגדר ענן להתחבר אליו. */
   function stepList() {
     var list = (window.Cloud && Cloud.enabled()) ? [stepAccount] : [];
@@ -374,10 +383,13 @@ Views.onboarding = (function () {
     // רגע של הצלחה לפני המעבר לשלב הבא
     setTimeout(function () {
       if (cloud.mode !== 'done') return;
+      // מי שלחץ "המשך" כבר עבר הלאה — בלי הבדיקה הזו הטיימר היה
+      // מדלג על שלב נוסף אחריו
+      if (step() !== accountStep()) return;
       // נמשכו נתונים מהענן של חשבון קיים — ההקמה כבר מאחורינו
       if (Store.state.setupDone) { App.render(); return; }
       advance();
-    }, 1400);
+    }, DONE_MS);
   }
 
   function signup() {
@@ -401,7 +413,7 @@ Views.onboarding = (function () {
         startWatch();
         setTimeout(function () {
           if (cloud.mode === 'sent' && step() === accountStep()) advance();
-        }, 3000);
+        }, SENT_MS);
         return;
       }
       succeed();
@@ -477,7 +489,9 @@ Views.onboarding = (function () {
           '<div class="state-ico">✓</div>' +
           '<b>החשבון נפתח 🎉</b>' +
           '<p>מכאן כל שינוי נשמר בענן אוטומטית</p>' +
-        '</div></div>';
+        '</div></div>' +
+        /* מי שקרא מהר אינו צריך לחכות לטיימר */
+        '<div class="mt"><button class="btn" data-action="wiz-next">המשך להקמה</button></div>';
     }
 
     /* ברירת המחדל — הטופס */
