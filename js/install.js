@@ -6,10 +6,11 @@
    נעשית בדפדפן, ולכן רוב העבודה כאן היא להסביר איפה הכפתור —
    וההסבר שונה בין אייפון, אנדרואיד ומחשב.
 
-   מתי מציעים: לא בכניסה הראשונה. מי שזה עתה הגיע עדיין לא יודע
-   אם האתר מעניין אותו, והצעה להתקין אותו מיד היא הפרעה. לכן
-   ההצעה מחכה לכניסה השלישית, ואחרי "אולי אחר כך" נעלמת לשלוש
-   כניסות נוספות. "לא להציג שוב" מכבה אותה לתמיד.
+   מתי מציעים: פעם אחת בלבד, בכניסה העשירית. לא בכניסה הראשונה —
+   מי שזה עתה הגיע עדיין לא יודע אם האתר מעניין אותו, והצעה להתקין
+   אותו מיד היא הפרעה; ולא שוב אחר כך — מי שראה את ההצעה וסגר
+   אותה ענה, והצעה שחוזרת היא נדנוד. אחרי שהוצגה היא כבויה לתמיד,
+   וההוספה נשארת זמינה בכל רגע מההגדרות ⚙️.
 
    מה נחשב כניסה: פתיחה של האתר. טעינות חוזרות בתוך חצי שעה הן
    אותה כניסה, כדי שרענון של המסך לא יקרב את ההצעה.
@@ -21,9 +22,11 @@
 var Install = (function () {
 
   var KEY = 'vaad-gan-install-v1';
-  var SHOW_AT = 3;                       // הכניסה שבה ההצעה מופיעה לראשונה
-  var SNOOZE = 3;                        // כמה כניסות ממתינים אחרי "אולי אחר כך"
+  var SHOW_AT = 10;                      // הכניסה שבה ההצעה מופיעה — פעם אחת
   var SAME_VISIT_MS = 30 * 60 * 1000;    // טעינות בתוך חצי שעה — אותה כניסה
+  /* הערך שהיה ב-next למי שההצעה כבר הוצגה לו בגרסה הקודמת, שבה היא
+     חזרה כל שלוש כניסות. ראו seenBefore. */
+  var LEGACY_SHOW_AT = 3;
 
   var deferred = null;    // אירוע ההתקנה של כרום, כל עוד לא נוצל
   var offered = false;    // הוצע פעם אחת בטעינה הזו, גם אם המסך צויר מחדש
@@ -38,11 +41,11 @@ var Install = (function () {
       return {
         visits: parseInt(o.visits, 10) || 0,
         last:   parseInt(o.last, 10) || 0,
-        next:   parseInt(o.next, 10) || SHOW_AT,
+        next:   parseInt(o.next, 10) || 0,
         off:    !!o.off
       };
     } catch (e) {
-      return { visits: 0, last: 0, next: SHOW_AT, off: true };
+      return { visits: 0, last: 0, next: 0, off: true };
     }
   }
 
@@ -52,11 +55,11 @@ var Install = (function () {
 
   function silence() { var s = read(); s.off = true; write(s); }
 
-  function snooze() {
-    var s = read();
-    s.next = s.visits + SNOOZE;
-    write(s);
-  }
+  /* מי שההצעה כבר הוצגה לו בגרסה הקודמת — לפני שהיא הפכה לחד־פעמית.
+     שם כל הצגה דחפה את next קדימה, ולכן ערך גדול מברירת המחדל הישנה
+     מעיד שההצעה כבר נראתה. בלי זה, "פעם אחת" היה מופר בדיוק אצל מי
+     שכבר ראה אותה כמה פעמים. */
+  function seenBefore(s) { return s.next > LEGACY_SHOW_AT; }
 
   /* ---------- זיהוי המכשיר והדפדפן ---------- */
   var ua = (navigator.userAgent || '');
@@ -235,17 +238,20 @@ var Install = (function () {
           '<button class="btn ghost mt js-how">או להוסיף ידנית, שלב אחרי שלב</button>'
         : stepsHTML(guide())) +
       noteHTML() +
+      /* כפתור אחד: ההצעה חד־פעמית, ולכן "אולי אחר כך" ו"לא להציג שוב"
+         היו אומרים בדיוק את אותו הדבר */
       '<div class="inst-foot">' +
-        '<button class="btn ghost js-later">אולי אחר כך</button>' +
-        '<button class="inst-never js-never">לא להציג שוב</button>' +
-      '</div>';
+        '<button class="btn ghost js-later">לא עכשיו</button>' +
+      '</div>' +
+      '<p class="wiz-note">אפשר להוסיף בכל רגע מההגדרות ⚙️</p>';
   }
 
-  /* ההצעה נסגרת בכל דרך (✕, רקע, Escape) בלי לשנות דבר — הדחייה
-     כבר נרשמה ברגע שהחלון נפתח, ולכן סגירה שקטה אינה מחזירה אותו */
+  /* ההצעה נסגרת בכל דרך (✕, רקע, Escape) בלי לשנות דבר — היא נרשמת
+     ככבויה ברגע שהחלון נפתח מאליו, ולכן גם סגירה שקטה היא תשובה.
+     פתיחה מההגדרות אינה מכבה דבר: שם המשתמש ביקש לראות אותה. */
   function open(auto) {
     if (box && box.isOpen && box.isOpen()) return;
-    if (auto) snooze();
+    if (auto) silence();
 
     if (standalone()) {
       box = UI.modal({
@@ -301,13 +307,9 @@ var Install = (function () {
   /* הכפתורים התחתונים נקשרים מחדש בכל החלפת תוכן של החלון */
   function wire(root, close) {
     var later = root.querySelector('.js-later');
-    if (later) later.addEventListener('click', function () { snooze(); close(); });
-    var never = root.querySelector('.js-never');
-    if (never) never.addEventListener('click', function () {
-      silence();
+    if (later) later.addEventListener('click', function () {
       close();
-      UI.toast('לא נציע שוב. אפשר תמיד להוסיף מההגדרות ⚙️');
-      if (window.Analytics) Analytics.install('never');
+      if (window.Analytics) Analytics.install('dismissed');
     });
   }
 
@@ -327,7 +329,7 @@ var Install = (function () {
   function maybeOffer() {
     if (offered || !canInstall() || standalone()) return;
     var s = read();
-    if (s.off || s.visits < s.next) return;
+    if (s.off || seenBefore(s) || s.visits < SHOW_AT) return;
     if (!Store.state.setupDone) return;
     // סיור ההיכרות קודם — שתי הצעות זו מעל זו הן הצעה אחת שלא נקראת
     if (window.Tour && (Tour.running() || !Tour.seen())) return;
