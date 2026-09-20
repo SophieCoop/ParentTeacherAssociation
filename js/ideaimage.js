@@ -221,7 +221,7 @@ var IdeaImage = (function () {
       ctx.fillText((split.heads > 0
                       ? split.heads + ' נפשות · ' + UI.money(split.perHead) + ' ' +
                         Views.ideas.perHeadLabel(idea)
-                      : 'הוצאה כללית לגן') +
+                      : Lang.t('generalExpense')) +
                    ' · ' + UI.money(split.perParent) + ' לכל הורה', W / 2, y + 8);
       y += 26;
     }

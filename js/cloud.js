@@ -13,6 +13,8 @@ var Cloud = (function () {
 
   var SESSION_KEY = 'vaad-gan-session-v1';
   var META_KEY    = 'vaad-gan-sync-v1';
+  var PENDING_KEY = 'vaad-gan-pending-signup-v1';
+  var CONFIRMED_KEY = 'vaad-gan-confirmed-v1';
   var PUSH_DELAY  = 1500;   // המתנה אחרי שינוי לפני העלאה
   var POLL_GUARD  = 5000;   // מרווח מזערי בין סנכרונים יזומים
 
@@ -77,6 +79,83 @@ var Cloud = (function () {
       }
     } catch (e) {}
   }
+  /* ---------- הרשמה שממתינה לאישור במייל ----------
+     חשבון שנפתח ועדיין לא אושר אינו מקבל טוקן, ולכן אין סשן ואין
+     שום זכר לכך במכשיר: ברענון הבא האפליקציה שוב אינה יודעת שיש
+     אישור שממתין, והנתונים ממשיכים להיצבר מקומית בלבד. הרשומה כאן
+     היא הזיכרון הזה, והיא שמאפשרת לתזכר על כך בהמשך (js/confirm.js).
+
+     הסיסמה אינה נשמרת — די בכתובת כדי לשלוח את המייל מחדש. */
+  /* ---------- רישום חיובי: הכתובות שידוע שאושרו ----------
+     מחיקת הרשומה הממתינה מספיקה כל עוד האישור מגיע יחד עם סשן, אבל
+     יש מסלולים שבהם ידוע שהמייל אושר ובכל זאת אין סשן במכשיר הזה:
+     לחיצה שנייה על הקישור (הוא חד־פעמי ולכן חוזר כשגיאה), נפילת רשת
+     אחרי שהטוקן כבר התקבל, או אישור שנעשה במכשיר אחר ונודע לנו רק
+     כששליחת המייל מחדש נענית ב"כבר מאושר". בלי הרישום הזה התזכורת
+     הייתה ממשיכה לקפוץ למי שכבר סיים. */
+  function confirmedList() {
+    try {
+      var a = JSON.parse(localStorage.getItem(CONFIRMED_KEY) || '[]');
+      return Array.isArray(a) ? a.filter(function (x) { return typeof x === 'string' && x; }) : [];
+    } catch (e) { return []; }
+  }
+
+  function norm(email) { return String(email || '').trim().toLowerCase(); }
+
+  function isConfirmed(email) {
+    var e = norm(email);
+    return !!e && confirmedList().indexOf(e) > -1;
+  }
+
+  /* הרשימה קצרה בכוונה — מכשיר משותף מחזיק חשבון או שניים, לא היסטוריה */
+  function markConfirmed(email) {
+    var e = norm(email);
+    if (!e) return;
+    var list = confirmedList().filter(function (x) { return x !== e; });
+    list.push(e);
+    try { localStorage.setItem(CONFIRMED_KEY, JSON.stringify(list.slice(-5))); } catch (e2) {}
+    var p = rawPending();
+    if (p && norm(p.email) === e) clearPendingSignup();
+  }
+
+  /* התחברות שנדחתה כי המייל טרם אושר היא עדות הפוכה — ומתקנת סימון
+     שגוי, אם איכשהו נרשם כזה */
+  function unmarkConfirmed(email) {
+    var e = norm(email);
+    if (!e || !isConfirmed(e)) return;
+    var list = confirmedList().filter(function (x) { return x !== e; });
+    try { localStorage.setItem(CONFIRMED_KEY, JSON.stringify(list)); } catch (e2) {}
+  }
+
+  function rawPending() {
+    try {
+      var o = JSON.parse(localStorage.getItem(PENDING_KEY) || 'null');
+      return (o && o.email) ? { email: String(o.email), at: parseInt(o.at, 10) || 0 } : null;
+    } catch (e) { return null; }
+  }
+
+  /* הרשומה מוחזרת רק כשבאמת אין אישור. כתובת שידוע שאושרה מסירה את
+     הרשומה כאן ועכשיו, כך שאף קורא לא יראה משימה שכבר נסגרה. */
+  function pendingSignup() {
+    var p = rawPending();
+    if (!p) return null;
+    if (isConfirmed(p.email)) { clearPendingSignup(); return null; }
+    return p;
+  }
+  /* הרשמה לכתובת שכבר אושרה אינה משימה פתוחה. Supabase מחזיר על
+     כתובת רשומה תשובה חיובית בלי טוקן — בדיוק כמו על הרשמה חדשה
+     שממתינה לאישור — כדי לא לגלות מי רשום; בלי הבדיקה כאן היינו
+     פותחים תזכורת על חשבון מאושר לגמרי. */
+  function setPendingSignup(email) {
+    if (isConfirmed(email)) return;
+    try {
+      localStorage.setItem(PENDING_KEY, JSON.stringify({ email: email, at: Date.now() }));
+    } catch (e) {}
+  }
+  function clearPendingSignup() {
+    try { localStorage.removeItem(PENDING_KEY); } catch (e) {}
+  }
+
   function saveSession(data) {
     if (!data || !data.access_token) return null;
     session = {
@@ -86,6 +165,11 @@ var Cloud = (function () {
       user: data.user ? { id: data.user.id, email: data.user.email } : (session && session.user)
     };
     try { localStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch (e) {}
+    /* סשן תקף פירושו שהאישור כבר מאחורינו — בין אם דרך הקישור שבמייל
+       ובין אם בהתחברות רגילה. נרשם גם בחיוב, ולא רק במחיקה, כדי שגם
+       אחרי התנתקות לא נתחיל להזכיר מחדש משימה שנסגרה. */
+    if (session.user && session.user.email) markConfirmed(session.user.email);
+    clearPendingSignup();
     return session;
   }
   function clearSession() {
@@ -204,6 +288,9 @@ var Cloud = (function () {
   function signIn(email, password) {
     return api('/auth/v1/token?grant_type=password', {
       method: 'POST', auth: false, body: { email: email, password: password }
+    }).then(null, function (err) {
+      if (/לאשר את המייל/.test((err && err.message) || '')) unmarkConfirmed(email);
+      throw err;
     }).then(function (d) {
       saveSession(d);
       enterAccount();
@@ -231,6 +318,8 @@ var Cloud = (function () {
         enterAccount();
         return sync(true).then(function () { return { confirmed: true }; });
       }
+      // הפרויקט דורש אישור מייל. נרשם כאן כדי שנוכל לתזכר על כך בהמשך
+      setPendingSignup(email);
       return { confirmed: false };
     });
   }
@@ -240,7 +329,12 @@ var Cloud = (function () {
     var back = returnUrl();
     return api('/auth/v1/resend' + (back ? '?redirect_to=' + encodeURIComponent(back) : ''), {
       method: 'POST', auth: false, body: { type: 'signup', email: email }
-    }).then(function () { return true; });
+    }).then(function () { return true; }, function (err) {
+      /* "החשבון כבר מאושר" אינו כישלון של המשתמש אלא תשובה: אין מה
+         לאשר. נרשם, וההודעה עולה כרגיל */
+      if (/כבר מאושר/.test((err && err.message) || '')) markConfirmed(email);
+      throw err;
+    });
   }
 
   function signOut() {
@@ -475,6 +569,12 @@ var Cloud = (function () {
         return { ok: true, type: back.type || '', email: u.email || '' };
       });
     }).catch(function (e) {
+      /* הטוקן שהגיע מהקישור היה תקף, ולכן האישור עצמו הצליח — רק
+         ההמשך נפל. נרשם ככזה, אחרת התזכורת הייתה קופצת למי שאישר */
+      if (back.type === 'signup' || back.type === 'invite') {
+        var p = rawPending();
+        if (p) markConfirmed(p.email);
+      }
       clearSession();
       setStatus('signed-out');
       return { ok: false, message: (e && e.message) || 'ההתחברות לא הושלמה' };
@@ -523,6 +623,8 @@ var Cloud = (function () {
     init: init, info: info, onChange: onChange,
     enabled: enabled, signedIn: signedIn,
     signIn: signIn, signUp: signUp, signOut: signOut, resendConfirm: resendConfirm,
+    pendingSignup: pendingSignup, clearPendingSignup: clearPendingSignup,
+    isConfirmed: isConfirmed, markConfirmed: markConfirmed,
     deleteAccount: deleteAccount,
     sync: sync, onLocalChange: onLocalChange,
     getConflict: getConflict, resolveConflict: resolveConflict

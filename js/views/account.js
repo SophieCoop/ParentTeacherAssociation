@@ -37,6 +37,25 @@ Views.account = (function () {
     }
 
     if (!i.signedIn) {
+      /* חשבון שנפתח וממתין לאישור אינו "לא מחובר" סתם: יש כאן משימה
+         פתוחה שחוסמת את הגיבוי, ולכן היא מוצגת ככזו ולא כהצעה לפתוח
+         חשבון נוסף. זו גם הדרך להגיע לכאן אחרי "לא להציג שוב"
+         שבתזכורת (js/confirm.js). */
+      var waiting = (window.Confirm && Confirm.pending()) || null;
+      if (waiting) {
+        return '<div class="note" style="background:#FDF0F2"><div class="n-ico">📬</div><div>' +
+            '<b>החשבון ממתין לאישור במייל</b>' +
+            'פתחנו חשבון עבור <span class="mail">' + UI.esc(waiting.email) + '</span>, ' +
+            'אבל עד שלא לוחצים על הקישור שנשלח אליו הנתונים נשמרים במכשיר הזה בלבד. ' +
+            'אם המייל לא נמצא — כדאי לחפש בספאם או ב"קידומי מכירות".' +
+          '</div></div>' +
+          (i.error ? '<div class="note" style="background:#FDF0F2;margin-top:10px"><div class="n-ico">⚠️</div><div>' + UI.esc(i.error) + '</div></div>' : '') +
+          '<div class="btn-row mt">' +
+            '<button class="btn ghost" data-action="acc-resend">שליחת המייל שוב</button>' +
+            '<button class="btn" data-action="acc-signin">כבר אישרתי — התחברות</button>' +
+          '</div>';
+      }
+
       return '<p class="small muted">כרגע הנתונים נשמרים במכשיר הזה בלבד. ' +
         'התחברות מאפשרת לראות ולערוך אותם גם מהטלפון וגם מהמחשב, ומשמשת גם כגיבוי.</p>' +
         (i.error ? '<div class="note" style="background:#FDF0F2"><div class="n-ico">⚠️</div><div>' + UI.esc(i.error) + '</div></div>' : '') +
@@ -128,7 +147,9 @@ Views.account = (function () {
     });
   }
 
-  function authForm(mode) {
+  /* email — כתובת למלא מראש. מגיעה מהתזכורת לאישור המייל, שכבר
+     יודעת באיזו כתובת נפתח החשבון */
+  function authForm(mode, email) {
     var isSignup = mode === 'signup';
     UI.formModal({
       title: isSignup ? 'פתיחת חשבון' : 'התחברות',
@@ -137,7 +158,8 @@ Views.account = (function () {
         : 'התחברות עם החשבון הקיים כדי למשוך את הנתונים',
       submitLabel: isSignup ? 'פתיחת חשבון' : 'התחברות',
       fields: [
-        { name: 'email', label: 'אימייל', type: 'email', required: true, placeholder: 'dana@example.com' },
+        { name: 'email', label: 'אימייל', type: 'email', required: true,
+          value: email || '', placeholder: 'dana@example.com' },
         { name: 'password', label: 'סיסמה', type: 'password', required: true,
           placeholder: '••••••', hint: isSignup ? 'לפחות 6 תווים' : '' },
         { name: 'resend', type: 'html',
@@ -330,8 +352,17 @@ Views.account = (function () {
   return {
     chipHTML: chipHTML, refreshChip: refreshChip, panel: panel, showConflict: showConflict,
     showAuthResult: showAuthResult, resendForm: resendForm,
+    /* טופס ההתחברות, עם כתובת ידועה מראש — לשימוש התזכורת שב-confirm.js */
+    signInForm: function (email) { authForm('signin', email); },
     actions: {
-      'acc-signin':  function () { authForm('signin'); },
+      'acc-signin':  function () {
+        var w = (window.Confirm && Confirm.pending()) || null;
+        authForm('signin', w ? w.email : '');
+      },
+      'acc-resend':  function () {
+        var w = (window.Confirm && Confirm.pending()) || null;
+        resendForm(w ? w.email : '');
+      },
       'acc-signup':  function () { authForm('signup'); },
       /* התנתקות כדי להקים גן אחר, או כדי למסור את המכשיר, אינה אותו
          דבר כמו יציאה זמנית מהחשבון. הנתונים נשארו כאן תמיד, ואיתם
@@ -342,8 +373,7 @@ Views.account = (function () {
          מכשיר עושה זאת מ"מחיקת כל הנתונים" שבהגדרות. */
       'acc-signout': function () {
         UI.confirmBox('להתנתק?',
-          'הגן נשמר במכשיר תחת החשבון שלכם ויחזור בהתחברות מחדש. עד אז המכשיר פנוי ' +
-          'להקמת גן חדש או לחשבון אחר.',
+          Lang.t('parkedOnDevice') + ' ' + Lang.t('freeForNew'),
           function () {
             Cloud.signOut();
             App.render();

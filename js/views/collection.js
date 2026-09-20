@@ -49,7 +49,7 @@ Views.collection = (function () {
       'data-input="col-search" value="' + UI.esc(q) + '"></div>';
 
     if (!st.children.length) {
-      return html + UI.empty({ art: 'children', title: 'אין ילדים ברשימה', text: 'הוסיפו את ילדי הגן כדי להתחיל בגבייה.', action: { act: 'nav-children', label: 'לרשימת הילדים' } });
+      return html + UI.empty({ art: 'children', title: 'אין ילדים ברשימה', text: 'הוסיפו את ' + Lang.t('childrenOf') + ' כדי להתחיל בגבייה.', action: { act: 'nav-children', label: 'לרשימת הילדים' } });
     }
 
     html += rows.map(function (r) {
@@ -337,7 +337,7 @@ Views.collection = (function () {
       UI.modal({
         title: 'עוד אין ילדים ברשימה',
         subtitle: 'כל תשלום משויך להורה של ילד/ה',
-        body: '<p class="small">הגבייה מחושבת לפי ילדי הגן, ולכן צריך קודם להוסיף אותם ואת פרטי ההורים. ' +
+        body: '<p class="small">הגבייה מחושבת לפי ' + Lang.t('childrenOf') + ', ולכן צריך קודם להוסיף אותם ואת פרטי ההורים. ' +
               'אחרי זה כל תשלום שתרשמו יתעדכן מיד במצב הגבייה.</p>' +
               '<button class="btn mt js-go">להוספת ילדים</button>',
         onMount: function (root, close) {
@@ -738,7 +738,7 @@ Views.collection = (function () {
         var r = Calc.childCollection(Store.state, c);
         var p = c.parents && c.parents[0] ? c.parents[0] : null;
         var txt = 'היי' + (p ? ' ' + p.name : '') + ',\n' +
-          'תזכורת מוועד ההורים של ' + (Store.state.gan.name || 'הגן') + ':\n\n' +
+          'תזכורת מוועד ההורים של ' + (Store.state.gan.name || Lang.t('placeThe')) + ':\n\n' +
           'סכום ההשתתפות של ' + c.name + ' לשנה: ' + UI.money(r.due) +
           (r.percent < 100 ? ' (מותאם לתאריך ההצטרפות)' : '') + '\n' +
           'שולם עד כה: ' + UI.money(r.paid) + '\n' +

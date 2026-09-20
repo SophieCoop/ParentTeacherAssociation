@@ -330,6 +330,9 @@ var Install = (function () {
     if (!Store.state.setupDone) return;
     // סיור ההיכרות קודם — שתי הצעות זו מעל זו הן הצעה אחת שלא נקראת
     if (window.Tour && (Tour.running() || !Tour.seen())) return;
+    /* וכך גם התזכורת לאישור המייל: שם הנתונים עדיין לא מגובים בשום
+       מקום, וזה דחוף יותר מהוספה למסך הבית */
+    if (window.Confirm && Confirm.pending()) return;
 
     offered = true;
     setTimeout(function () {
@@ -342,6 +345,10 @@ var Install = (function () {
   function init() {
     countVisit();
   }
+
+  /* מונה הכניסות משותף: גם התזכורת לאישור המייל (js/confirm.js) נמדדת
+     בו, כדי ש"כניסה" תהיה אותו דבר בשני המקומות ולא תיספר פעמיים */
+  function visits() { return read().visits; }
 
   /* כרום ואדג׳ מודיעים שהאתר ניתן להתקנה. עוצרים את הפס שהדפדפן
      היה מציג בעצמו, ושומרים את האירוע לכפתור שבחלון שלנו. */
@@ -359,7 +366,7 @@ var Install = (function () {
   });
 
   return {
-    init: init, open: open, maybeOffer: maybeOffer,
+    init: init, open: open, maybeOffer: maybeOffer, visits: visits,
     standalone: standalone, canInstall: canInstall
   };
 })();

@@ -1,5 +1,5 @@
 /* ============================================================
-   צוות הגן — שמות, תפקידים והיררכיה
+   צוות הגן / הכיתה — שמות, תפקידים והיררכיה
    ============================================================ */
 var Views = (typeof Views === 'undefined') ? {} : Views;
 
@@ -11,7 +11,7 @@ Views.staff = (function () {
     var list = st.staff.slice();
     if (filter !== 'all') list = list.filter(function (t) { return t.level === filter; });
 
-    var html = UI.pageHead({ title: 'צוות הגן', subtitle: st.staff.length + ' אנשי צוות', art: 'staff', tone: 'green', back: 'home' });
+    var html = UI.pageHead({ title: Lang.t('staffTeam'), subtitle: st.staff.length + ' אנשי צוות', art: 'staff', tone: 'green', back: 'home' });
 
     html += '<div class="chips" style="margin-bottom:14px">' +
       '<button class="chip ' + (filter === 'all' ? 'on' : '') + '" data-action="staff-filter" data-level="all">הכל</button>' +
@@ -81,7 +81,7 @@ Views.staff = (function () {
         { name: 'level', label: 'דרגה בהיררכיה', type: 'chips', value: t.level,
           options: Store.STAFF_LEVELS.map(function (l) { return { value: l.id, label: l.name, icon: l.icon }; }),
           hint: 'חסרה קטגוריה? אפשר להוסיף אחת בכפתור "+ קטגוריה" שבראש דף הצוות' },
-        { name: 'role', label: 'תפקיד', value: t.role, placeholder: 'גננת / סייעת / מטפלת / צהרון',
+        { name: 'role', label: 'תפקיד', value: t.role, placeholder: Lang.t('rolesPlaceholder'),
           suggestions: Store.STAFF_ROLES, hint: 'אפשר לבחור מהרשימה או לכתוב תפקיד חופשי' },
         { name: 'phone', label: 'טלפון', type: 'tel', value: t.phone, placeholder: '050-1234567', half: true },
         { name: 'birthDate', label: 'יום הולדת', type: 'date', value: t.birthDate, half: true }
@@ -163,7 +163,7 @@ Views.staff = (function () {
       'staff-edit': function (el) { staffForm(Store.find('staff', el.getAttribute('data-id'))); },
       'staff-wa': function (el, ev) {
         if (ev) ev.stopPropagation();
-        UI.whatsapp('היי, הודעה מוועד ההורים של ' + (Store.state.gan.name || 'הגן'), el.getAttribute('data-phone'));
+        UI.whatsapp('היי, הודעה מוועד ההורים של ' + (Store.state.gan.name || Lang.t('placeThe')), el.getAttribute('data-phone'));
       }
     }
   };

@@ -32,7 +32,7 @@ Views.dates = (function () {
       '<i>' + UI.MONTHS_SHORT[it.next.getMonth()] + '</i></span>';
   }
 
-  /* אירועי הגן ניתנים לעריכה; ימי הולדת וסעיפי תקציב מגיעים ממקום אחר */
+  /* אירועי הוועד ניתנים לעריכה; ימי הולדת וסעיפי תקציב מגיעים ממקום אחר */
   function editable(it) {
     return it.type === 'event' && it.refId;
   }
@@ -81,7 +81,7 @@ Views.dates = (function () {
     UI.formModal({
       title: isNew ? 'תאריך חדש' : 'עריכת תאריך',
       fields: [
-        { name: 'title', label: 'כותרת', value: ev.title, required: true, placeholder: 'למשל: יום גיבוש גן' },
+        { name: 'title', label: 'כותרת', value: ev.title, required: true, placeholder: Lang.t('eventPlaceholder') },
         { name: 'date', label: 'תאריך', type: 'date', value: ev.date, required: true },
         { name: 'icon', label: 'אימוג׳י', value: ev.icon, placeholder: '📅', half: true },
         { name: 'tone', label: 'צבע', type: 'select', value: ev.tone, half: true, options: [
@@ -107,7 +107,7 @@ Views.dates = (function () {
 
   function render() {
     var html = UI.pageHead({ title: 'תאריכים מיוחדים',
-      subtitle: 'חגים, ימי הולדת, סוף שנה ואירועי הגן',
+      subtitle: 'חגים, ימי הולדת, סוף שנה ו' + Lang.t('eventsOf'),
       art: 'dates', tone: 'blue', back: 'home' });
 
     html += UI.addBtn({ act: 'date-add', label: 'הוספת תאריך', cls: 'mb-add' });
@@ -115,7 +115,7 @@ Views.dates = (function () {
     var list = items();
     if (!list.length) {
       return html + UI.empty({ art: 'dates', title: 'אין תאריכים',
-        text: 'הוסיפו ימי הולדת לילדים או אירועים לגן.' });
+        text: Lang.t('addEventsHint') });
     }
 
     html += nextUp(list[0]);

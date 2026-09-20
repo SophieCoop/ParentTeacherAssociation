@@ -38,7 +38,7 @@ Views.onboarding = (function () {
   function splash() {
     return '<div class="splash">' +
       '<div class="art">🏫</div>' +
-      '<h1>ועד הורים<br>גן שלנו</h1>' +
+      '<h1>' + Lang.t('splashTitle') + '</h1>' +
       '<p>יחד למען הילדים ❤️<br>ניהול תקציב, גבייה והוצאות במקום אחד</p>' +
       '<button class="btn" data-action="wiz-start">בואו נתחיל</button>' +
       cloudBlock() +
@@ -139,9 +139,9 @@ Views.onboarding = (function () {
 
   function COUNTS() {
     return {
-      children: { art: 'children', q: 'כמה ילדים יש בגן?',
+      children: { art: 'children', q: 'כמה ילדים יש?',
                   sub: 'רק מספר, ניתן לעדכן בהמשך', list: Store.state.children },
-      staff:    { art: 'staff', q: 'כמה אנשי צוות יש בגן?',
+      staff:    { art: 'staff', q: 'כמה אנשי צוות יש?',
                   sub: 'רק מספר, ניתן לעדכן בהמשך', list: Store.state.staff }
     };
   }
@@ -175,15 +175,39 @@ Views.onboarding = (function () {
       '<div class="cb-art">' + UI.art(c.art) + '</div></div>';
   }
 
+  /* ---------- בחירת סוג הוועד ----------
+     גן או כיתה. הבחירה קובעת את השפה בכל האפליקציה (ראו js/lang.js),
+     ולכן היא הדבר הראשון בשלב — כל מה שמתחתיו כבר מדבר בשפה שנבחרה.
+     ניתן לשנותה בכל עת מההגדרות. */
+  function kindPicker() {
+    var cur = Lang.kind();
+    return '<div class="kind-pick" role="radiogroup" aria-label="סוג הוועד">' +
+      '<div class="cb-q">איזה ועד אתם מנהלים?</div>' +
+      '<div class="small muted">נבנה עבורכם חוויה מותאמת</div>' +
+      '<div class="kind-grid">' + Lang.KINDS.map(function (k) {
+        var on = k.id === cur;
+        return '<button type="button" class="kind-card' + (on ? ' on' : '') + '" role="radio" ' +
+          'aria-checked="' + (on ? 'true' : 'false') + '" ' +
+          'data-action="wiz-kind" data-kind="' + k.id + '">' +
+          '<span class="kc-radio" aria-hidden="true"></span>' +
+          '<span class="kc-art" aria-hidden="true">' + k.icon + '</span>' +
+          '<span class="kc-name">' + UI.esc(k.label) + '</span>' +
+          '<span class="kc-sub">' + UI.esc(k.sub) + '</span>' +
+          '</button>';
+      }).join('') + '</div></div>';
+  }
+
   function stepPeople(n) {
     if (detail() === 'children') return detailScreen(n, 'children');
     if (detail() === 'staff') return detailScreen(n, 'staff');
-    return head(n, 'פרטי הגן', 'רק כמה פרטים כדי שנוכל להתאים את האפליקציה לגן שלכם') +
+    return head(n, 'פרטי הוועד', 'רק כמה פרטים כדי שנוכל להתאים את האפליקציה לצרכים שלכם') +
       '<div class="card">' +
-        '<div class="field gan-name"><label for="wiz-gan-name">שם הגן</label>' +
-          '<div class="input-wrap"><span class="in-ico" aria-hidden="true">🏫</span>' +
+        kindPicker() +
+        '<div class="count-sep"></div>' +
+        '<div class="field gan-name"><label for="wiz-gan-name">שם הוועד</label>' +
+          '<div class="input-wrap"><span class="in-ico" aria-hidden="true">' + Lang.kindInfo().icon + '</span>' +
           '<input class="input" id="wiz-gan-name" data-input="wiz-gan" data-key="name" ' +
-            'value="' + UI.esc(Store.state.gan.name) + '" placeholder="גן צבעוני" autocomplete="organization"></div></div>' +
+            'value="' + UI.esc(Store.state.gan.name) + '" placeholder="' + UI.esc('למשל: ' + Lang.t('placeNamePh')) + '" autocomplete="organization"></div></div>' +
         '<div class="count-sep"></div>' +
         countBlock('children') +
         '<div class="count-sep"></div>' +
@@ -580,6 +604,11 @@ Views.onboarding = (function () {
       'wiz-cloud-signup': signup,
       'wiz-cloud-check': function () { check(true); },
       'wiz-cloud-resend': function () { Views.account.resendForm(cloud.email); },
+      /* שינוי סוג הוועד באמצע ההקמה — הציור מחדש מחליף את השפה במקום */
+      'wiz-kind': function (el) {
+        Store.setKind(el.getAttribute('data-kind'));
+        App.render();
+      },
       'wiz-gan': function (el) {
         Store.state.gan[el.getAttribute('data-key')] = el.value;
         Store.save();

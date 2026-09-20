@@ -103,6 +103,9 @@ var App = (function () {
     if (current === 'home' && window.Tour) Tour.maybeStart();
     // סיור הרעיון מחכה בכניסה הראשונה למסך שלו
     if (current === 'ideas' && window.Tour && Tour.maybeStartIdea) Tour.maybeStartIdea();
+    /* התזכורת לאישור המייל קודמת להצעת ההוספה למסך הבית: כל עוד
+       החשבון לא אושר שום דבר אינו מגובה, וזה דחוף יותר */
+    if (current === 'home' && window.Confirm) Confirm.maybeRemind();
     // וההצעה להוסיף את האפליקציה למסך הבית — רק אחרי כמה כניסות
     if (current === 'home' && window.Install) Install.maybeOffer();
   }

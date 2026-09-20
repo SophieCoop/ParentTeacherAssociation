@@ -23,7 +23,8 @@ var Analytics = (function () {
     'wizard-step': { step: ['1', '2', '3', '4', '5'] },
     'setup-done':  { account: ['yes', 'no'] },
     'account':     { action: ['signup', 'signin', 'confirmed'] },
-    'install':     { action: ['shown', 'manual', 'accepted', 'dismissed', 'never', 'installed'] }
+    'install':     { action: ['shown', 'manual', 'accepted', 'dismissed', 'never', 'installed'] },
+    'confirm-reminder': { action: ['shown', 'manual', 'resend', 'signin', 'later', 'never'] }
   };
 
   function send(name, data) {
@@ -63,6 +64,9 @@ var Analytics = (function () {
     account: function (action) { send('account', { action: action }); },
 
     /* ההצעה להוסיף את האפליקציה למסך הבית: הוצגה, נדחתה, בוצעה */
-    install: function (action) { send('install', { action: action }); }
+    install: function (action) { send('install', { action: action }); },
+
+    /* התזכורת לאישור המייל — בלי הכתובת, כמובן */
+    confirmReminder: function (action) { send('confirm-reminder', { action: action }); }
   };
 })();

@@ -1,5 +1,5 @@
 /* ============================================================
-   ילדי הגן — ימי הולדת, שמות ההורים וטלפונים
+   ילדי הגן / הכיתה — ימי הולדת, שמות ההורים וטלפונים
    ============================================================ */
 var Views = (typeof Views === 'undefined') ? {} : Views;
 
@@ -12,7 +12,7 @@ Views.children = (function () {
     var html = UI.addBtn({ act: 'child-add', label: 'הוספת ילד', cls: 'mb-add' });
 
     if (!kids.length) {
-      return html + UI.empty({ art: 'children', title: 'עוד אין ילדים ברשימה', text: 'הוסיפו את ילדי הגן, ההורים והטלפונים.' });
+      return html + UI.empty({ art: 'children', title: 'עוד אין ילדים ברשימה', text: 'הוסיפו את ' + Lang.t('childrenOf') + ', ההורים והטלפונים.' });
     }
 
     html += kids.map(function (c) {
@@ -102,7 +102,7 @@ Views.children = (function () {
           ? 'נקבע ידנית ' + pct + '% מהסכום של ילד שהיה כל השנה.'
           : (skipped.length
               ? 'אינו/ה מחויב/ת בסעיפים שכבר היו לפני כן, ומחויב/ת במחיר מלא על כל השאר.'
-              : 'היה/תה בגן לכל הסעיפים, ולכן משלם/ת מלא.')) +
+              : Lang.t('paysFull'))) +
         '</div></div>';
 
       /* פירוט סעיף-סעיף — כדי שיהיה ברור על מה בדיוק משלמים */
@@ -187,13 +187,13 @@ Views.children = (function () {
         { name: 'p1phone', label: 'טלפון הורה 1', type: 'tel', value: p1.phone, placeholder: '052-1234567', half: true },
         { name: 'p2name', label: 'שם הורה 2', value: p2.name, placeholder: 'אופציונלי', half: true },
         { name: 'p2phone', label: 'טלפון הורה 2', type: 'tel', value: p2.phone, placeholder: 'אופציונלי', half: true },
-        { name: 'joinDate', label: 'תאריך הצטרפות לגן', type: 'date',
+        { name: 'joinDate', label: Lang.t('joinDate'), type: 'date',
           value: child.joinDate || yearStart(),
           hint: 'ברירת המחדל היא תחילת שנת הלימודים. משנים רק אם הילד/ה הצטרף/ה מאוחר יותר — ואז הסכום מחושב יחסית' },
         { name: 'sharePercentOverride', label: 'אחוז תשלום ידני (%)', type: 'number',
           value: child.sharePercentOverride === null ? '' : child.sharePercentOverride,
           min: 0, max: 100, placeholder: 'ריק = חישוב אוטומטי',
-          hint: 'אחוז מהסכום של ילד שהיה בגן כל השנה. משאירים ריק כדי שהחישוב '
+          hint: 'אחוז מהסכום של ' + Lang.t('wasAllYear') + '. משאירים ריק כדי שהחישוב '
               + 'ייעשה לבד לפי הסעיפים שהיו אחרי תאריך ההצטרפות' }
       ],
       onSubmit: function (v) {
@@ -223,7 +223,7 @@ Views.children = (function () {
 
   function render() {
     var tab = App.vs('kidTab', 'list');
-    var html = UI.pageHead({ title: 'ילדי הגן', subtitle: Store.state.children.length + ' ילדים רשומים', art: 'children', tone: 'blue', back: 'home' });
+    var html = UI.pageHead({ title: Lang.t('childrenOf'), subtitle: Store.state.children.length + ' ילדים רשומים', art: 'children', tone: 'blue', back: 'home' });
     html += '<div class="segment">' +
       '<button data-action="kid-tab" data-tab="contacts" class="' + (tab === 'contacts' ? 'on' : '') + '">פרטים</button>' +
       '<button data-action="kid-tab" data-tab="list" class="' + (tab === 'list' ? 'on' : '') + '">רשימה</button>' +
@@ -245,7 +245,7 @@ Views.children = (function () {
       },
       'child-wa': function (el) {
         var phone = el.getAttribute('data-phone');
-        UI.whatsapp('היי, הודעה מוועד ההורים של ' + (Store.state.gan.name || 'הגן'), phone);
+        UI.whatsapp('היי, הודעה מוועד ההורים של ' + (Store.state.gan.name || Lang.t('placeThe')), phone);
       }
     }
   };

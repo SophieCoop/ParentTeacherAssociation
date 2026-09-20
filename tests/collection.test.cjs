@@ -11,7 +11,7 @@ function setup() {
     UI: { todayISO: () => '2026-09-17', formModal: options => { form = options; }, toast() {} },
     App: { render() {} }
   });
-  for (const file of ['js/store.js', 'js/calc.js', 'js/views/collection.js']) {
+  for (const file of ['js/lang.js', 'js/store.js', 'js/calc.js', 'js/views/collection.js']) {
     vm.runInContext(fs.readFileSync(path.join(__dirname, '..', file), 'utf8'), context);
   }
   context.Store.state.children.push(
