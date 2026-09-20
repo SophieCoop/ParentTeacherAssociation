@@ -1478,6 +1478,13 @@ table.ye-tbl td:nth-child(2),table.ye-tbl td:nth-child(3){text-align:center}
   width:6px;height:6px;border-radius:50%;background:var(--primary);
 }
 .bullets li b{color:var(--ink)}
+/* שורת אישור עם תיבת סימון — לפני הורדה שמוציאה פרטים מהאפליקציה */
+.check-line{display:flex;align-items:flex-start;gap:10px;cursor:pointer;
+  padding:12px 14px;border-radius:var(--r-sm);background:#F6F3FA}
+.check-line input{flex:none;width:20px;height:20px;margin:1px 0 0;accent-color:var(--primary-dark);cursor:pointer}
+.check-line span{font-size:13px;color:var(--ink-2);line-height:1.6}
+.check-line a{color:var(--primary-dark);font-weight:600}
+.btn:disabled{opacity:.45;cursor:default}
 
 /* ===== הרכב צוות הגן: דרגה, פס יחסי וסכום מומלץ לאדם ===== */
 .staff-mix .sm-head{justify-content:space-between}
