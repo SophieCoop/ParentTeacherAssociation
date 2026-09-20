@@ -100,13 +100,25 @@ var PayImport = (function () {
     return '';
   }
 
+  /* ---------- טלפון ----------
+     בייצוא של פייבוקס המספר בינלאומי ("972-5464830000"), ובאפליקציה
+     הוא מקומי ("054-6483000"). המפתח כאן מנקה את שניהם לאותה צורה:
+     ספרות בלבד, בלי קידומת הארץ ובלי האפס המוביל. */
+  function phoneKey(v) {
+    var d = String(v == null ? '' : v).replace(/\D/g, '');
+    if (!d) return '';
+    d = d.replace(/^00972/, '').replace(/^972/, '').replace(/^0+/, '');
+    return d.length >= 8 ? d : '';
+  }
+
   /* ---------- זיהוי עמודות ---------- */
   var KEYS = {
     name:   ['שם המשלם', 'שם משלם', 'משלם', 'שם', 'שם מלא', 'לקוח', 'מאת', 'שולח', 'name', 'payer', 'customer', 'from', 'sender', 'member'],
     amount: ['סכום', 'סה"כ', 'סהכ', 'סך', 'תשלום', 'amount', 'sum', 'total', 'price', 'paid'],
     date:   ['תאריך', 'מועד', 'זמן', 'date', 'time', 'created', 'paid at'],
     note:   ['תיאור', 'הערה', 'הערות', 'פרטים', 'עבור', 'מטרה', 'description', 'note', 'notes', 'details', 'memo', 'title', 'reason'],
-    status: ['סטטוס', 'מצב', 'status', 'state']
+    status: ['סטטוס', 'מצב', 'status', 'state'],
+    phone:  ['פלאפון', 'פלפון', 'טלפון', 'נייד', 'סלולרי', 'מספר טלפון', 'phone', 'mobile', 'cell', 'tel']
   };
 
   function headerScore(cell, keys) {
@@ -126,7 +138,7 @@ var PayImport = (function () {
     var best = { headerRow: -1, map: {}, score: 0 };
     for (var r = 0; r < Math.min(rows.length, 10); r++) {
       var row = rows[r] || [], map = {}, used = {}, total = 0;
-      ['amount', 'date', 'name', 'status', 'note'].forEach(function (kind) {
+      ['amount', 'date', 'name', 'phone', 'status', 'note'].forEach(function (kind) {
         var bi = -1, bs = 0;
         row.forEach(function (cell, i) {
           if (used[i]) return;
@@ -190,6 +202,7 @@ var PayImport = (function () {
         name: name,
         amount: Math.round(amount * 100) / 100,
         date: map.date !== undefined ? parseDate(row[map.date]) : '',
+        phone: map.phone !== undefined ? phoneKey(row[map.phone]) : '',
         note: map.note !== undefined ? String(row[map.note] == null ? '' : row[map.note]).trim() : '',
         status: status.trim(),
         skipped: bad ? 'status' : (map.name !== undefined && isTotalRow(name) ? 'total' : '')
@@ -229,6 +242,38 @@ var PayImport = (function () {
     return { childId: '', level: '', candidates: [] };
   }
 
+  /* כל הטלפונים של הילד — של ההורים ושלו עצמו */
+  function phonesOf(child) {
+    var out = [];
+    (child.parents || []).forEach(function (p) {
+      var k = p && phoneKey(p.phone);
+      if (k) out.push(k);
+    });
+    var own = phoneKey(child.phone);
+    if (own) out.push(own);
+    return out;
+  }
+
+  /* ---------- התאמת משלם ----------
+     הטלפון קודם לשם. שם נכתב בכל דרך — באנגלית, בסדר הפוך, עם כינוי —
+     ואילו המספר זהה בשני הצדדים, ולכן התאמה לפיו ודאית. רק כשאין
+     טלפון, או שהוא אינו מוכר, חוזרים להתאמה לפי השם. */
+  function matchPayer(rec, children) {
+    var key = phoneKey(rec && rec.phone);
+    if (key) {
+      var hit = (children || []).filter(function (c) {
+        return phonesOf(c).indexOf(key) > -1;
+      });
+      if (hit.length === 1) {
+        return { childId: hit[0].id, level: 'phone', candidates: [hit[0].id] };
+      }
+      if (hit.length > 1) {
+        return { childId: '', level: 'ambiguous', candidates: hit.map(function (c) { return c.id; }) };
+      }
+    }
+    return matchChild(rec && rec.name, children);
+  }
+
   /* ---------- תוכנית ייבוא: התאמות וכפילויות ---------- */
   function importPlan(records, children, payments) {
     var existing = {};
@@ -236,7 +281,7 @@ var PayImport = (function () {
       existing[p.childId + '|' + Math.round(Calcish(p.amount) * 100) + '|' + (p.date || '')] = true;
     });
     return records.map(function (r) {
-      var m = matchChild(r.name, children);
+      var m = matchPayer(r, children);
       var dup = !!(m.childId && existing[m.childId + '|' + Math.round(r.amount * 100) + '|' + (r.date || '')]);
       return Object.assign({}, r, {
         childId: m.childId, level: m.level, candidates: m.candidates,
@@ -250,6 +295,7 @@ var PayImport = (function () {
   return {
     parseCSV: parseCSV, normName: normName, parseAmount: parseAmount, parseDate: parseDate,
     detectColumns: detectColumns, toRecords: toRecords, matchChild: matchChild, importPlan: importPlan,
-    KINDS: ['name', 'amount', 'date', 'note', 'status']
+    matchPayer: matchPayer, phoneKey: phoneKey,
+    KINDS: ['name', 'amount', 'date', 'note', 'status', 'phone']
   };
 })();

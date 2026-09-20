@@ -651,6 +651,7 @@ Views.collection = (function () {
         var badge = r.skipped === 'duplicate' ? '<span class="badge warn">כבר קיים</span>'
           : r.skipped === 'status' ? '<span class="badge no">' + UI.esc(r.status || 'בוטל') + '</span>'
           : r.skipped === 'total' ? '<span class="badge">שורת סיכום</span>'
+          : r.level === 'phone' ? '<span class="badge ok">זוהה לפי טלפון</span>'
           : r.level === 'exact' ? '<span class="badge ok">זוהה</span>'
           : r.level === 'partial' ? '<span class="badge info">זוהה חלקית</span>'
           : '<span class="badge no">לבדיקה</span>';

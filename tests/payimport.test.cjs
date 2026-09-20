@@ -72,3 +72,77 @@ test('import plan marks duplicates of existing payments', () => {
   const plan = plain(P.importPlan(recs, kids, [{ childId: 'a', amount: '250', date: '2026-09-18' }]));
   assert.deepEqual(plan.map(r => [r.childId, r.duplicate, r.skipped]), [['a', true, 'duplicate'], ['a', false, '']]);
 });
+
+/* ---------- התאמה לפי טלפון ----------
+   הייצוא של פייבוקס נושא את מספר המשלם, והוא זהה בשני הצדדים גם
+   כששמו נכתב באנגלית או בסדר הפוך. */
+
+test('a phone number survives both formats and becomes the same key', () => {
+  const local = P.phoneKey('054-6483000');
+  assert.equal(P.phoneKey('972-546483000'), local, 'international == local');
+  assert.equal(P.phoneKey('+972 54 648 3000'), local, 'spaces and plus ignored');
+  assert.equal(P.phoneKey('00972546483000'), local, 'double-zero prefix');
+  assert.equal(P.phoneKey('0546483000'), local);
+  assert.equal(P.phoneKey(''), '');
+  assert.equal(P.phoneKey('1234'), '', 'too short to be a phone');
+  assert.equal(P.phoneKey(null), '');
+});
+
+test('the payer is matched by phone even when the name would never match', () => {
+  const kids = [
+    { id: 'a', name: 'איתי אלקוב', parents: [{ name: 'איתי אלקובי', phone: '054-9491000' }] },
+    { id: 'b', name: 'ירדן דורון', parents: [{ name: 'דורון וייסברג', phone: '054-6483000' }] }
+  ];
+  // שם באנגלית — לפי השם לבדו אין סיכוי
+  assert.equal(P.matchChild('Itay Elkoub', kids).childId, '', 'name alone fails');
+  const m = P.matchPayer({ name: 'Itay Elkoub', phone: '972-549491000' }, kids);
+  assert.deepEqual([m.childId, m.level], ['a', 'phone']);
+
+  // סדר הפוך — גם הוא נכשל לפי שם, ונפתר לפי הטלפון
+  assert.equal(P.matchChild('וייסברג דורון', kids).childId, '');
+  assert.equal(P.matchPayer({ name: 'וייסברג דורון', phone: '972-546483000' }, kids).childId, 'b');
+});
+
+test('without a usable phone the match falls back to the name, unchanged', () => {
+  const kids = [{ id: 'a', name: 'מאיה גל', parents: [{ name: 'דנה כהן', phone: '052-1111111' }] }];
+  assert.equal(P.matchPayer({ name: 'דנה כהן', phone: '' }, kids).level, 'exact');
+  assert.equal(P.matchPayer({ name: 'דנה כהן' }, kids).level, 'exact');
+  assert.equal(P.matchPayer({ name: 'דנה כהן', phone: '03-000' }, kids).level, 'exact', 'junk phone ignored');
+  assert.equal(P.matchPayer({ name: 'לא קיים', phone: '972-599999999' }, kids).childId, '',
+    'an unknown phone does not invent a match');
+});
+
+test('one phone on two children is ambiguous, never a silent guess', () => {
+  const kids = [
+    { id: 'a', name: 'תום לוי', parents: [{ name: 'רות לוי', phone: '052-7777777' }] },
+    { id: 'b', name: 'גיל לוי', parents: [{ name: 'רות לוי', phone: '052-7777777' }] }
+  ];
+  const m = P.matchPayer({ name: 'רות לוי', phone: '972-527777777' }, kids);
+  assert.equal(m.childId, '', 'no child is picked');
+  assert.equal(m.level, 'ambiguous');
+  assert.deepEqual(plain(m.candidates), ['a', 'b']);
+});
+
+test('a PayBox export maps its columns and keeps only the money coming in', () => {
+  const rows = [
+    ['שם', 'פלאפון', 'סוג', 'סכום', 'תאריך', 'הערות', 'שורות התשלום'],
+    ['נילה א', '972-526461000', 'העברה לקבוצה', 1444, '2025-09-21', '', ''],
+    ['Itay E', '972-549491000', 'העברה לקבוצה', 1444, '2025-09-21', '', ''],
+    ['Sophie C', '972-542117000', 'תשלום מהקבוצה', -1100, '2025-09-25', '', ''],
+    ['מיכל ר', '972-529156000', 'העברה לקבוצה', 481.33, '2026-05-11', 'חוג חיות', ''],
+    ['Sophie C', '972-542117000', 'תשלום מהקבוצה', -3300, '2025-11-18', '', '']
+  ];
+  const det = P.detectColumns(rows);
+  assert.equal(det.headerRow, 0);
+  assert.deepEqual(
+    ['name', 'phone', 'amount', 'date', 'note'].map(k => rows[0][det.map[k]]),
+    ['שם', 'פלאפון', 'סכום', 'תאריך', 'הערות'],
+    'every column lands where it belongs');
+
+  const recs = P.toRecords(rows, det);
+  // תנועות יוצאות מהקופה (סכום שלילי) אינן תשלומי הורים
+  assert.equal(recs.length, 3);
+  assert.deepEqual(plain(recs).map(r => r.amount), [1444, 1444, 481.33]);
+  assert.equal(recs[2].note, 'חוג חיות');
+  assert.equal(recs[0].phone, P.phoneKey('052-6461000'));
+});
