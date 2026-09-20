@@ -13,6 +13,7 @@ var Cloud = (function () {
 
   var SESSION_KEY = 'vaad-gan-session-v1';
   var META_KEY    = 'vaad-gan-sync-v1';
+  var PENDING_KEY = 'vaad-gan-pending-signup-v1';
   var PUSH_DELAY  = 1500;   // המתנה אחרי שינוי לפני העלאה
   var POLL_GUARD  = 5000;   // מרווח מזערי בין סנכרונים יזומים
 
@@ -77,6 +78,28 @@ var Cloud = (function () {
       }
     } catch (e) {}
   }
+  /* ---------- הרשמה שממתינה לאישור במייל ----------
+     חשבון שנפתח ועדיין לא אושר אינו מקבל טוקן, ולכן אין סשן ואין
+     שום זכר לכך במכשיר: ברענון הבא האפליקציה שוב אינה יודעת שיש
+     אישור שממתין, והנתונים ממשיכים להיצבר מקומית בלבד. הרשומה כאן
+     היא הזיכרון הזה, והיא שמאפשרת לתזכר על כך בהמשך (js/confirm.js).
+
+     הסיסמה אינה נשמרת — די בכתובת כדי לשלוח את המייל מחדש. */
+  function pendingSignup() {
+    try {
+      var o = JSON.parse(localStorage.getItem(PENDING_KEY) || 'null');
+      return (o && o.email) ? { email: String(o.email), at: parseInt(o.at, 10) || 0 } : null;
+    } catch (e) { return null; }
+  }
+  function setPendingSignup(email) {
+    try {
+      localStorage.setItem(PENDING_KEY, JSON.stringify({ email: email, at: Date.now() }));
+    } catch (e) {}
+  }
+  function clearPendingSignup() {
+    try { localStorage.removeItem(PENDING_KEY); } catch (e) {}
+  }
+
   function saveSession(data) {
     if (!data || !data.access_token) return null;
     session = {
@@ -86,6 +109,9 @@ var Cloud = (function () {
       user: data.user ? { id: data.user.id, email: data.user.email } : (session && session.user)
     };
     try { localStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch (e) {}
+    /* סשן תקף פירושו שהאישור כבר מאחורינו — בין אם דרך הקישור שבמייל
+       ובין אם בהתחברות רגילה */
+    clearPendingSignup();
     return session;
   }
   function clearSession() {
@@ -231,6 +257,8 @@ var Cloud = (function () {
         enterAccount();
         return sync(true).then(function () { return { confirmed: true }; });
       }
+      // הפרויקט דורש אישור מייל. נרשם כאן כדי שנוכל לתזכר על כך בהמשך
+      setPendingSignup(email);
       return { confirmed: false };
     });
   }
@@ -523,6 +551,7 @@ var Cloud = (function () {
     init: init, info: info, onChange: onChange,
     enabled: enabled, signedIn: signedIn,
     signIn: signIn, signUp: signUp, signOut: signOut, resendConfirm: resendConfirm,
+    pendingSignup: pendingSignup, clearPendingSignup: clearPendingSignup,
     deleteAccount: deleteAccount,
     sync: sync, onLocalChange: onLocalChange,
     getConflict: getConflict, resolveConflict: resolveConflict

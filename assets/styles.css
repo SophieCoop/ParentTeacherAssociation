@@ -1255,7 +1255,8 @@ table.tbl tr td:first-child{font-weight:600}
 .state-box .state-ico.info{background:var(--blue);color:var(--blue-ink)}
 .state-box b{display:block;font-size:16px;color:var(--ink);margin-bottom:6px}
 .state-box p{margin:0;font-size:13px;color:var(--ink-2);line-height:1.65}
-.state-box .mail{font-weight:700;color:var(--ink);word-break:break-all}
+/* כתובת המייל מודגשת גם מחוץ ל-state-box (למשל בהערה שבהגדרות) */
+.mail{font-weight:700;color:var(--ink);word-break:break-all}
 @keyframes pop{from{transform:scale(.4);opacity:0}to{transform:none;opacity:1}}
 
 @media (prefers-reduced-motion:reduce){
