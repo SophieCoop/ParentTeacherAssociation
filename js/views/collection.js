@@ -420,10 +420,8 @@ Views.collection = (function () {
       '</div></div></div>';
   }
 
-  /* ---------- הוספה ידנית לצד ייבוא מקובץ ----------
-     הייבוא מקובץ (PayBox / Excel) מוסתר בינתיים מהמסך; הלוגיקה נשארת
-     (importModal, PayImport) ומופעלת שוב על ידי הפיכת הדגל ל-true. */
-  var IMPORT_ENABLED = false;
+  /* ---------- הוספה ידנית לצד ייבוא מקובץ ---------- */
+  var IMPORT_ENABLED = true;
   function payActions(tab) {
     var html = '<div class="pay-actions">' +
       '<button class="btn add-btn manual" data-action="pay-add" aria-label="הוספת תשלום ידנית">' +
@@ -472,24 +470,46 @@ Views.collection = (function () {
     });
   }
 
-  function readRows(file) {
+  function readBytes(file) {
+    return new Promise(function (resolve, reject) {
+      var r = new FileReader();
+      r.onerror = function () { reject(r.error); };
+      r.onload = function () { resolve(new Uint8Array(r.result)); };
+      r.readAsArrayBuffer(file);
+    });
+  }
+
+  function sheetRows(bytes) {
+    return loadXLSX().then(function (XLSX) {
+      var wb = XLSX.read(bytes, { type: 'array', cellDates: true });
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      return XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' });
+    });
+  }
+
+  /* מבקש סיסמה שוב ושוב עד שהיא נכונה, או עד שמבטלים. ask מקבל את
+     הודעת השגיאה מהניסיון הקודם (ריק בפעם הראשונה) ומחזיר הבטחה עם
+     הסיסמה, או null לביטול. */
+  function unlock(bytes, ask, note) {
+    return ask(note).then(function (pass) {
+      if (pass === null) { var c = new Error('cancelled'); c.cancelled = true; throw c; }
+      return XlsxCrypt.decrypt(bytes, pass).catch(function (e) {
+        if (e.cancelled) throw e;
+        return unlock(bytes, ask, e.message || 'פתיחת הקובץ נכשלה');
+      });
+    });
+  }
+
+  /* ask — פונקציה שמציגה את שאלת הסיסמה. נדרשת רק לקובץ מוצפן. */
+  function readRows(file, ask) {
     var name = (file.name || '').toLowerCase();
     if (/\.(csv|txt|tsv)$/.test(name) || /text\/(csv|plain)/.test(file.type)) {
       return readText(file).then(function (t) { return PayImport.parseCSV(t); });
     }
-    return loadXLSX().then(function (XLSX) {
-      return new Promise(function (resolve, reject) {
-        var r = new FileReader();
-        r.onerror = function () { reject(r.error); };
-        r.onload = function () {
-          try {
-            var wb = XLSX.read(new Uint8Array(r.result), { type: 'array', cellDates: true });
-            var ws = wb.Sheets[wb.SheetNames[0]];
-            resolve(XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' }));
-          } catch (e) { reject(e); }
-        };
-        r.readAsArrayBuffer(file);
-      });
+    return readBytes(file).then(function (bytes) {
+      if (!XlsxCrypt.isEncrypted(bytes)) return sheetRows(bytes);
+      if (!ask) throw new Error('הקובץ מוגן בסיסמה');
+      return unlock(bytes, ask).then(sheetRows);
     });
   }
 
@@ -497,11 +517,14 @@ Views.collection = (function () {
     var kids = Store.state.children;
     var rows = null, detected = null, plan = null, method = 'paybox';
 
+    /* גוף החלון, לשימוש שלבים שרצים מחוץ ל-onMount (שאלת הסיסמה) */
+    var host = null, hostClose = null;
+
     var m = UI.modal({
       title: 'ייבוא תשלומים',
       subtitle: 'מ-PayBox, מ-Excel או מקובץ CSV',
       body: stepFileHTML(),
-      onMount: function (root, close) { mountStepFile(root, close); }
+      onMount: function (root, close) { host = root; hostClose = close; mountStepFile(root, close); }
     });
 
     function stepFileHTML() {
@@ -515,6 +538,44 @@ Views.collection = (function () {
           'שם המשלם מותאם אוטומטית להורים שברשימת הילדים, ואפשר לתקן לפני הייבוא.</div>';
     }
 
+    /* ---------- שאלת הסיסמה לקובץ מוצפן ----------
+       מוצגת בתוך אותו חלון במקום מסך בחירת הקובץ, כדי לא לערום
+       חלון על חלון. מחזירה הבטחה עם הסיסמה, או null אם ביטלו. */
+    function askPassword(note) {
+      return new Promise(function (resolve) {
+        host.innerHTML =
+          '<div class="state-box">' +
+            '<div class="state-ico info">🔒</div>' +
+            '<b>הקובץ מוגן בסיסמה</b>' +
+            '<p>פייבוקס מצפינה את הקובץ. הסיסמה נשארת במכשיר שלכם ' +
+            'ואינה נשלחת לשום מקום.</p>' +
+          '</div>' +
+          '<div class="field" style="margin-top:4px"><label for="imp-pass">הסיסמה</label>' +
+            '<input class="input" id="imp-pass" type="password" inputmode="numeric" ' +
+              'autocomplete="off" placeholder="••••••">' +
+            '<div class="hint">רמז: בדרך כלל זה <b>5 הספרות האחרונות של תעודת הזהות</b> ' +
+            'של מי שהוציא את הדוח מפייבוקס.</div></div>' +
+          (note ? '<div class="note" style="background:#FDF0F2"><div class="n-ico">⚠️</div><div>' +
+                  UI.esc(note) + '</div></div>' : '') +
+          '<button class="btn mt js-pass-go">פתיחת הקובץ</button>' +
+          '<button class="btn soft js-pass-no" style="margin-top:9px">ביטול</button>';
+
+        var box = host.querySelector('#imp-pass');
+        var go = host.querySelector('.js-pass-go');
+        box.focus();
+
+        function submit() {
+          if (!box.value) { box.focus(); return; }
+          go.disabled = true;
+          go.textContent = 'מפענח…';
+          resolve(box.value);
+        }
+        go.addEventListener('click', submit);
+        box.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); });
+        host.querySelector('.js-pass-no').addEventListener('click', function () { resolve(null); });
+      });
+    }
+
     function mountStepFile(root, close) {
       var input = root.querySelector('#imp-pay-file');
       var status = root.querySelector('.imp-status');
@@ -522,7 +583,7 @@ Views.collection = (function () {
         var f = input.files && input.files[0];
         if (!f) return;
         status.textContent = 'קורא את הקובץ…';
-        readRows(f).then(function (rs) {
+        readRows(f, askPassword).then(function (rs) {
           rows = rs;
           detected = PayImport.detectColumns(rows);
           if (detected.map.amount === undefined) throw new Error('no-amount');
@@ -530,12 +591,17 @@ Views.collection = (function () {
           root.innerHTML = stepPreviewHTML();
           mountStepPreview(root, close);
         }).catch(function (e) {
-          status.textContent = e && e.message === 'no-amount'
+          /* שאלת הסיסמה החליפה את גוף החלון, ולכן חוזרים למסך בחירת
+             הקובץ לפני שמציגים הודעה — אחרת אין לאן לכתוב אותה */
+          host.innerHTML = stepFileHTML();
+          mountStepFile(host, hostClose);
+          var st = host.querySelector('.imp-status');
+          if (e && e.cancelled) return;                       // ביטלו — בלי הודעת שגיאה
+          st.textContent = e && e.message === 'no-amount'
             ? 'לא נמצאה עמודת סכום בקובץ. אפשר לבדוק שהקובץ הוא דוח התשלומים ולא דף אחר.'
             : e && e.message === 'load failed'
               ? 'לא הצלחנו לטעון את קורא ה-Excel (אין חיבור?). אפשר לשמור את הקובץ כ-CSV ולנסות שוב.'
-              : 'לא הצלחנו לקרוא את הקובץ. אפשר לשמור אותו כ-CSV ולנסות שוב.';
-          input.value = '';
+              : (e && e.message) || 'לא הצלחנו לקרוא את הקובץ. אפשר לשמור אותו כ-CSV ולנסות שוב.';
         });
       });
     }
