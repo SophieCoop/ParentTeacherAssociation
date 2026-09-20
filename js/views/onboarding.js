@@ -336,9 +336,9 @@ Views.onboarding = (function () {
     stopWatch();
     watchFrom = Date.now();
     watchTimer = setInterval(function () {
-      // אחרי חמש דקות מפסיקים לשאול מיוזמתנו; החזרה ללשונית והכפתור עדיין בודקים
+      // אחרי חמש דקות מפסיקים לשאול מיוזמתנו; החזרה ללשונית עדיין בודקת
       if (Date.now() - watchFrom > 300000) { clearInterval(watchTimer); watchTimer = null; return; }
-      check(false);
+      check();
     }, 20000);
     window.addEventListener('focus', onBack);
     document.addEventListener('visibilitychange', onVisible);
@@ -351,23 +351,20 @@ Views.onboarding = (function () {
     document.removeEventListener('visibilitychange', onVisible);
   }
 
-  function onBack()    { check(false); }
-  function onVisible() { if (!document.hidden) check(false); }
+  function onBack()    { check(); }
+  function onVisible() { if (!document.hidden) check(); }
 
-  function check(manual) {
+  /* הבדיקה רצה ברקע בלבד — אין כפתור שמפעיל אותה ביד — ולכן כישלון
+     אינו מצייר דבר: המשתמש כבר ממשיך הלאה בהקמה, ו"עוד לא אושר"
+     אינו חדשות עבורו. */
+  function check() {
     if (cloud.mode !== 'sent') return;
     var now = Date.now();
-    if (!manual && now - lastCheck < 6000) return;   // מרווח מזערי בין בדיקות
+    if (now - lastCheck < 6000) return;   // מרווח מזערי בין בדיקות
     lastCheck = now;
-    if (manual) { cloud.mode = 'busy'; cloud.busyText = 'בודקים את האישור…'; paint(); }
 
-    Cloud.signIn(cloud.email, cloud.password).then(function () { succeed(); }, function (err) {
-      if (cloud.mode === 'done') return;
-      cloud.mode = 'sent';
-      if (!manual) return;
-      var msg = (err && err.message) || '';
-      cloud.error = /לאשר את המייל/.test(msg) ? 'עוד לא אישרתם — הקישור מחכה במייל שנשלח' : msg;
-      paint();
+    Cloud.signIn(cloud.email, cloud.password).then(succeed, function () {
+      if (cloud.mode !== 'done') cloud.mode = 'sent';
     });
   }
 
@@ -470,7 +467,9 @@ Views.onboarding = (function () {
         '</div></div>';
     }
 
-    /* המייל נשלח — ממשיכים הלאה, לא ממתינים לו */
+    /* המייל נשלח — ממשיכים הלאה, לא ממתינים לו. המסך הזה נראה שלוש
+       שניות בלבד (ראו signup) ולכן אין עליו אלא ההודעה: שליחה חוזרת
+       והתחברות מחכות בפס הקבוע שבמסך הבית, שאינו נעלם עד האישור. */
     if (cloud.mode === 'sent') {
       return top +
         '<div class="card"><div class="state-box" role="status" aria-live="polite">' +
@@ -480,11 +479,7 @@ Views.onboarding = (function () {
           'אפשר להמשיך בהקמה כרגיל — נזהה את האישור לבד, וכל מה שהוזן בינתיים יעלה לענן.</p>' +
         '</div></div>' +
         errorNote() +
-        '<div class="mt">' +
-          '<button class="btn" data-action="wiz-next">המשך להקמה</button>' +
-          '<button class="btn soft" style="margin-top:9px" data-action="wiz-cloud-check">כבר אישרתי — בדיקה עכשיו</button>' +
-          '<button class="linkbtn" style="margin-top:11px" data-action="wiz-cloud-resend">המייל לא הגיע? שליחה מחדש</button>' +
-        '</div>';
+        '<div class="mt"><button class="btn" data-action="wiz-next">המשך להקמה</button></div>';
     }
 
     if (cloud.mode === 'done') {
@@ -619,8 +614,6 @@ Views.onboarding = (function () {
       },
       'wiz-cloud': function (el) { cloud[el.getAttribute('data-key')] = el.value; },
       'wiz-cloud-signup': signup,
-      'wiz-cloud-check': function () { check(true); },
-      'wiz-cloud-resend': function () { Views.account.resendForm(cloud.email); },
       /* שינוי סוג הוועד באמצע ההקמה — הציור מחדש מחליף את השפה במקום */
       'wiz-kind': function (el) {
         Store.setKind(el.getAttribute('data-kind'));
