@@ -652,7 +652,9 @@ Views.collection = (function () {
           : r.skipped === 'status' ? '<span class="badge no">' + UI.esc(r.status || 'בוטל') + '</span>'
           : r.skipped === 'total' ? '<span class="badge">שורת סיכום</span>'
           : r.level === 'phone' ? '<span class="badge ok">זוהה לפי טלפון</span>'
+          : r.level === 'remembered' ? '<span class="badge ok">זוהה מייבוא קודם</span>'
           : r.level === 'exact' ? '<span class="badge ok">זוהה</span>'
+          : r.level === 'reversed' ? '<span class="badge info">זוהה — סדר הפוך</span>'
           : r.level === 'partial' ? '<span class="badge info">זוהה חלקית</span>'
           : '<span class="badge no">לבדיקה</span>';
         var opts = '<option value="">— לא לייבא —</option>' + kids.map(function (c) {
@@ -707,14 +709,21 @@ Views.collection = (function () {
       root.querySelector('.js-import').addEventListener('click', function () {
         var picked = plan.filter(function (r) { return r.include && r.childId && Store.find('children', r.childId); });
         if (!picked.length) return;
+        /* שיוך שנעשה ביד נשמר על הילד, כדי שהייבוא הבא יזהה את אותו
+           משלם לבד. מה שזוהה מראש לפי טלפון כבר ידוע ואין מה לזכור. */
+        var learned = 0;
         picked.forEach(function (r) {
           Store.add('payments', { childId: r.childId, amount: r.amount, method: method,
             date: r.date || UI.todayISO(), installments: 1, note: r.note || '' });
+          if (r.level !== 'phone' && r.level !== 'remembered') {
+            if (Store.rememberPayer(r.childId, PayImport.keysForRecord(r))) learned++;
+          }
         });
         close();
         App.render();
         refreshCard();
-        UI.toast('יובאו ' + picked.length + ' תשלומים ✓');
+        UI.toast('יובאו ' + picked.length + ' תשלומים ✓' +
+          (learned ? ' · ' + learned + ' משלמים ייזכרו לפעם הבאה' : ''));
       });
     }
     return m;

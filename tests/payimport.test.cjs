@@ -61,7 +61,10 @@ test('payer names match parents exactly, partially, or stay for the user to deci
   assert.equal(P.matchChild('רון', kids).childId, 'c', 'unique first name');
   assert.equal(P.matchChild('דנה', kids).level, 'ambiguous', 'two parents called Dana');
   assert.equal(P.matchChild('מאיה', kids).childId, 'c', 'child name works too');
-  assert.equal(P.matchChild('גל רון', kids).childId, '', 'reversed order is not guessed');
+  // סדר הפוך כן מזוהה, אבל ברמה משלו — כדי שהמשתמש יראה על מה
+  // ההתאמה נשענת. ההיפוך נדרש להתאמה מלאה, לא חלקית.
+  assert.deepEqual([P.matchChild('גל רון', kids).childId, P.matchChild('גל רון', kids).level],
+    ['c', 'reversed']);
   assert.equal(P.matchChild('שרה אברהם', kids).level, '');
 });
 
@@ -98,9 +101,10 @@ test('the payer is matched by phone even when the name would never match', () =>
   const m = P.matchPayer({ name: 'Itay Elkoub', phone: '972-549491000' }, kids);
   assert.deepEqual([m.childId, m.level], ['a', 'phone']);
 
-  // סדר הפוך — גם הוא נכשל לפי שם, ונפתר לפי הטלפון
-  assert.equal(P.matchChild('וייסברג דורון', kids).childId, '');
-  assert.equal(P.matchPayer({ name: 'וייסברג דורון', phone: '972-546483000' }, kids).childId, 'b');
+  // סדר הפוך נתפס לפי השם, אבל הטלפון גובר ומדייק את הרמה
+  assert.equal(P.matchChild('וייסברג דורון', kids).level, 'reversed');
+  const rev = P.matchPayer({ name: 'וייסברג דורון', phone: '972-546483000' }, kids);
+  assert.deepEqual([rev.childId, rev.level], ['b', 'phone']);
 });
 
 test('without a usable phone the match falls back to the name, unchanged', () => {
@@ -145,4 +149,53 @@ test('a PayBox export maps its columns and keeps only the money coming in', () =
   assert.deepEqual(plain(recs).map(r => r.amount), [1444, 1444, 481.33]);
   assert.equal(recs[2].note, 'חוג חיות');
   assert.equal(recs[0].phone, P.phoneKey('052-6461000'));
+});
+
+/* ---------- מה שנלמד פעם אחת ---------- */
+
+test('a payer the user assigned by hand is recognised on the next import', () => {
+  const kids = [{ id: 'a', name: 'נועם ריגר', parents: [{ name: 'אנה ריגר', phone: '' }] }];
+  const rec = { name: 'Anna Riger', phone: '' };
+
+  // בפעם הראשונה אין קשר בין "Anna Riger" ל"אנה ריגר"
+  assert.equal(P.matchPayer(rec, kids).childId, '', 'nothing to go on yet');
+
+  // המשתמש שייך ביד, והמפתחות נשמרים על הילד
+  kids[0].payerKeys = P.keysForRecord(rec);
+  const m = P.matchPayer(rec, kids);
+  assert.deepEqual([m.childId, m.level], ['a', 'remembered']);
+});
+
+test('a remembered phone is recognised even when the name changed since', () => {
+  const kids = [{ id: 'a', name: 'תום לוי', parents: [{ name: 'רות לוי', phone: '' }],
+                  payerKeys: P.keysForRecord({ name: 'Ruth Levi', phone: '972-521111111' }) }];
+  // אותו מספר, שם אחר לגמרי בייצוא הבא
+  const m = P.matchPayer({ name: 'R. Levi-Cohen', phone: '052-1111111' }, kids);
+  assert.deepEqual([m.childId, m.level], ['a', 'phone']);
+});
+
+test('what gets remembered is the phone and the name, and nothing else', () => {
+  assert.deepEqual(plain(P.keysForRecord({ name: 'דנה כהן', phone: '972-521234567' })),
+    ['t:521234567', 'n:דנה כהן']);
+  assert.deepEqual(plain(P.keysForRecord({ name: 'דנה כהן', phone: '' })), ['n:דנה כהן']);
+  assert.deepEqual(plain(P.keysForRecord({ name: '', phone: '' })), []);
+});
+
+test('a remembered name on two children is ambiguous, not a coin toss', () => {
+  const rec = { name: 'Dana K', phone: '' };
+  const keys = P.keysForRecord(rec);
+  const kids = [{ id: 'a', name: 'תום', parents: [], payerKeys: keys },
+                { id: 'b', name: 'גיל', parents: [], payerKeys: keys }];
+  const m = P.matchPayer(rec, kids);
+  assert.equal(m.childId, '');
+  assert.equal(m.level, 'ambiguous');
+});
+
+test('a real phone still beats a remembered name', () => {
+  const kids = [
+    { id: 'a', name: 'תום לוי', parents: [{ name: 'רות לוי', phone: '052-1111111' }] },
+    { id: 'b', name: 'גיל כהן', parents: [], payerKeys: ['n:רות לוי'] }
+  ];
+  const m = P.matchPayer({ name: 'רות לוי', phone: '972-521111111' }, kids);
+  assert.deepEqual([m.childId, m.level], ['a', 'phone'], 'the phone is the harder evidence');
 });

@@ -239,19 +239,62 @@ var PayImport = (function () {
     if (exact.length > 1) return { childId: '', level: 'ambiguous', candidates: exact };
     if (partial.length === 1) return { childId: partial[0], level: 'partial', candidates: partial };
     if (partial.length > 1) return { childId: '', level: 'ambiguous', candidates: partial };
+
+    /* סדר הפוך: "וייסברג דורון" מול "דורון וייסברג". נפוץ מאוד בייצוא
+       ישראלי, ובטוח יחסית — שתי המילים זהות, רק סדרן שונה. עדיין
+       מסומן בנפרד ולא כהתאמה מדויקת, כדי שהמשתמש יראה על מה היא
+       נשענת. מחפש רק התאמה מלאה אחרי ההיפוך, ולא התאמה חלקית. */
+    var pt2 = p.split(' ');
+    if (pt2.length > 1) {
+      var rev = pt2.slice().reverse().join(' ');
+      var hits = (children || []).filter(function (c) {
+        return labelsOf(c).indexOf(rev) > -1;
+      }).map(function (c) { return c.id; });
+      if (hits.length === 1) return { childId: hits[0], level: 'reversed', candidates: hits };
+      if (hits.length > 1) return { childId: '', level: 'ambiguous', candidates: hits };
+    }
     return { childId: '', level: '', candidates: [] };
   }
 
-  /* כל הטלפונים של הילד — של ההורים ושלו עצמו */
-  function phonesOf(child) {
+  /* ---------- מפתחות משלם ----------
+     מפתח מזהה משלם בקובץ. שני סוגים, עם תחילית שמבדילה ביניהם:
+       t:<ספרות>  — טלפון
+       n:<שם>     — שם מנורמל
+     הטלפונים נגזרים מרשומת הילד, והמפתחות שנשמרו (child.payerKeys)
+     הם מה שהמשתמש עצמו קבע בייבוא קודם. בזכותם התאמה שנעשתה ביד
+     פעם אחת אינה נדרשת שוב — וזה ההבדל בין מטלה חוזרת לבין דקה
+     אחת בהתחלה. */
+  function phoneKeys(child) {
     var out = [];
     (child.parents || []).forEach(function (p) {
       var k = p && phoneKey(p.phone);
-      if (k) out.push(k);
+      if (k) out.push('t:' + k);
     });
     var own = phoneKey(child.phone);
-    if (own) out.push(own);
+    if (own) out.push('t:' + own);
     return out;
+  }
+
+  function savedKeys(child) {
+    return (child.payerKeys || []).map(function (k) { return String(k || ''); })
+                                  .filter(Boolean);
+  }
+
+  /* המפתחות שראוי לזכור עבור שורה שהמשתמש שייך ביד */
+  function keysForRecord(rec) {
+    var out = [];
+    var t = phoneKey(rec && rec.phone);
+    if (t) out.push('t:' + t);
+    var n = normName(rec && rec.name);
+    if (n) out.push('n:' + n);
+    return out;
+  }
+
+  function findByKey(children, key) {
+    if (!key) return [];
+    return (children || []).filter(function (c) {
+      return phoneKeys(c).indexOf(key) > -1 || savedKeys(c).indexOf(key) > -1;
+    }).map(function (c) { return c.id; });
   }
 
   /* ---------- התאמת משלם ----------
@@ -259,17 +302,21 @@ var PayImport = (function () {
      ואילו המספר זהה בשני הצדדים, ולכן התאמה לפיו ודאית. רק כשאין
      טלפון, או שהוא אינו מוכר, חוזרים להתאמה לפי השם. */
   function matchPayer(rec, children) {
-    var key = phoneKey(rec && rec.phone);
-    if (key) {
-      var hit = (children || []).filter(function (c) {
-        return phonesOf(c).indexOf(key) > -1;
-      });
-      if (hit.length === 1) {
-        return { childId: hit[0].id, level: 'phone', candidates: [hit[0].id] };
-      }
-      if (hit.length > 1) {
-        return { childId: '', level: 'ambiguous', candidates: hit.map(function (c) { return c.id; }) };
-      }
+    var t = phoneKey(rec && rec.phone);
+    if (t) {
+      var byPhone = findByKey(children, 't:' + t);
+      if (byPhone.length === 1) return { childId: byPhone[0], level: 'phone', candidates: byPhone };
+      if (byPhone.length > 1) return { childId: '', level: 'ambiguous', candidates: byPhone };
+    }
+    /* שם שנשמר בייבוא קודם — החלטה מפורשת של המשתמש, ולכן היא גוברת
+       על ניחוש לפי דמיון שמות */
+    var n = normName(rec && rec.name);
+    if (n) {
+      var saved = (children || []).filter(function (c) {
+        return savedKeys(c).indexOf('n:' + n) > -1;
+      }).map(function (c) { return c.id; });
+      if (saved.length === 1) return { childId: saved[0], level: 'remembered', candidates: saved };
+      if (saved.length > 1) return { childId: '', level: 'ambiguous', candidates: saved };
     }
     return matchChild(rec && rec.name, children);
   }
@@ -295,7 +342,7 @@ var PayImport = (function () {
   return {
     parseCSV: parseCSV, normName: normName, parseAmount: parseAmount, parseDate: parseDate,
     detectColumns: detectColumns, toRecords: toRecords, matchChild: matchChild, importPlan: importPlan,
-    matchPayer: matchPayer, phoneKey: phoneKey,
+    matchPayer: matchPayer, phoneKey: phoneKey, keysForRecord: keysForRecord,
     KINDS: ['name', 'amount', 'date', 'note', 'status', 'phone']
   };
 })();
