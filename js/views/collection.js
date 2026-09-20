@@ -420,8 +420,13 @@ Views.collection = (function () {
       '</div></div></div>';
   }
 
-  /* ---------- הוספה ידנית לצד ייבוא מקובץ ---------- */
-  var IMPORT_ENABLED = true;
+  /* ---------- הוספה ידנית לצד ייבוא מקובץ ----------
+     היכולת כולה תלויה במתג אחד ב-js/config.js. ברירת המחדל דולקת,
+     וקובץ הגדרות ישן שאין בו את המתג אינו מכבה אותה בטעות. */
+  function importEnabled() {
+    if (typeof Features === 'undefined' || !Features) return true;
+    return Features.payboxImport !== false;
+  }
   function payActions(tab) {
     var html = '<div class="pay-actions">' +
       '<button class="btn add-btn manual" data-action="pay-add" aria-label="הוספת תשלום ידנית">' +
@@ -740,7 +745,7 @@ Views.collection = (function () {
       '</div>';
     html += !Store.state.children.length
       ? UI.addBtn({ act: 'nav', label: 'הוספת ילדים', cls: 'mb-add', data: { view: 'children' } })
-      : IMPORT_ENABLED
+      : importEnabled()
         ? payActions(tab)
         : UI.addBtn({ act: 'pay-add', label: 'הוספת תשלום', cls: 'mb-add' });
     if (tab === 'calc') html += tabCalc();
@@ -752,6 +757,8 @@ Views.collection = (function () {
   return {
     render: render,
     payForm: payForm,
+    /* חשוף לבדיקה, ולכל מי שרוצה לשאול אם היכולת דולקת */
+    importEnabled: importEnabled,
     actions: {
       'col-tab': function (el) { App.setVs('colTab', el.getAttribute('data-tab')); App.render(); },
       'col-search': function (el) {
@@ -763,7 +770,9 @@ Views.collection = (function () {
       },
       'col-open': function (el) { openChild(el.getAttribute('data-id')); },
       'pay-add': function (el) { payForm(null, el.getAttribute('data-child')); },
-      'pay-import': function () { importModal(); },
+      /* גם הפעולה עצמה נבדקת: הכפתורים נעלמים כשהמתג כבוי, אבל
+         הפעולה גלובלית ואסור שתישאר פתוחה מאחוריהם */
+      'pay-import': function () { if (importEnabled()) importModal(); },
       'pay-edit': function (el, ev) {
         if (ev) ev.stopPropagation();
         payForm(Store.find('payments', el.getAttribute('data-id')));
