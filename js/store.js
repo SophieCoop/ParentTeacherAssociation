@@ -368,6 +368,10 @@ var Store = (function () {
     data.staffLevels = migrateStaffLevels(data.staffLevels);
     if (!Array.isArray(data.categories) || !data.categories.length) data.categories = base.categories;
     else migrateCategories(data.categories);
+    /* ילדים שנשמרו לפני שנוספו מפתחות המשלם */
+    (data.children || []).forEach(function (c) {
+      if (!Array.isArray(c.payerKeys)) c.payerKeys = [];
+    });
     migrateBudgetItems(data.budgetItems);
     migrateExpenses(data.expenses, data.ideas);
     return data;
@@ -492,6 +496,25 @@ var Store = (function () {
     if (used[nm]) nm += ' ' + (items.length + 1);   // שם תפוס אצל עובד/ת אמיתי/ת
     used[nm] = true;
     return { id: uid('stf'), name: nm, role: nm.replace(/ \d+$/, ''), level: level, phone: '', birthDate: '', placeholder: true };
+  }
+
+  /* ---------- מפתחות משלם ----------
+     שיוך שהמשתמש עשה ביד בייבוא תשלומים נשמר על רשומת הילד, כדי
+     שהייבוא הבא יזהה את אותו משלם לבד. מצטבר ואינו נמחק: הורה יכול
+     לשלם משני מספרים, ושם המשלם עשוי להשתנות בין ייצוא לייצוא. */
+  function rememberPayer(childId, keys) {
+    var child = find('children', childId);
+    if (!child || !keys || !keys.length) return null;
+    if (!Array.isArray(child.payerKeys)) child.payerKeys = [];
+    var added = 0;
+    keys.forEach(function (k) {
+      k = String(k || '');
+      if (!k || child.payerKeys.indexOf(k) > -1) return;
+      child.payerKeys.push(k);
+      added++;
+    });
+    if (added) save();
+    return child;
   }
 
   function remove(name, id) {
@@ -675,6 +698,7 @@ var Store = (function () {
     currentOwner: currentOwner, clearAllSlots: clearAllSlots, dropSlot: dropSlot,
     uid: uid, list: list, find: find, add: add, update: update, remove: remove,
     setHeadcount: setHeadcount, headcountFloor: headcountFloor, isPlaceholder: isPlaceholder,
+    rememberPayer: rememberPayer,
     replaceState: replaceState,
     exportJSON: exportJSON, importJSON: importJSON, loadDemo: loadDemo,
     methodName: function (id) {

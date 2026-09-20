@@ -95,3 +95,33 @@ test('bad input keeps the current count and unknown kinds are ignored', () => {
   assert.equal(Store.setHeadcount('payments', 5), 0);
   assert.equal((Store.state.payments || []).length, 0);
 });
+
+test('a payer assignment is stored on the child, accumulates, and survives a reload', () => {
+  const { Store } = setup();
+  const kid = Store.add('children', { name: 'נועם ריגר', parents: [] });
+
+  assert.equal(Store.rememberPayer(kid.id, ['t:501111111', 'n:anna riger']).id, kid.id);
+  assert.deepEqual(plain(Store.find('children', kid.id).payerKeys), ['t:501111111', 'n:anna riger']);
+
+  // הורה יכול לשלם ממספר נוסף — המפתחות מצטברים ואינם נדרסים
+  Store.rememberPayer(kid.id, ['t:502222222', 'n:anna riger']);
+  assert.deepEqual(plain(Store.find('children', kid.id).payerKeys),
+    ['t:501111111', 'n:anna riger', 't:502222222'], 'added once, no duplicates');
+
+  // שורדים ייצוא וטעינה
+  const saved = Store.exportJSON();
+  Store.reset();
+  Store.importJSON(saved);
+  assert.deepEqual(plain(Store.find('children', kid.id).payerKeys),
+    ['t:501111111', 'n:anna riger', 't:502222222']);
+
+  // קלט ריק או ילד שאינו קיים אינם עושים דבר
+  assert.equal(Store.rememberPayer(kid.id, []), null);
+  assert.equal(Store.rememberPayer('no-such-child', ['t:1']), null);
+});
+
+test('children saved before payer keys existed get an empty list, not undefined', () => {
+  const { Store } = setup();
+  Store.importJSON(JSON.stringify({ children: [{ id: 'c1', name: 'ותיק', parents: [] }] }));
+  assert.deepEqual(plain(Store.find('children', 'c1').payerKeys), []);
+});

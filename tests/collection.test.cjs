@@ -18,7 +18,7 @@ function setup() {
     { id: 'a', name: 'אביב', parents: [{ name: 'סופי' }] },
     { id: 'b', name: 'גבי', parents: [{ name: 'גבי' }] }
   );
-  return { ...context, form: () => form };
+  return { ...context, ctx: context, form: () => form };
 }
 
 test('bulk payment records the full amount separately for each selected child', () => {
@@ -51,4 +51,49 @@ test('editing one payment keeps the other payment intact', () => {
   assert.equal(s.Store.state.payments.length, 2);
   assert.equal(s.Store.find('payments', 'p1').amount, 200);
   assert.equal(s.Store.find('payments', 'p2').amount, 100);
+});
+
+/* ---------- מתג ייבוא הקובץ ---------- */
+
+test('the PayBox import is one switch away from being off completely', () => {
+  const s = setup();
+  const C = s.Views.collection;
+
+  assert.equal(C.importEnabled(), true, 'on by default');
+  s.ctx.Features = { payboxImport: false };
+  assert.equal(C.importEnabled(), false);
+  s.ctx.Features = { payboxImport: true };
+  assert.equal(C.importEnabled(), true);
+});
+
+test('a config without the switch does not silently disable the feature', () => {
+  const s = setup();
+  const C = s.Views.collection;
+  s.ctx.Features = {};                             // הגדרות ישנות, בלי המתג
+  assert.equal(C.importEnabled(), true);
+  s.ctx.Features = { payboxImport: undefined };
+  assert.equal(C.importEnabled(), true);
+  s.ctx.Features = { payboxImport: null };
+  assert.equal(C.importEnabled(), true, 'only an explicit false turns it off');
+  s.ctx.Features = null;
+  assert.equal(C.importEnabled(), true, 'and a missing config is not a kill switch');
+});
+
+test('with the switch off the import action does nothing, even if called directly', () => {
+  const s = setup();
+  let opened = false;
+  // החלון בונה HTML אמיתי, ולכן הסטאב צריך את מה שהוא קורא לו
+  Object.assign(s.ctx.UI, {
+    esc: x => String(x == null ? '' : x),
+    svgIcon: () => '',
+    modal: () => { opened = true; return { close() {}, setBody() {}, isOpen: () => true }; }
+  });
+
+  s.ctx.Features = { payboxImport: false };
+  s.Views.collection.actions['pay-import']();
+  assert.equal(opened, false, 'no modal was opened');
+
+  s.ctx.Features = { payboxImport: true };
+  s.Views.collection.actions['pay-import']();
+  assert.equal(opened, true, 'and it still works when on');
 });

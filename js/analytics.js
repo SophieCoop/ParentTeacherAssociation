@@ -24,7 +24,9 @@ var Analytics = (function () {
     'setup-done':  { account: ['yes', 'no'] },
     'account':     { action: ['signup', 'signin', 'confirmed'] },
     'install':     { action: ['shown', 'manual', 'accepted', 'dismissed', 'never', 'installed'] },
-    'confirm-reminder': { action: ['shown', 'manual', 'resend', 'signin', 'later', 'never'] }
+    /* התזכורת לאישור המייל היא פס קבוע במסך הבית; הערכים שהיו שייכים
+       לחלון הקופץ שקדם לו (shown / later / never) ירדו איתו */
+    'confirm-reminder': { action: ['banner'] }
   };
 
   function send(name, data) {

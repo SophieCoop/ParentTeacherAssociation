@@ -41,8 +41,12 @@ var Confirm = (function () {
   }
 
   /* ---------- הפס ---------- */
-  /* שני הכפתורים הם אותן פעולות שבמסך ההגדרות (js/views/account.js):
-     שתיהן כבר יודעות למלא מראש את הכתובת הממתינה מ-pending(). */
+  /* הכפתורים הם אותן פעולות שבמסך ההגדרות (js/views/account.js):
+     כולן כבר יודעות למלא מראש את הכתובת הממתינה מ-pending().
+
+     שחזור הסיסמה נמצא כאן כי "כבר אישרתי" מבקש להתחבר — והסיסמה
+     נבחרה באשף פעם אחת ונשכחה. בלי מוצא כזה, מי שהקישור פג אצלו
+     נתקע עם חשבון שקיים ונתונים שלא יסתנכרנו לעולם. */
   function banner() {
     var p = pending();
     if (!p) return '';
@@ -64,6 +68,8 @@ var Confirm = (function () {
           '<button class="btn ghost" data-action="acc-resend">שליחת המייל שוב</button>' +
           '<button class="btn" data-action="acc-signin">כבר אישרתי</button>' +
         '</div>' +
+        '<button class="linkbtn" data-action="acc-recover" style="margin-top:8px">' +
+          'שכחתי את הסיסמה</button>' +
       '</div></div>';
   }
 
