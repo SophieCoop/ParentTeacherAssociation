@@ -23,6 +23,10 @@ Views.home = (function () {
       (Views.account.chipHTML() ? '<div style="margin-top:8px">' + Views.account.chipHTML() + '</div>' : '') +
       '</header>';
 
+    /* אישור המייל ממתין — הפס קודם לכל השאר: כל עוד לא אושר,
+       שום דבר במסך הזה אינו מגובה */
+    if (window.Confirm) html += Confirm.banner();
+
     /* ההקמה נעצרה באמצע — מזכירים אותה כל עוד נשאר שלב לחזור אליו */
     if (!st.setupDone || App.savedWizStep()) {
       html += '<div class="note"><div class="n-ico">🌱</div><div>' +

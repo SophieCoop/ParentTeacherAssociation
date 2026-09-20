@@ -1,5 +1,5 @@
 /* ============================================================
-   תזכורת לאישור המייל — חלון שקופץ אחרי כמה כניסות
+   תזכורת לאישור המייל — פס קבוע במסך הבית
    ------------------------------------------------------------
    פתיחת חשבון שדורשת אישור מייל אינה עוצרת את ההקמה: המייל נשלח
    וממשיכים הלאה (ראו js/views/onboarding.js). זו החלטה נכונה —
@@ -9,20 +9,18 @@
    הדפדפן או החלפת מכשיר מוחקת הכול.
 
    המייל עצמו נוטה להיעלם: הוא נוחת בספאם או ב"קידומי מכירות",
-   נקבר תחת מיילים חדשים, או פשוט נשכח. לכן אחרי חמש כניסות
-   לאפליקציה החלון הזה מזכיר שהאישור ממתין, מכוון לחפש בספאם,
-   ומציע לשלוח את המייל שוב או להתחבר למי שכבר אישר במכשיר אחר.
+   נקבר תחת מיילים חדשים, או פשוט נשכח.
 
-   מה נחשב כניסה: אותה הגדרה בדיוק שבהצעה להוסיף למסך הבית —
-   פתיחה של האתר, כשטעינות חוזרות בתוך חצי שעה הן אותה כניסה.
-   המונה משותף לשתיהן (Install.visits), כדי שלא תהיינה שתי
-   ספירות שונות לאותו דבר.
+   קודם עמד כאן חלון קופץ שהופיע אחרי חמש כניסות. הוא החמיץ בדיוק
+   את מי שנועד לו: מי שלא קיבל את המייל לא חזר חמש פעמים כדי לראות
+   אותו. במקומו יש עכשיו פס שיושב בראש מסך הבית ואינו זז עד
+   שהאישור מגיע — נראה בכניסה הראשונה, לא חוסם דבר, ואי אפשר
+   לסגור אותו בטעות ולאבד אותו.
 
-   "אולי אחר כך" מרחיק את התזכורת בחמש כניסות; "לא להציג שוב"
-   מכבה אותה. ברגע שהאישור מגיע — הרשומה שב-Cloud נמחקת מאליה
-   והתזכורת נעלמת בלי שיידרש דבר.
+   ברגע שהאישור מגיע — הרשומה שב-Cloud נמחקת מאליה והפס נעלם בלי
+   שיידרש דבר.
 
-   וחשוב מכל: מי שכבר אישר לא רואה אותה לעולם. Cloud שומר גם רישום
+   וחשוב מכל: מי שכבר אישר לא רואה אותו לעולם. Cloud שומר גם רישום
    חיובי של הכתובות שידוע שאושרו, ולא רק מוחק את הממתינה — כי יש
    מסלולים שבהם האישור הצליח ובכל זאת אין סשן במכשיר הזה (לחיצה
    שנייה על הקישור החד־פעמי, נפילת רשת אחרי שהטוקן התקבל, או אישור
@@ -30,43 +28,10 @@
    ============================================================ */
 var Confirm = (function () {
 
-  var KEY = 'vaad-gan-confirm-v1';
-  var SHOW_AT = 5;    // הכניסה שבה התזכורת מופיעה לראשונה
-  var SNOOZE  = 5;    // כמה כניסות ממתינים אחרי "אולי אחר כך"
-
-  var shown = false;  // הוצגה פעם אחת בטעינה הזו, גם אם המסך צויר מחדש
-  var box = null;
-
-  /* ---------- זיכרון ---------- */
-  /* בלי localStorage אי אפשר לזכור דחייה, ולכן גם לא מזכירים —
-     תזכורת שחוזרת בכל טעינה גרועה מתזכורת שלא הופיעה כלל */
-  function read() {
-    try {
-      var o = JSON.parse(localStorage.getItem(KEY) || '{}');
-      return { next: parseInt(o.next, 10) || SHOW_AT, off: !!o.off };
-    } catch (e) {
-      return { next: SHOW_AT, off: true };
-    }
-  }
-
-  function write(s) {
-    try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {}
-  }
-
-  function silence() { var s = read(); s.off = true; write(s); }
-
-  function snooze() {
-    var s = read();
-    s.next = visits() + SNOOZE;
-    write(s);
-  }
-
-  function visits() {
-    return (window.Install && Install.visits) ? Install.visits() : 0;
-  }
+  var reported = false;   // דיווח אחד לכל טעינה, גם כשהמסך מצויר שוב ושוב
 
   /* ---------- האם יש בכלל אישור שממתין ---------- */
-  /* התזכורת קופצת אך ורק כשהמייל באמת טרם אושר. שלוש שכבות מבטיחות
+  /* הפס עולה אך ורק כשהמייל באמת טרם אושר. שלוש שכבות מבטיחות
      זאת: מי שמחובר כבר עבר את האישור; Cloud.pendingSignup מחזיר null
      לכתובת שרשומה אצלו כמאושרת (גם כשאין סשן במכשיר הזה); והרשומה
      עצמה נמחקת בכל סשן תקף. */
@@ -75,89 +40,32 @@ var Confirm = (function () {
     return Cloud.pendingSignup ? Cloud.pendingSignup() : null;
   }
 
-  /* ---------- החלון ---------- */
-  function body(email) {
-    return '<div class="state-box" role="status" aria-live="polite">' +
-        '<div class="state-ico info">📬</div>' +
-        '<b>המייל מחכה לכם</b>' +
-        '<p>שלחנו קישור אישור אל<br><span class="mail">' + UI.esc(email) + '</span></p>' +
-      '</div>' +
-      '<div class="note" style="background:#FDF0F2"><div class="n-ico">⚠️</div><div>' +
-        '<b>עד שלא לוחצים עליו, הנתונים יושבים במכשיר הזה בלבד</b>' +
-        'כל מה שהזנתם — ילדים, תקציב, גבייה והוצאות — עדיין לא מגובה בענן. ' +
-        'ניקוי של הדפדפן או מעבר למכשיר אחר ימחקו את הכול.' +
-      '</div></div>' +
-      '<div class="note"><div class="n-ico">🔎</div><div>' +
-        '<b>לא מוצאים את המייל?</b>' +
-        'כדאי לחפש בתיקיית הספאם / "דואר זבל", ובג׳ימייל גם בלשונית ' +
-        '"קידומי מכירות". אם הוא שם — כדאי לסמן אותו כ"לא ספאם", ' +
-        'כדי שגם המיילים הבאים יגיעו.' +
-      '</div></div>' +
-      '<button class="btn mt js-resend">שליחת המייל שוב</button>' +
-      '<button class="btn soft js-signin" style="margin-top:9px">כבר אישרתי — התחברות</button>' +
-      '<div class="inst-foot">' +
-        '<button class="btn ghost js-later">אולי אחר כך</button>' +
-        '<button class="inst-never js-never">לא להציג שוב</button>' +
-      '</div>';
-  }
-
-  /* auto — נפתח מאליו אחרי ספירת הכניסות, ולא בלחיצה של המשתמש.
-     הדחייה נרשמת מיד עם הפתיחה, ולכן סגירה שקטה (✕, רקע, Escape)
-     אינה מחזירה את החלון בטעינה הבאה. */
-  function open(auto) {
+  /* ---------- הפס ---------- */
+  /* שני הכפתורים הם אותן פעולות שבמסך ההגדרות (js/views/account.js):
+     שתיהן כבר יודעות למלא מראש את הכתובת הממתינה מ-pending(). */
+  function banner() {
     var p = pending();
-    if (!p) return;
-    if (box && box.isOpen && box.isOpen()) return;
-    if (auto) snooze();
+    if (!p) return '';
 
-    box = UI.modal({
-      title: 'כמעט סיימנו — נשאר לאשר את המייל 📬',
-      subtitle: 'האישור הוא מה שמפעיל את החשבון ומתחיל לשמור את הנתונים בענן',
-      body: body(p.email),
-      onMount: function (root, close) {
-        root.querySelector('.js-resend').addEventListener('click', function () {
-          close();
-          Views.account.resendForm(p.email);
-          if (window.Analytics) Analytics.confirmReminder('resend');
-        });
-        root.querySelector('.js-signin').addEventListener('click', function () {
-          close();
-          Views.account.signInForm(p.email);
-          if (window.Analytics) Analytics.confirmReminder('signin');
-        });
-        root.querySelector('.js-later').addEventListener('click', function () {
-          snooze();
-          close();
-          if (window.Analytics) Analytics.confirmReminder('later');
-        });
-        root.querySelector('.js-never').addEventListener('click', function () {
-          silence();
-          close();
-          UI.toast('לא נזכיר שוב. אפשר לאשר בכל רגע מההגדרות ⚙️');
-          if (window.Analytics) Analytics.confirmReminder('never');
-        });
-      }
-    });
+    if (!reported) {
+      reported = true;
+      if (window.Analytics) Analytics.confirmReminder('banner');
+    }
 
-    if (window.Analytics) Analytics.confirmReminder(auto ? 'shown' : 'manual');
+    return '<div class="note" style="background:#FDF0F2">' +
+      '<div class="n-ico">📬</div><div>' +
+        '<b>נשאר לאשר את המייל — הנתונים עדיין לא מגובים</b>' +
+        'שלחנו קישור אישור אל <span class="mail">' + UI.esc(p.email) + '</span>. ' +
+        'עד שלוחצים עליו, כל מה שהזנתם יושב במכשיר הזה בלבד — ניקוי של הדפדפן ' +
+        'או מעבר למכשיר אחר ימחקו את הכול.<br>' +
+        'לא מוצאים את המייל? כדאי לחפש בתיקיית הספאם / "דואר זבל", ובג׳ימייל גם ' +
+        'בלשונית "קידומי מכירות", ולסמן אותו שם כ"לא ספאם".' +
+        '<div class="btn-row mt">' +
+          '<button class="btn ghost" data-action="acc-resend">שליחת המייל שוב</button>' +
+          '<button class="btn" data-action="acc-signin">כבר אישרתי</button>' +
+        '</div>' +
+      '</div></div>';
   }
 
-  /* נקראת בכל ציור של מסך הבית; החלון עצמו נפתח פעם אחת בטעינה */
-  function maybeRemind() {
-    if (shown || !pending()) return;
-    var s = read();
-    if (s.off || visits() < s.next) return;
-    if (!Store.state.setupDone) return;
-    // סיור ההיכרות קודם — שני חלונות זה מעל זה הם חלון אחד שלא נקרא
-    if (window.Tour && (Tour.running() || !Tour.seen())) return;
-
-    shown = true;
-    setTimeout(function () {
-      if (document.querySelector('#modal-root .modal-back')) return;
-      if (window.Tour && Tour.running()) return;
-      open(true);
-    }, 900);
-  }
-
-  return { maybeRemind: maybeRemind, open: open, pending: pending };
+  return { banner: banner, pending: pending };
 })();
