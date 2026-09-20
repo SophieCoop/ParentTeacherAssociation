@@ -1,5 +1,5 @@
 /* ============================================================
-   הגדרות — פרטי הוועד, גיבוי נתונים ואיפוס
+   הגדרות — פרטי הוועד, דוח כספי ואיפוס
    ============================================================ */
 var Views = (typeof Views === 'undefined') ? {} : Views;
 
@@ -35,7 +35,7 @@ Views.settings = (function () {
 
   function render() {
     var st = Store.state;
-    var html = UI.pageHead({ title: 'הגדרות', subtitle: 'פרטי הוועד וגיבוי נתונים', icon: '⚙️', tone: 'mint', back: 'home' });
+    var html = UI.pageHead({ title: 'הגדרות', subtitle: 'פרטי הוועד, דוח כספי ואיפוס', icon: '⚙️', tone: 'mint', back: 'home' });
 
     html += Views.account.panel();
 
@@ -68,11 +68,10 @@ Views.settings = (function () {
       (Cloud.info().signedIn
         ? 'הנתונים נשמרים במכשיר וגם מסונכרנים לחשבון שלכם בענן. '
         : 'הנתונים נשמרים במכשיר הזה בלבד. ') +
-      'בכל מקרה מומלץ לייצא גיבוי מדי פעם ולשמור את הקובץ.</p>' +
-      '<div class="btn-row mt">' +
-        '<button class="btn ghost" data-action="set-export">⬇️ ייצוא גיבוי</button>' +
-        '<button class="btn ghost" data-action="set-import">⬆️ טעינת גיבוי</button>' +
-      '</div>' +
+      'אפשר לייצא מהם דוח כספי לאקסל בכל רגע.</p>' +
+      '<button class="btn ghost mt" data-action="set-xlsx">📊 ייצוא דוח לאקסל</button>' +
+      '<div class="hint">הדוח כולל את ההכנסות לקופה, תכנון התקציב, ההוצאות בפועל, ' +
+        'כמה נשאר — ומאזן ההחזרים להורים, אם יש כזה.</div>' +
       '<div class="stat-grid" style="margin-top:14px">' +
         '<div class="stat"><div class="s-val">' + st.children.length + '</div><div class="s-lab">ילדים</div></div>' +
         '<div class="stat"><div class="s-val">' + st.payments.length + '</div><div class="s-lab">תשלומים</div></div>' +
@@ -168,50 +167,50 @@ Views.settings = (function () {
         Store.save();
         UI.toast('נשמר ✓');
       },
-      'set-export': function () {
-        var data = Store.exportJSON();
-        var name = 'vaad-gan-' + UI.todayISO() + '.json';
-        try {
-          var blob = new Blob([data], { type: 'application/json' });
-          var a = document.createElement('a');
-          a.href = URL.createObjectURL(blob);
-          a.download = name;
-          document.body.appendChild(a);
-          a.click();
-          setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
-          UI.toast('הגיבוי הורד ✓');
-        } catch (e) {
-          UI.copyText(data);
-          UI.toast('הנתונים הועתקו ללוח');
-        }
-      },
-      'set-import': function () {
+      /* ---------- ייצוא דוח לאקסל ----------
+         בקובץ יושבים שמות של ילדים ושל הורים, והוא יוצא מהאפליקציה
+         אל המכשיר ומשם לכל מקום שאליו ישלחו אותו. לכן ההורדה עוברת
+         דרך אישור מפורש: מה יש בקובץ, ומה האחריות שעוברת למי
+         שמוריד אותו. */
+      'set-xlsx': function () {
+        var rf = Calc.refunds(Store.state);
+        var hasRefunds = rf.totalRefund > 0 || rf.totalOwed > 0;
+
         UI.modal({
-          title: 'טעינת גיבוי',
-          subtitle: 'בחרו קובץ גיבוי או הדביקו את תוכנו',
-          body: '<div class="field"><input class="input" type="file" accept="application/json,.json" id="imp-file"></div>' +
-            '<div class="field"><label>או הדבקת JSON</label><textarea class="input" id="imp-text" style="min-height:120px"></textarea></div>' +
-            '<button class="btn js-go">טעינה</button>' +
-            '<p class="small muted mt">שימו לב: הטעינה תחליף את כל הנתונים הקיימים.</p>',
+          title: 'ייצוא דוח כספי לאקסל 📊',
+          subtitle: 'לפני ההורדה — רגע אחד על מה שיוצא מכאן',
+          body:
+            '<p class="small" style="line-height:1.75;margin:0 0 10px">בקובץ יהיו:</p>' +
+            '<ul class="bullets" style="margin-bottom:14px">' +
+              '<li>סיכום — כמה נגבה, כמה תוכנן, כמה יצא וכמה נשאר בקופה.</li>' +
+              '<li>ההכנסות לקופה, תשלום־תשלום, עם שמות הילדים וההורים.</li>' +
+              '<li>תכנון התקציב וההוצאות בפועל.</li>' +
+              (hasRefunds ? '<li>מאזן ההחזרים להורים.</li>' : '') +
+            '</ul>' +
+            '<div class="note" style="background:#FDF0F2;margin-bottom:14px"><div class="n-ico">⚠️</div><div>' +
+              '<b>הקובץ מכיל פרטים אישיים</b>' +
+              'שמות של ילדים ושל הורים. מרגע ההורדה הוא יושב במכשיר שלכם ואינו ' +
+              'מוגן עוד על ידי האפליקציה — שמרו אותו במקום בטוח, ושתפו רק עם מי שצריך.' +
+            '</div></div>' +
+            '<label class="check-line"><input type="checkbox" class="js-ok">' +
+              '<span>קראתי את <a href="privacy.html" target="_blank" rel="noopener">מדיניות הפרטיות</a> ' +
+              'ואני מאשר/ת את הורדת הקובץ</span></label>' +
+            '<button class="btn mt js-go" disabled>⬇️ הורדת הקובץ</button>',
           onMount: function (root, close) {
-            var file = root.querySelector('#imp-file');
-            var text = root.querySelector('#imp-text');
-            file.addEventListener('change', function () {
-              var f = file.files && file.files[0];
-              if (!f) return;
-              var reader = new FileReader();
-              reader.onload = function () { text.value = reader.result; };
-              reader.readAsText(f);
-            });
-            root.querySelector('.js-go').addEventListener('click', function () {
-              try {
-                Store.importJSON(text.value);
+            var ok = root.querySelector('.js-ok');
+            var go = root.querySelector('.js-go');
+            ok.addEventListener('change', function () { go.disabled = !ok.checked; });
+            go.addEventListener('click', function () {
+              go.disabled = true;
+              go.textContent = 'מכין את הקובץ…';
+              Report.download().then(function () {
                 close();
-                App.setView('home');
-                UI.toast('הגיבוי נטען ✓');
-              } catch (e) {
-                UI.toast('הקובץ אינו תקין');
-              }
+                UI.toast('הדוח הורד ✓');
+              }, function (err) {
+                go.disabled = false;
+                go.textContent = '⬇️ הורדת הקובץ';
+                UI.toast((err && err.message) || 'הכנת הקובץ נכשלה');
+              });
             });
           }
         });
@@ -226,8 +225,8 @@ Views.settings = (function () {
         });
       },
       /* מחיקת חשבון היא הפעולה היחידה באפליקציה שאי אפשר לחזור ממנה
-         בשום דרך — גם לא מגיבוי בענן, כי הענן עצמו נמחק. לכן החלון
-         מפרט מה נמחק, ומציע לייצא גיבוי לפני. */
+         בשום דרך — גם לא מהענן, כי הענן עצמו נמחק. לכן החלון מפרט מה
+         נמחק, ומציע להוריד קודם את הדוח הכספי. */
       'set-delete-account': function () {
         var email = (Cloud.info().email || '');
         UI.modal({
@@ -244,14 +243,14 @@ Views.settings = (function () {
             'הפעולה מיידית ואינה הפיכה. מכשיר אחר שמחובר לחשבון יינתק בפעם ' +
             'הבאה שינסה להסתנכרן, אבל העותק ששמור בו יישאר שם עד שיימחק בנפרד.' +
             '</div></div>' +
-            '<button class="btn ghost js-backup">⬇️ ייצוא גיבוי קודם</button>' +
+            '<button class="btn ghost js-backup">📊 ייצוא דוח אקסל קודם</button>' +
             '<div class="btn-row mt">' +
               '<button class="btn soft js-no">ביטול</button>' +
               '<button class="btn js-yes" style="background:var(--danger);color:#fff">מחיקת החשבון</button>' +
             '</div>',
           onMount: function (root, close) {
             root.querySelector('.js-backup').addEventListener('click', function () {
-              Views.settings.actions['set-export']();
+              Views.settings.actions['set-xlsx']();
             });
             root.querySelector('.js-no').addEventListener('click', close);
             root.querySelector('.js-yes').addEventListener('click', function (e) {

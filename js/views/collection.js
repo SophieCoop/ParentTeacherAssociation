@@ -450,17 +450,9 @@ Views.collection = (function () {
      שנטענת רק כשצריך. שלב 2: תצוגה מקדימה — כל שורה עם ההורה שזוהה
      (ניתן לשינוי), כפילויות מסומנות ומדולגות, ואז ייבוא בלחיצה.
      ============================================================ */
-  var XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-  function loadXLSX() {
-    if (window.XLSX) return Promise.resolve(window.XLSX);
-    return new Promise(function (resolve, reject) {
-      var sc = document.createElement('script');
-      sc.src = XLSX_URL;
-      sc.onload = function () { window.XLSX ? resolve(window.XLSX) : reject(new Error('no XLSX')); };
-      sc.onerror = function () { reject(new Error('load failed')); };
-      document.head.appendChild(sc);
-    });
-  }
+  /* הספרייה נטענת ממקום אחד (js/report.js), שגם הדוח לאקסל נשען עליו —
+     כך יש כתובת CDN אחת ולא שתיים שעלולות להיפרד */
+  function loadXLSX() { return Report.loadXLSX(); }
 
   /* קובץ טקסט: UTF-8, ואם יצא ג׳יבריש — Windows-1255 (ייצוא ישן מאקסל) */
   function readText(file) {
