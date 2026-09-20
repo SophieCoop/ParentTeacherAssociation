@@ -103,10 +103,11 @@ var App = (function () {
     if (current === 'home' && window.Tour) Tour.maybeStart();
     // סיור הרעיון מחכה בכניסה הראשונה למסך שלו
     if (current === 'ideas' && window.Tour && Tour.maybeStartIdea) Tour.maybeStartIdea();
-    /* התזכורת לאישור המייל קודמת להצעת ההוספה למסך הבית: כל עוד
-       החשבון לא אושר שום דבר אינו מגובה, וזה דחוף יותר */
-    if (current === 'home' && window.Confirm) Confirm.maybeRemind();
-    // וההצעה להוסיף את האפליקציה למסך הבית — רק אחרי כמה כניסות
+    /* התזכורת לאישור המייל אינה חלון קופץ אלא פס קבוע בראש מסך
+       הבית (ראו js/confirm.js), ולכן היא מצוירת עם המסך ואין מה
+       להפעיל כאן. ההצעה להוסיף למסך הבית ממתינה לה: כל עוד החשבון
+       לא אושר שום דבר אינו מגובה, וזה דחוף יותר. */
+    // ההצעה להוסיף את האפליקציה למסך הבית — רק אחרי כמה כניסות
     if (current === 'home' && window.Install) Install.maybeOffer();
   }
 
