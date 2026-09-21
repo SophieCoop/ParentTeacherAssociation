@@ -95,10 +95,15 @@ Views.collection = (function () {
 
     html += pays.map(function (p) {
       var c = Store.find('children', p.childId);
-      var parent = c && c.parents && c.parents[0] ? c.parents[0].name : (c ? c.name : 'לא ידוע');
+      /* תשלום שלא שויך לילד נושא את שם המשלם שהגיע מהקובץ — הוא מה
+         שמבדיל בין "לא ידוע" לבין שורה שאפשר לזהות ולשייך בהמשך */
+      var parent = c && c.parents && c.parents[0] ? c.parents[0].name
+                 : c ? c.name
+                 : (p.payer || 'לא ידוע');
       return '<div class="row" data-action="pay-edit" data-id="' + p.id + '">' +
         '<div class="r-ico" style="background:var(--blue)">' + Store.methodIcon(p.method) + '</div>' +
-        '<div class="r-body"><div class="r-name">' + UI.esc(parent) + '</div>' +
+        '<div class="r-body"><div class="r-name">' + UI.esc(parent) +
+        (c ? '' : ' <span class="badge">ללא שיוך</span>') + '</div>' +
         '<div class="r-sub">' + UI.esc(Store.methodName(p.method)) + ' · ' + UI.dateShort(p.date) +
         (p.installments > 1 ? ' · ' + p.installments + ' תשלומים' : '') +
         (p.note ? ' · 📝 ' + UI.esc(p.note) : '') + '</div></div>' +
@@ -359,11 +364,17 @@ Views.collection = (function () {
       title: isNew ? 'רישום תשלום' : 'עריכת תשלום',
       fields: [
         { name: isNew ? 'childIds' : 'childId', label: isNew ? 'בחרו הורה/ים' : 'ההורה של',
-          type: isNew ? 'multiselect' : 'select', value: isNew ? (presetChild ? [presetChild] : []) : pay.childId, required: true,
-          options: kids.map(function (c) {
-            var p = c.parents && c.parents[0] ? c.parents[0].name : c.name;
-            return { value: c.id, label: p + ' (' + c.name + ')' };
-          }) },
+          type: isNew ? 'multiselect' : 'select',
+          value: isNew ? (presetChild ? [presetChild] : []) : pay.childId,
+          /* בעריכה השיוך אינו חובה: תשלום שיובא בלי שיוך נשאר חוקי,
+             וזה גם המקום לשייך אותו כשהילדים יקבלו שמות */
+          required: isNew,
+          hint: (!isNew && !pay.childId && pay.payer) ? 'שולם על ידי ' + pay.payer : '',
+          options: (isNew ? [] : [{ value: '', label: '— ללא שיוך —' }]).concat(
+            kids.map(function (c) {
+              var p = c.parents && c.parents[0] ? c.parents[0].name : c.name;
+              return { value: c.id, label: p + ' (' + c.name + ')' };
+            })) },
         { name: 'amount', label: isNew ? 'סכום לכל הורה (₪)' : 'סכום (₪)', type: 'number', value: pay.amount, required: true, placeholder: '0', min: 0,
           hint: isNew ? 'הסכום ופרטי התשלום יירשמו בנפרד לכל הורה שנבחר.' : '' },
         { name: 'method', label: 'אמצעי תשלום', type: 'chips', value: pay.method,
@@ -423,6 +434,10 @@ Views.collection = (function () {
   /* ---------- הוספה ידנית לצד ייבוא מקובץ ----------
      היכולת כולה תלויה במתג אחד ב-js/config.js. ברירת המחדל דולקת,
      וקובץ הגדרות ישן שאין בו את המתג אינו מכבה אותה בטעות. */
+  /* ערך הסימון ל"לא לייבא" בתפריט השיוך. ריק כבר תפוס — הוא אומר
+     "לייבא בלי שיוך" — ולכן צריך ערך משלו שאינו מזהה של ילד. */
+  var SKIP = '\u0000skip';
+
   function importEnabled() {
     if (typeof Features === 'undefined' || !Features) return true;
     return Features.payboxImport !== false;
@@ -614,7 +629,11 @@ Views.collection = (function () {
     function rebuildPlan() {
       var recs = PayImport.toRecords(rows, detected);
       plan = PayImport.importPlan(recs, kids, Store.state.payments);
-      plan.forEach(function (r) { r.include = !r.skipped && !!r.childId; });
+      /* שורה שלא זוהה לה הורה נכנסת בכל זאת, בלי שיוך: הכסף אמיתי
+         והוא שייך לקופה. שם המשלם נשמר איתה, והשיוך אפשרי בכל רגע
+         מאוחר יותר. רק שורה שסוננה (כפילות, בוטלה, שורת סיכום)
+         נשארת בחוץ. */
+      plan.forEach(function (r) { r.include = !r.skipped; });
     }
 
     function childLabel(c) {
@@ -647,7 +666,7 @@ Views.collection = (function () {
         '<p class="small muted imp-summary">' +
           'נמצאו <b>' + plan.length + '</b> תשלומים בקובץ' +
           (dups ? ' · <b>' + dups + '</b> כבר רשומים' : '') +
-          (unmatched ? ' · <b>' + unmatched + '</b> ללא הורה מזוהה' : '') + '</p>';
+          (unmatched ? ' · <b>' + unmatched + '</b> ייובאו ללא שיוך' : '') + '</p>';
 
       if (!plan.length) {
         html += '<p class="small muted center" style="margin:14px 0">לא נמצאו שורות עם סכום. אפשר לבחור עמודות אחרות למעלה.</p>';
@@ -661,10 +680,15 @@ Views.collection = (function () {
           : r.level === 'exact' ? '<span class="badge ok">זוהה</span>'
           : r.level === 'reversed' ? '<span class="badge info">זוהה — סדר הפוך</span>'
           : r.level === 'partial' ? '<span class="badge info">זוהה חלקית</span>'
-          : '<span class="badge no">לבדיקה</span>';
-        var opts = '<option value="">— לא לייבא —</option>' + kids.map(function (c) {
-          return '<option value="' + c.id + '"' + (r.childId === c.id ? ' selected' : '') + '>' + UI.esc(childLabel(c)) + '</option>';
-        }).join('');
+          : '<span class="badge">ללא שיוך</span>';
+        /* שלוש אפשרויות שונות זו מזו: לייבא בלי שיוך (ברירת המחדל
+           לשורה שלא זוהתה), לשייך לילד, או לא לייבא כלל. */
+        var skipped = !r.include && !r.childId;
+        var opts = '<option value=""' + (!r.childId && r.include ? ' selected' : '') + '>— ללא שיוך —</option>' +
+          '<option value="' + SKIP + '"' + (skipped ? ' selected' : '') + '>— לא לייבא —</option>' +
+          kids.map(function (c) {
+            return '<option value="' + c.id + '"' + (r.childId === c.id ? ' selected' : '') + '>' + UI.esc(childLabel(c)) + '</option>';
+          }).join('');
         return '<div class="imp-row' + (r.include ? '' : ' off') + '" data-i="' + i + '">' +
           '<div class="imp-top"><span class="imp-name">' + UI.esc(r.name || 'ללא שם') + '</span>' +
             '<span class="imp-amt">' + UI.money(r.amount) + '</span></div>' +
@@ -696,9 +720,15 @@ Views.collection = (function () {
       root.querySelectorAll('[data-pick]').forEach(function (sel) {
         sel.addEventListener('change', function () {
           var r = plan[parseInt(sel.getAttribute('data-pick'), 10)];
-          r.childId = sel.value;
-          r.include = !!sel.value;
-          if (r.skipped === 'duplicate' && sel.value) r.skipped = '';   // בחירה מפורשת גוברת על אזהרת הכפילות
+          if (sel.value === SKIP) {
+            r.childId = '';
+            r.include = false;
+          } else {
+            r.childId = sel.value;                                      // ריק = ללא שיוך
+            if (r.skipped === 'duplicate' && sel.value) r.skipped = ''; // בחירה מפורשת גוברת על אזהרת הכפילות
+            // שורה שסוננה נכנסת רק בשיוך מפורש לילד
+            r.include = !r.skipped || !!sel.value;
+          }
           sel.closest('.imp-row').classList.toggle('off', !r.include);
           var ready = plan.filter(function (x) { return x.include; }).length;
           var btn = root.querySelector('.js-import');
@@ -712,14 +742,19 @@ Views.collection = (function () {
         mountStepFile(root, close);
       });
       root.querySelector('.js-import').addEventListener('click', function () {
-        var picked = plan.filter(function (r) { return r.include && r.childId && Store.find('children', r.childId); });
+        var picked = plan.filter(function (r) {
+          if (!r.include) return false;
+          return !r.childId || !!Store.find('children', r.childId);
+        });
         if (!picked.length) return;
         /* שיוך שנעשה ביד נשמר על הילד, כדי שהייבוא הבא יזהה את אותו
            משלם לבד. מה שזוהה מראש לפי טלפון כבר ידוע ואין מה לזכור. */
         var learned = 0;
         picked.forEach(function (r) {
-          Store.add('payments', { childId: r.childId, amount: r.amount, method: method,
-            date: r.date || UI.todayISO(), installments: 1, note: r.note || '' });
+          /* payer — שם המשלם כפי שהוא בקובץ. הוא מה שמזהה תשלום שלא
+             שויך לילד, ובלעדיו הוא היה "לא ידוע" ברשימה. */
+          Store.add('payments', { childId: r.childId || '', payer: r.name || '', amount: r.amount,
+            method: method, date: r.date || UI.todayISO(), installments: 1, note: r.note || '' });
           if (r.level !== 'phone' && r.level !== 'remembered') {
             if (Store.rememberPayer(r.childId, PayImport.keysForRecord(r))) learned++;
           }

@@ -322,14 +322,26 @@ var PayImport = (function () {
   }
 
   /* ---------- תוכנית ייבוא: התאמות וכפילויות ---------- */
+  /* מפתח כפילות. תשלום משויך מזוהה לפי הילד; תשלום בלי שיוך לפי שם
+     המשלם שנשמר איתו — אחרת ייבוא חוזר של אותו קובץ היה מכפיל בדיוק
+     את השורות שלא זוהו. בלי ילד ובלי שם אין על מה להישען, ואז מוטב
+     לא לטעון לכפילות מאשר לחסום שורה אמיתית. */
+  function dupKey(childId, payer, amount, date) {
+    var who = childId ? 'c:' + childId : 'p:' + normName(payer);
+    if (who === 'p:') return '';
+    return who + '|' + Math.round(Calcish(amount) * 100) + '|' + (date || '');
+  }
+
   function importPlan(records, children, payments) {
     var existing = {};
     (payments || []).forEach(function (p) {
-      existing[p.childId + '|' + Math.round(Calcish(p.amount) * 100) + '|' + (p.date || '')] = true;
+      var k = dupKey(p.childId, p.payer, p.amount, p.date);
+      if (k) existing[k] = true;
     });
     return records.map(function (r) {
       var m = matchPayer(r, children);
-      var dup = !!(m.childId && existing[m.childId + '|' + Math.round(r.amount * 100) + '|' + (r.date || '')]);
+      var key = dupKey(m.childId, r.name, r.amount, r.date);
+      var dup = !!(key && existing[key]);
       return Object.assign({}, r, {
         childId: m.childId, level: m.level, candidates: m.candidates,
         duplicate: dup,
@@ -343,6 +355,7 @@ var PayImport = (function () {
     parseCSV: parseCSV, normName: normName, parseAmount: parseAmount, parseDate: parseDate,
     detectColumns: detectColumns, toRecords: toRecords, matchChild: matchChild, importPlan: importPlan,
     matchPayer: matchPayer, phoneKey: phoneKey, keysForRecord: keysForRecord,
+    dupKey: dupKey,
     KINDS: ['name', 'amount', 'date', 'note', 'status', 'phone']
   };
 })();
