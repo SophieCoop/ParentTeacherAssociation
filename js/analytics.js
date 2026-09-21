@@ -68,7 +68,7 @@ var Analytics = (function () {
     /* ההצעה להוסיף את האפליקציה למסך הבית: הוצגה, נדחתה, בוצעה */
     install: function (action) { send('install', { action: action }); },
 
-    /* התזכורת לאישור המייל — בלי הכתובת, כמובן */
+    /* הפס שמזכיר לאשר את המייל — נספר פעם אחת לכל טעינה, בלי הכתובת */
     confirmReminder: function (action) { send('confirm-reminder', { action: action }); }
   };
 })();

@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>מדדי שימוש · ועד הורים</title>
+<!-- מסך פנימי: אין סיבה שיופיע בתוצאות חיפוש -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#FBF8F3">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" sizes="64x64" href="assets/icon-64.png">
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  /* ============================================================
+     מסך המדדים — יושב על עיצוב האפליקציה, ומוסיף רק את מה שאין בה:
+     אריחי מספרים, משפך וטבלה.
+     ============================================================ */
+  body{background:var(--bg)}
+  .stats-page{max-width:900px;margin:0 auto;padding:22px 16px 60px}
+
+  .sp-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:20px}
+  .sp-head h1{font-size:25px;margin:0;color:var(--ink)}
+  .sp-state{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+  .dot.live{background:var(--ok)}
+  .dot.stale{background:var(--warn)}
+
+  .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:16px}
+  .tile{background:var(--card);border-radius:var(--r);padding:15px 15px 13px;box-shadow:var(--shadow)}
+  .tile .k{font-size:11.5px;color:var(--muted);letter-spacing:.03em}
+  .tile .v{font-size:29px;font-weight:800;line-height:1.2;color:var(--ink);font-variant-numeric:tabular-nums}
+  .tile .n{font-size:12px;color:var(--ink-2)}
+  .tile.flag .v{color:var(--danger)}
+
+  .funnel{display:flex;flex-direction:column;gap:11px}
+  .stage{display:grid;grid-template-columns:126px 1fr auto;align-items:center;gap:11px}
+  .stage .lbl{font-size:13px;color:var(--ink-2)}
+  .track{background:var(--bg-2);border-radius:7px;height:25px;position:relative;overflow:hidden}
+  .fill{position:absolute;inset-block:0;inset-inline-start:0;background:var(--primary);
+        border-start-end-radius:4px;border-end-end-radius:4px;transition:inline-size .45s ease}
+  .stage .val{font-size:14px;font-weight:700;min-width:56px;color:var(--ink);font-variant-numeric:tabular-nums}
+  .stage .val small{color:var(--muted);font-weight:400;font-size:11.5px;margin-inline-start:4px}
+  .stage:hover .track,.stage:focus-visible .track{outline:2px solid var(--primary-soft)}
+  .tip{font-size:12px;color:var(--ink-2);min-height:18px;margin-top:12px}
+
+  .scroller{overflow-x:auto}
+  table.users{border-collapse:collapse;width:100%;font-size:13px;min-width:540px}
+  table.users th{text-align:start;font-weight:500;font-size:11px;color:var(--muted);
+                 letter-spacing:.03em;padding:0 9px 7px;border-bottom:1px solid var(--line);white-space:nowrap}
+  table.users td{padding:9px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink)}
+  table.users tr:last-child td{border-bottom:0}
+  table.users tbody tr:hover{background:var(--bg-2)}
+  .u-mail{font-size:12.5px;word-break:break-all}
+  .u-sub{color:var(--muted);font-size:11.5px;font-variant-numeric:tabular-nums}
+  .tag-own{font-size:10px;color:var(--primary-dark);background:var(--primary-soft);
+           border-radius:999px;padding:1px 7px;margin-inline-start:5px;white-space:nowrap}
+  .u-none{color:var(--muted)}
+
+  .toggle{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-2);cursor:pointer}
+  .toggle input{accent-color:var(--primary);width:15px;height:15px}
+
+  .gate{max-width:340px;margin:60px auto 0;text-align:center}
+  .gate .app-icon{width:58px;height:58px;margin:0 auto 14px}
+  .gate .app-icon img{width:58px;height:58px;border-radius:16px}
+
+  .foot{font-size:11.5px;color:var(--muted);line-height:1.8;margin-top:22px}
+  .foot b{color:var(--ink-2);font-weight:500}
+
+  @media (max-width:620px){
+    .tiles{grid-template-columns:repeat(2,1fr)}
+    .stage{grid-template-columns:100px 1fr auto;gap:8px}
+    .stage .lbl{font-size:12px}
+  }
+</style>
+</head>
+<body>
+
+<div class="stats-page">
+
+  <!-- ---------- שער הכניסה ---------- -->
+  <section id="gate" class="gate" hidden>
+    <div class="app-icon"><img src="assets/icon-192.png" alt="" width="192" height="192"></div>
+    <h1 style="font-size:21px;margin:0 0 4px">מדדי שימוש</h1>
+    <p class="small muted" style="margin:0 0 18px">הכניסה עם חשבון בעלת האתר</p>
+    <form class="card" id="login-form" style="text-align:start">
+      <div class="field"><label for="st-email">אימייל</label>
+        <input class="input" id="st-email" type="email" inputmode="email" autocomplete="email" required></div>
+      <div class="field" style="margin-bottom:0"><label for="st-pass">סיסמה</label>
+        <input class="input" id="st-pass" type="password" autocomplete="current-password" required></div>
+      <div id="login-err" class="note" style="background:#FDF0F2;margin-top:14px" hidden>
+        <div class="n-ico">⚠️</div><div id="login-err-txt"></div>
+      </div>
+      <button class="btn mt" id="login-go" type="submit">כניסה</button>
+    </form>
+  </section>
+
+  <!-- ---------- הדשבורד ---------- -->
+  <section id="board" hidden>
+    <header class="sp-head">
+      <div>
+        <h1>מי משתמש באתר</h1>
+        <p class="small muted" style="margin:2px 0 0">מההרשמה ועד הנתון האמיתי הראשון</p>
+      </div>
+      <div class="sp-state">
+        <span class="dot" id="dot"></span>
+        <span class="small muted" id="state">טוען…</span>
+        <button class="btn sm ghost" id="refresh" type="button">רענון</button>
+        <button class="btn sm soft" id="signout" type="button">יציאה</button>
+      </div>
+    </header>
+
+    <div class="note" id="err" style="background:#FDF0F2" hidden><div class="n-ico">⚠️</div><div id="err-txt"></div></div>
+
+    <div class="tiles" id="tiles"></div>
+
+    <div class="card">
+      <div class="card-title" style="align-items:center">
+        <h2>המשפך</h2>
+        <label class="toggle" for="incl-own"><input type="checkbox" id="incl-own"> כולל חשבונות בדיקה</label>
+      </div>
+      <div class="funnel" id="funnel"></div>
+      <p class="tip" id="tip">מעבר עכבר על שלב מראה כמה נשרו בו.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><h2>משתמש־משתמש</h2><span class="small muted" id="rowcount"></span></div>
+      <div class="scroller">
+        <table class="users">
+          <thead><tr><th>מי</th><th>נרשם</th><th>מצב</th><th>מה הוזן</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <p class="foot">
+      <b>"נתון אמיתי"</b> = שם אמיתי של ילד או איש צוות (לא "ילד 1" שהאשף יוצר ממספר), תשלום, הוצאה,
+      סעיף תקציב, רעיון או תאריך.<br>
+      <b>"חזר ביום אחר"</b> = נשמרו נתונים בענן בשני תאריכים שונים לפחות.<br>
+      <b>המקור</b> — פונקציית <span dir="ltr">admin-stats</span> שסופרת בצד השרת. תוכן הנתונים עצמו אינו יוצא משם.
+    </p>
+  </section>
+
+</div>
+
+<script src="js/config.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ============================================================
+     מדדי השימוש — מסך פנימי לבעלת האתר
+     ------------------------------------------------------------
+     הספירה כולה נעשית בפונקציית admin-stats שבענן, כי הדפדפן אינו
+     יכול לקרוא לא את רשימת המשתמשים ולא את השורות של אחרים. כאן רק
+     התחברות, בקשה אחת, וציור.
+     ============================================================ */
+
+  var API = (CloudConfig.url || '').replace(/\/+$/, '');
+  var KEY = CloudConfig.key;
+  var SESSION_KEY = 'vaad-stats-session-v1';
+
+  /* חשבונות שנפתחו לבדיקה ואינם משתמשים אמיתיים */
+  var OWN = ['sophie.elk22@gmail.com', 'sophie@cooperman.co.il', 'sophie.cooperman@mail.huji.ac.il'];
+
+  var rows = [];
+  var dataAt = null;
+  var inclOwn = false;
+  var session = null;
+
+  /* ---------- הסשן במכשיר ---------- */
+  function loadSession() {
+    try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (e) { return null; }
+  }
+  function saveSession(s) {
+    session = s;
+    try {
+      if (s) localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+      else localStorage.removeItem(SESSION_KEY);
+    } catch (e) {}
+  }
+
+  /* ---------- קריאות לשרת ---------- */
+  function auth(path, body) {
+    return fetch(API + '/auth/v1/' + path, {
+      method: 'POST',
+      headers: { 'apikey': KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function (r) {
+      return r.json().then(function (d) {
+        if (!r.ok) throw new Error(d.error_description || d.msg || d.error || 'ההתחברות נכשלה');
+        return d;
+      });
+    });
+  }
+
+  function signIn(email, password) {
+    return auth('token?grant_type=password', { email: email, password: password }).then(saveSession);
+  }
+  function refresh() {
+    if (!session || !session.refresh_token) return Promise.reject(new Error('אין סשן'));
+    return auth('token?grant_type=refresh_token', { refresh_token: session.refresh_token }).then(saveSession);
+  }
+
+  /* הפונקציה מאמתת את הטוקן בעצמה, ולכן נשלחת רק כותרת ההרשאה */
+  function fetchStats() {
+    return fetch(API + '/functions/v1/admin-stats', {
+      headers: { 'Authorization': 'Bearer ' + session.access_token }
+    }).then(function (r) {
+      return r.json().then(function (d) {
+        if (r.status === 401) { var e = new Error(d.error || 'ההתחברות פגה'); e.expired = true; throw e; }
+        if (!r.ok) throw new Error(d.error || 'קריאת המדדים נכשלה');
+        return d;
+      });
+    });
+  }
+
+  /* טוקן שפג מקבל ניסיון רענון אחד, ורק אחריו חוזרים לשער */
+  function load(retried) {
+    return fetchStats().then(function (d) {
+      rows = d.rows || [];
+      dataAt = d.at;
+      showBoard();
+      showError(null);
+      render();
+    }, function (err) {
+      if (err.expired && !retried) {
+        return refresh().then(function () { return load(true); }, function () { signOut(); });
+      }
+      if (err.expired) { signOut(); return; }
+      showError(err.message);
+    });
+  }
+
+  function signOut() {
+    saveSession(null);
+    rows = [];
+    showGate(null);
+  }
+
+  /* ---------- מסכים ---------- */
+  function showGate(msg) {
+    document.getElementById('board').hidden = true;
+    document.getElementById('gate').hidden = false;
+    var box = document.getElementById('login-err');
+    if (msg) { document.getElementById('login-err-txt').textContent = msg; box.hidden = false; }
+    else box.hidden = true;
+  }
+  function showBoard() {
+    document.getElementById('gate').hidden = true;
+    document.getElementById('board').hidden = false;
+  }
+  function showError(msg) {
+    var n = document.getElementById('err');
+    if (!msg) { n.hidden = true; return; }
+    document.getElementById('err-txt').textContent = msg;
+    n.hidden = false;
+  }
+
+  /* ---------- עזרי תצוגה ---------- */
+  function isOwn(r) { return OWN.indexOf((r.email || '').toLowerCase()) > -1; }
+  function visible() { return inclOwn ? rows : rows.filter(function (r) { return !isOwn(r); }); }
+
+  function fmt(v, withTime) {
+    if (!v) return '—';
+    var d = new Date(v);
+    if (isNaN(d.getTime())) return '—';
+    var o = { timeZone: 'Asia/Jerusalem', day: 'numeric', month: 'numeric' };
+    if (withTime) { o.hour = '2-digit'; o.minute = '2-digit'; }
+    try { return d.toLocaleString('he-IL', o); } catch (e) { return v.slice(0, 16); }
+  }
+  function real(r) {
+    return (r.kids_named || 0) + (r.staff_named || 0) + (r.budget_items || 0) +
+           (r.payments || 0) + (r.expenses || 0) + (r.ideas || 0) + (r.events || 0);
+  }
+  function el(tag, cls, txt) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (txt !== undefined && txt !== null) n.textContent = txt;
+    return n;
+  }
+  function pct(n, total) { return total ? Math.round(n / total * 100) + '% מהנרשמים' : '—'; }
+
+  /* ---------- אריחים ---------- */
+  function renderTiles(list) {
+    var got = list.filter(function (r) { return r.synced; }).length;
+    var act = list.filter(function (r) { return real(r) > 0; }).length;
+    var back = list.filter(function (r) { return r.returned; }).length;
+
+    var box = document.getElementById('tiles');
+    box.textContent = '';
+    [
+      { k: 'נרשמו', v: list.length, n: inclOwn ? 'כולל בדיקות' : 'משתמשים אמיתיים' },
+      { k: 'הגיעו לאפליקציה', v: got, n: pct(got, list.length) },
+      { k: 'הזינו נתון אמיתי', v: act, n: pct(act, list.length) },
+      { k: 'חזרו ביום אחר', v: back, n: pct(back, list.length), flag: back === 0 }
+    ].forEach(function (t) {
+      var d = el('div', 'tile' + (t.flag ? ' flag' : ''));
+      d.appendChild(el('div', 'k', t.k));
+      d.appendChild(el('div', 'v', String(t.v)));
+      d.appendChild(el('div', 'n', t.n));
+      box.appendChild(d);
+    });
+  }
+
+  /* ---------- משפך ---------- */
+  function renderFunnel(list) {
+    var st = [
+      { lbl: 'נרשמו', n: list.length },
+      { lbl: 'נכנסו בפועל', n: list.filter(function (r) { return !!r.last_login; }).length },
+      { lbl: 'נשמר להם בענן', n: list.filter(function (r) { return r.synced; }).length },
+      { lbl: 'סיימו את ההקמה', n: list.filter(function (r) { return r.setup_done; }).length },
+      { lbl: 'הזינו נתון אמיתי', n: list.filter(function (r) { return real(r) > 0; }).length },
+      { lbl: 'חזרו ביום אחר', n: list.filter(function (r) { return r.returned; }).length }
+    ];
+    var top = st[0].n || 1;
+    var box = document.getElementById('funnel');
+    var tip = document.getElementById('tip');
+    box.textContent = '';
+
+    st.forEach(function (s, i) {
+      var row = el('div', 'stage');
+      row.tabIndex = 0;
+      row.appendChild(el('div', 'lbl', s.lbl));
+
+      var track = el('div', 'track');
+      var fill = el('div', 'fill');
+      fill.style.inlineSize = Math.max(s.n / top * 100, s.n ? 1.5 : 0) + '%';
+      track.appendChild(fill);
+      row.appendChild(track);
+
+      var val = el('div', 'val', String(s.n));
+      val.appendChild(el('small', null, Math.round(s.n / top * 100) + '%'));
+      row.appendChild(val);
+
+      var msg = i === 0
+        ? s.n + ' הרשמות — בסיס המשפך'
+        : 'נשרו כאן: ' + (st[i - 1].n - s.n) + ' מתוך ' + st[i - 1].n + ' שהגיעו לשלב הקודם';
+      row.addEventListener('mouseenter', function () { tip.textContent = msg; });
+      row.addEventListener('focus', function () { tip.textContent = msg; });
+      box.appendChild(row);
+    });
+  }
+
+  /* ---------- טבלה ---------- */
+  function statusOf(r) {
+    if (r.returned) return { cls: 'badge ok', txt: 'חוזר' };
+    if (real(r) > 0) return { cls: 'badge ok', txt: 'הזין נתונים' };
+    if (r.setup_done) return { cls: 'badge neutral', txt: 'סיים הקמה, ריק' };
+    if (r.synced) return { cls: 'badge warn', txt: 'הקמה חלקית' };
+    if (r.last_login) return { cls: 'badge warn', txt: 'נכנס, לא שמר' };
+    return { cls: 'badge no', txt: 'לא נכנס מעולם' };
+  }
+
+  function whatOf(r) {
+    var bits = [];
+    if (r.kids_named) bits.push(r.kids_named + ' ילדים בשם');
+    if (r.staff_named) bits.push(r.staff_named + ' צוות בשם');
+    if (r.budget_items) bits.push(r.budget_items + ' סעיפי תקציב');
+    if (r.payments) bits.push(r.payments + ' תשלומים · ' + Math.round(r.paid_sum).toLocaleString('he-IL') + ' ₪');
+    if (r.expenses) bits.push(r.expenses + ' הוצאות');
+    if (r.ideas) bits.push(r.ideas + ' רעיונות');
+    if (r.events) bits.push(r.events + ' תאריכים');
+    if (bits.length) return { txt: bits.join(' · '), none: false };
+    if (r.kids) return { txt: r.kids + ' ילדים במספר בלבד', none: true };
+    return { txt: '—', none: true };
+  }
+
+  function renderRows(list) {
+    var body = document.getElementById('rows');
+    body.textContent = '';
+
+    list.forEach(function (r) {
+      var tr = document.createElement('tr');
+
+      var who = document.createElement('td');
+      var mail = el('div', 'u-mail', r.email);
+      if (isOwn(r)) mail.appendChild(el('span', 'tag-own', 'בדיקה'));
+      who.appendChild(mail);
+      if (r.gan_name) who.appendChild(el('div', 'u-sub', r.gan_name.trim()));
+      tr.appendChild(who);
+
+      var when = document.createElement('td');
+      when.appendChild(el('div', 'u-sub', fmt(r.signup, true)));
+      if (r.last_sync) when.appendChild(el('div', 'u-sub', 'סנכרון: ' + fmt(r.last_sync, true)));
+      tr.appendChild(when);
+
+      var s = statusOf(r);
+      var td = document.createElement('td');
+      td.appendChild(el('span', s.cls, s.txt));
+      tr.appendChild(td);
+
+      var w = whatOf(r);
+      var wt = document.createElement('td');
+      wt.appendChild(el('span', w.none ? 'u-none' : null, w.txt));
+      tr.appendChild(wt);
+
+      body.appendChild(tr);
+    });
+
+    document.getElementById('rowcount').textContent = list.length + ' חשבונות';
+  }
+
+  function render() {
+    var list = visible();
+    renderTiles(list);
+    renderFunnel(list);
+    renderRows(list);
+    document.getElementById('dot').className = 'dot live';
+    document.getElementById('state').textContent = 'עודכן ' + fmt(dataAt, true);
+  }
+
+  /* ---------- אירועים ---------- */
+  document.getElementById('login-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var btn = document.getElementById('login-go');
+    btn.disabled = true;
+    btn.textContent = 'מתחברים…';
+    signIn(document.getElementById('st-email').value.trim(), document.getElementById('st-pass').value)
+      .then(function () {
+        document.getElementById('st-pass').value = '';
+        return load(false);
+      })
+      .catch(function (err) { showGate(err.message); })
+      .then(function () { btn.disabled = false; btn.textContent = 'כניסה'; });
+  });
+
+  document.getElementById('refresh').addEventListener('click', function () {
+    var b = this;
+    b.disabled = true;
+    load(false).then(function () { b.disabled = false; });
+  });
+
+  document.getElementById('signout').addEventListener('click', signOut);
+
+  document.getElementById('incl-own').addEventListener('change', function () {
+    inclOwn = this.checked;
+    render();
+  });
+
+  /* ---------- התחלה ---------- */
+  session = loadSession();
+  if (session && session.access_token) {
+    document.getElementById('dot').className = 'dot stale';
+    document.getElementById('state').textContent = 'טוען…';
+    showBoard();
+    load(false);
+  } else {
+    showGate(null);
+  }
+})();
+</script>
+</body>
+</html>
