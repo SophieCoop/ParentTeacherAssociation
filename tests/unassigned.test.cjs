@@ -153,3 +153,90 @@ test('part assigned, part not, money complete — closed', () => {
   assert.equal(s.done, true);
   assert.equal(s.unknownCount, 2);
 });
+
+/* ---------- "כל ההורים שילמו" דורשת ראיה לכל הורה ---------- */
+
+test('one parent covering the whole budget is not "everyone paid"', () => {
+  const s = committee(4000, [[4000, 0]]);
+  assert.equal(s.done, true, 'the money is all in');
+  assert.equal(s.everyonePaid, false, 'but three parents paid nothing');
+  assert.equal(s.noneCount, 3);
+});
+
+test('each child covered by their own payment — that is everyone', () => {
+  const s = committee(4000, [[1000, 0], [1000, 1], [1000, 2], [1000, 3]]);
+  assert.equal(s.everyonePaid, true);
+  assert.equal(s.fullCount, 4);
+});
+
+test('a parent who paid twice still counts once', () => {
+  /* ילד 0 מקבל שני תשלומים שמכסים גם את המכסה של ילד 3 — הכסף שלם,
+     אבל הורה אחד לא שילם */
+  const s = committee(4000, [[1000, 0], [1000, 0], [1000, 1], [1000, 2]]);
+  assert.equal(s.done, true);
+  assert.equal(s.everyonePaid, false);
+});
+
+test('unassigned money counts only as many parents as it has distinct names', () => {
+  const four = [['אמא א', 1000], ['אבא ב', 1000], ['אמא ג', 1000], ['אבא ד', 1000]];
+  const one = [['אמא א', 1000], ['אמא א', 1000], ['אמא א', 1000], ['אמא א', 1000]];
+  const build = list => {
+    const { Store, Calc } = setup();
+    Store.reset();
+    Store.setHeadcount('children', 4);
+    Store.add('budgetItems', { name: 'פעילויות', categoryId: Store.state.categories[0].id, mode: 'total', amount: 4000 });
+    list.forEach(([payer, amount]) => Store.add('payments',
+      { childId: '', payer: payer, amount: amount, method: 'paybox', date: '2025-09-21', installments: 1 }));
+    return Calc.collectionSummary(Store.state);
+  };
+  const a = build(four);
+  assert.equal(a.everyonePaid, true, 'four names for four children');
+  const b = build(one);
+  assert.equal(b.done, true, 'the same money came in');
+  assert.equal(b.everyonePaid, false, 'but it is one parent who paid four times');
+  assert.equal(b.unassigned, 4000);
+});
+
+test('unassigned payments with no name at all prove nothing', () => {
+  const { Store, Calc } = setup();
+  Store.reset();
+  Store.setHeadcount('children', 4);
+  Store.add('budgetItems', { name: 'פעילויות', categoryId: Store.state.categories[0].id, mode: 'total', amount: 4000 });
+  [1000, 1000, 1000, 1000].forEach(a => Store.add('payments',
+    { childId: '', payer: '', amount: a, method: 'cash', date: '2025-09-21', installments: 1 }));
+  const s = Calc.collectionSummary(Store.state);
+  assert.equal(s.done, true);
+  assert.equal(s.everyonePaid, false, 'four anonymous payments could all be one person');
+  assert.equal(Calc.distinctPayers(Store.state), 0);
+});
+
+test('names that differ only by spacing or case are the same parent', () => {
+  const { Store, Calc } = setup();
+  Store.reset();
+  ['דנה  כהן', 'דנה כהן', 'Dana Cohen', 'dana cohen'].forEach(name => Store.add('payments',
+    { childId: '', payer: name, amount: 100, method: 'paybox', date: '2025-09-21', installments: 1 }));
+  assert.equal(Calc.distinctPayers(Store.state), 2);
+});
+
+test('assigned and unassigned together: the names cover what is missing', () => {
+  const { Store, Calc } = setup();
+  Store.reset();
+  Store.setHeadcount('children', 4);
+  Store.add('budgetItems', { name: 'פעילויות', categoryId: Store.state.categories[0].id, mode: 'total', amount: 4000 });
+  Store.add('payments', { childId: Store.state.children[0].id, amount: 1000, method: 'bit', date: '2025-09-21', installments: 1 });
+  Store.add('payments', { childId: Store.state.children[1].id, amount: 1000, method: 'bit', date: '2025-09-21', installments: 1 });
+  ['אמא ג', 'אבא ד'].forEach(n => Store.add('payments',
+    { childId: '', payer: n, amount: 1000, method: 'paybox', date: '2025-09-21', installments: 1 }));
+  const s = Calc.collectionSummary(Store.state);
+  assert.equal(s.unknownCount, 2, 'two children are still open');
+  assert.equal(s.everyonePaid, true, 'and there are exactly two different payers to explain them');
+});
+
+test('a committee with no budget yet has not "collected everything"', () => {
+  const { Store, Calc } = setup();
+  Store.reset();
+  Store.setHeadcount('children', 8);
+  const s = Calc.collectionSummary(Store.state);
+  assert.equal(s.due, 0, 'nothing to collect');
+  assert.equal(s.everyonePaid, false, 'and so nothing to declare');
+});

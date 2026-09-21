@@ -141,11 +141,13 @@ Views.home = (function () {
         '<span class="pf-cell">' +
           (!hasKids
             ? '<span class="pf-ico">🌱</span><span class="pf-text"><b class="lead">טרם נוספו ילדים</b></span>'
+            : col.due <= 0
+              ? '<span class="pf-ico">📋</span><span class="pf-text"><b class="lead">טרם נקבע תקציב</b></span>'
             : done
-              /* כשהכול משויך אפשר לומר את זה על ההורים עצמם; כשלא,
-                 הידיעה היא על הקופה בלבד, וכך גם הניסוח. */
+              /* יש ראיה לכל הורה בנפרד — אז אפשר לומר את זה עליהם.
+                 אחרת הידיעה היא על הקופה בלבד, וכך גם הניסוח. */
               ? '<span class="pf-ico ok">✔</span><span class="pf-text"><b class="lead pos">' +
-                (unknown ? 'הגבייה הושלמה!' : 'כל ההורים שילמו!') + '</b></span>'
+                (col.everyonePaid ? 'כל ההורים שילמו!' : 'הגבייה הושלמה!') + '</b></span>'
               : '<span class="pf-ico warn">⏳</span><span class="pf-text"><b>' + money(col.remaining) + '</b>' +
                 '<small>נותר לגבות</small></span>') +
         '</span>' +

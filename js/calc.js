@@ -443,6 +443,19 @@ var Calc = (function () {
     return rest > 0.005 ? rest : 0;
   }
 
+  /* כמה משלמים *שונים* עומדים מאחורי הכסף שלא שויך. שם אחד ששילם
+     שלוש פעמים הוא הורה אחד, לא שלושה, ולכן הספירה היא של שמות ולא
+     של תשלומים. תשלום בלי שם אינו נספר — אי אפשר להעיד עליו. */
+  function distinctPayers(state) {
+    var seen = {};
+    (state.payments || []).forEach(function (p) {
+      if (p.childId) return;                       // משויך — נספר אצל הילד
+      var k = String(p.payer == null ? '' : p.payer).replace(/\s+/g, ' ').trim().toLowerCase();
+      if (k) seen[k] = true;
+    });
+    return Object.keys(seen).length;
+  }
+
   function collectionSummary(state) {
     var rows = collectionRows(state);
     var due = rows.reduce(function (s, r) { return s + r.due; }, 0);
@@ -459,6 +472,17 @@ var Calc = (function () {
     if (unassigned > 0) {
       rows.forEach(function (r) { if (r.status === 'none') r.status = 'unknown'; });
     }
+    var done = round2(due - paid) <= rows.length * 0.5 + 0.5;
+    /* ילדים שאין להם כיסוי משלהם — מי שלא שילם, מי ששילם חלקית, ומי
+       שעדיין לא ידוע. כל עוד יש כזה, "כל ההורים שילמו" אינו נכון,
+       אלא אם הכסף שלא שויך מגיע ממספיק משלמים שונים כדי להסביר
+       בדיוק אותם. */
+    var short = rows.filter(function (r) { return r.status !== 'full' && r.status !== 'over'; }).length;
+    /* בלי תקציב אין מה לגבות, ולכן גם אין על מה להכריז: ועד שרק
+       הוקם עונה טכנית על "אף אחד לא חייב", וזו לא הכרזה שמישהו
+       רוצה לראות במסך הבית. */
+    var everyonePaid = rows.length > 0 && due > 0 && done &&
+      (short === 0 || (unassigned > 0 && distinctPayers(state) >= short));
     return {
       rows: rows,
       due: round2(due),
@@ -475,7 +499,11 @@ var Calc = (function () {
       /* האם הגבייה נסגרה. זו שאלה על הכסף, לא על השמות: אם כל מה
          שצריך לגבות נכנס, סיימנו — גם אם עוד לא יודעים מי שילם מה.
          חצי שקל לכל ילד הוא רעש של עיגול החיוב לשקל שלם. */
-      done: round2(due - paid) <= rows.length * 0.5 + 0.5,
+      done: done,
+      /* "כל ההורים שילמו" היא קביעה על אנשים, והיא דורשת ראיה לכל
+         אחד מהם. תשלום אחד גדול שסוגר את כל הסכום אינו ראיה כזאת —
+         הוא רק אומר שהכסף נכנס. */
+      everyonePaid: everyonePaid,
       pct: due > 0 ? Math.min(100, Math.round((paid / due) * 100)) : 0
     };
   }
@@ -855,7 +883,7 @@ var Calc = (function () {
     expensesTotal: expensesTotal, expensesByCategory: expensesByCategory,
     budgetItem: budgetItem, expensesByBudgetItem: expensesByBudgetItem,
     paymentsOf: paymentsOf, paidBy: paidBy, collectedTotal: collectedTotal,
-    unassignedTotal: unassignedTotal,
+    unassignedTotal: unassignedTotal, distinctPayers: distinctPayers,
     totalShareUnits: totalShareUnits, fullChildShare: fullChildShare,
     childCollection: childCollection, collectionRows: collectionRows,
     collectionSummary: collectionSummary, byMethod: byMethod,
