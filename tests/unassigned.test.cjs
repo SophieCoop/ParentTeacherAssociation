@@ -156,11 +156,14 @@ test('part assigned, part not, money complete — closed', () => {
 
 /* ---------- "כל ההורים שילמו" דורשת ראיה לכל הורה ---------- */
 
-test('one parent covering the whole budget is not "everyone paid"', () => {
+test('one parent covering the whole budget does not close the collection', () => {
   const s = committee(4000, [[4000, 0]]);
-  assert.equal(s.done, true, 'the money is all in');
-  assert.equal(s.everyonePaid, false, 'but three parents paid nothing');
-  assert.equal(s.noneCount, 3);
+  assert.equal(s.cashGap, 0, 'the budget is covered');
+  assert.equal(s.owed, 3000, 'but three parents owe 1,000 each');
+  assert.equal(s.remaining, 3000, 'and that is what is left to collect');
+  assert.equal(s.done, false);
+  assert.equal(s.everyonePaid, false);
+  assert.equal(s.overTotal, 3000, 'the one who paid is owed a refund');
 });
 
 test('each child covered by their own payment — that is everyone', () => {
@@ -169,11 +172,13 @@ test('each child covered by their own payment — that is everyone', () => {
   assert.equal(s.fullCount, 4);
 });
 
-test('a parent who paid twice still counts once', () => {
+test('a parent who paid twice does not pay for someone else', () => {
   /* ילד 0 מקבל שני תשלומים שמכסים גם את המכסה של ילד 3 — הכסף שלם,
-     אבל הורה אחד לא שילם */
+     אבל הורה אחד לא שילם, והחוב שלו נשאר חוב */
   const s = committee(4000, [[1000, 0], [1000, 0], [1000, 1], [1000, 2]]);
-  assert.equal(s.done, true);
+  assert.equal(s.cashGap, 0);
+  assert.equal(s.owed, 1000, 'the fourth parent still owes their share');
+  assert.equal(s.done, false);
   assert.equal(s.everyonePaid, false);
 });
 
@@ -311,4 +316,49 @@ test('instalments from one parent do not add up to "everyone paid"', () => {
   assert.equal(s.done, true);
   assert.equal(Calc.distinctPayers(Store.state), 1);
   assert.equal(s.everyonePaid, false, 'four payments, one parent, three still open');
+});
+
+/* ---------- שני חסרים שונים ---------- */
+
+test('normally the budget gap and what parents owe are the same number', () => {
+  const s = committee(4000, [[1000, 0], [1000, 1], [1000, 2]]);
+  assert.equal(s.cashGap, 1000);
+  assert.equal(s.owed, 1000);
+  assert.equal(s.remaining, 1000);
+});
+
+test('an overpayment does not cancel someone else\'s debt', () => {
+  /* שלושה שילמו, אחד מהם 500 ביתר, והרביעי לא שילם כלום */
+  const s = committee(4000, [[1000, 0], [1000, 1], [1500, 2]]);
+  assert.equal(s.cashGap, 500, 'the pot is only 500 short');
+  assert.equal(s.owed, 1000, 'but a whole share is still owed');
+  assert.equal(s.remaining, 1000, 'chase the share, not the gap');
+  assert.equal(s.overTotal, 500, 'and refund the 500');
+});
+
+test('money that is in but unassigned is not a debt of anyone', () => {
+  const { Store, Calc } = setup();
+  Store.reset();
+  Store.setHeadcount('children', 4);
+  Store.add('budgetItems', { name: 'פעילויות', categoryId: Store.state.categories[0].id, mode: 'total', amount: 4000 });
+  ['אמא א', 'אבא ב', 'אמא ג', 'אבא ד'].forEach(n => Store.add('payments',
+    { childId: '', payer: n, amount: 1000, method: 'paybox', date: '2025-09-21', installments: 1 }));
+  const s = Calc.collectionSummary(Store.state);
+  assert.equal(s.owed, 0, 'nobody is known to owe');
+  assert.equal(s.remaining, 0);
+  assert.equal(s.done, true, 'and the money is all in');
+});
+
+test('unassigned money does not paper over a known debt', () => {
+  const { Store, Calc } = setup();
+  Store.reset();
+  Store.setHeadcount('children', 4);
+  Store.add('budgetItems', { name: 'פעילויות', categoryId: Store.state.categories[0].id, mode: 'total', amount: 4000 });
+  /* ילד 0 שילם 200 בלבד, והשאר נכנס בלי שיוך מהורה אחד */
+  Store.add('payments', { childId: Store.state.children[0].id, amount: 200, method: 'bit', date: '2025-09-21', installments: 1 });
+  Store.add('payments', { childId: '', payer: 'אמא ב', amount: 3800, method: 'paybox', date: '2025-09-21', installments: 1 });
+  const s = Calc.collectionSummary(Store.state);
+  assert.equal(s.cashGap, 0, 'the budget is covered');
+  assert.equal(s.owed, 800, 'but child 0 is 800 short of their own share');
+  assert.equal(s.done, false);
 });

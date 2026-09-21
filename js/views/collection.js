@@ -168,6 +168,10 @@ Views.collection = (function () {
            כלול בשורה שמעליו, והשורה הזאת רק אומרת כמה ממנו עוד לא
            יודעים על מי לרשום. */
         (sum.unassigned ? row('↳ מתוכם ללא שיוך להורה', UI.money(sum.unassigned)) : '') +
+        /* בלי השורה הזאת החשבון נראה שבור: נגבו 4,000 ₪ מתוך תקציב
+           של 4,000, ובכל זאת נותרו 3,000 לגבייה. ההסבר הוא שחלק
+           מהכסף שנגבה שייך להורה ששילם יותר מחלקו וממתין להחזר. */
+        (sum.overTotal ? row('↳ מתוכם שולם ביתר וממתין להחזר', UI.money(sum.overTotal)) : '') +
         row('נותר לגבייה', '<span class="' + (sum.remaining > 0 ? 'neg' : 'pos') + '">' + UI.money(sum.remaining) + '</span>') +
       '</tbody></table>' +
       (showGap ? gapNote(st, gap) : '') +

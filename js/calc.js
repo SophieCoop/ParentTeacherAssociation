@@ -512,7 +512,19 @@ var Calc = (function () {
     if (unassigned > 0) {
       rows.forEach(function (r) { if (r.status === 'none') r.status = 'unknown'; });
     }
-    var done = round2(due - paid) <= rows.length * 0.5 + 0.5;
+    /* "נותר לגבות" הוא בעצם שני חסרים שונים שהתחפשו למספר אחד.
+       cashGap הוא הפער מול התקציב, ו-owed הוא מה שהורים מסוימים
+       עדיין חייבים. בדרך כלל הם זהים, אבל לא תמיד: הורה אחד ששילם
+       לבדו את כל התקציב סוגר את הפער ומשאיר שלושה חייבים, והמסך
+       הכריז "הגבייה הושלמה". מה שנותר לגבות הוא הגדול מביניהם.
+       שורה שעדיין לא ידועה אינה חוב — ייתכן שהכסף שלה כבר בקופה
+       בלי שם; רק מי שידוע שלא שילם או שילם חלקית נספר. */
+    var cashGap = round2(due - paid);
+    var owed = round2(rows.reduce(function (s, r) {
+      return s + (r.status === 'none' || r.status === 'partial' ? Math.max(0, r.remaining) : 0);
+    }, 0));
+    var toCollect = Math.max(0, cashGap, owed);
+    var done = toCollect <= rows.length * 0.5 + 0.5;
     /* ילדים שאין להם כיסוי משלהם — מי שלא שילם, מי ששילם חלקית, ומי
        שעדיין לא ידוע. כל עוד יש כזה, "כל ההורים שילמו" אינו נכון,
        אלא אם הכסף שלא שויך מגיע ממספיק משלמים שונים כדי להסביר
@@ -529,7 +541,11 @@ var Calc = (function () {
       paid: paid,
       assigned: round2(assigned),
       unassigned: unassigned,
-      remaining: round2(due - paid),
+      /* remaining הוא מה שנותר לגבות בפועל — כך הוא מוצג בכל מסך.
+         שני המרכיבים שלו חשופים לצדו למי שצריך להבחין ביניהם. */
+      remaining: round2(toCollect),
+      cashGap: cashGap,
+      owed: owed,
       fullCount: rows.filter(function (r) { return r.status === 'full' || r.status === 'over'; }).length,
       overCount: rows.filter(function (r) { return r.status === 'over'; }).length,
       overTotal: round2(rows.reduce(function (s, r) { return s + r.overAmount; }, 0)),
