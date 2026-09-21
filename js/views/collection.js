@@ -10,6 +10,8 @@ Views.collection = (function () {
     if (r.due <= 0) return '<span class="badge neutral">אין חיוב</span>';
     if (r.status === 'full') return '<span class="badge ok">שולם במלואו</span>';
     if (r.status === 'partial') return '<span class="badge warn">חלקי</span>';
+    /* יש בקופה כסף שאיש לא יודע של מי — ייתכן שהוא של ההורה הזה */
+    if (r.status === 'unknown') return '<span class="badge neutral">טרם ידוע</span>';
     return '<span class="badge no">טרם שולם</span>';
   }
 
@@ -36,7 +38,9 @@ Views.collection = (function () {
       '<div class="stat-grid">' +
         '<div class="stat"><div class="s-val pos">' + sum.fullCount + '</div><div class="s-lab">שילמו מלא</div></div>' +
         '<div class="stat"><div class="s-val" style="color:var(--warn)">' + sum.partialCount + '</div><div class="s-lab">חלקי</div></div>' +
-        '<div class="stat"><div class="s-val neg">' + sum.noneCount + '</div><div class="s-lab">טרם שילמו</div></div>' +
+        (sum.unknownCount
+          ? '<div class="stat"><div class="s-val muted">' + sum.unknownCount + '</div><div class="s-lab">טרם ידוע</div></div>'
+          : '<div class="stat"><div class="s-val neg">' + sum.noneCount + '</div><div class="s-lab">טרם שילמו</div></div>') +
       '</div>' +
       (sum.overCount
         ? '<div class="flex-between small mt"><span class="over-paid">⚠️ ' + sum.overCount +
@@ -67,7 +71,9 @@ Views.collection = (function () {
         '<div class="r-body">' +
           '<div class="r-name">' + UI.esc(parent) + '</div>' +
           '<div class="r-sub">' + UI.esc(c.name) + ' · ' +
-            (r.over ? '<b class="over-paid">' + UI.money(r.paid) + '</b>' : UI.money(r.paid)) +
+            /* אפס שקלים זו קביעה. כשהשאלה עדיין פתוחה מוטב קו מאשר מספר */
+            (r.over ? '<b class="over-paid">' + UI.money(r.paid) + '</b>'
+             : r.status === 'unknown' ? '—' : UI.money(r.paid)) +
             ' מתוך ' + UI.money(r.due) +
             (r.percent < 100 ? ' · ' + r.percent + '%' : '') + '</div>' +
           UI.bar(r.paid, r.due, r.status === 'full' ? 'ok' : 'thin') +
@@ -75,6 +81,7 @@ Views.collection = (function () {
         '<div class="r-end">' + statusBadge(r) +
         '<div class="r-pct" style="margin-top:4px">' +
           (r.over ? '<span class="over-paid">עודף ' + UI.money(r.overAmount) + '</span>'
+                  : r.status === 'unknown' ? '—'
                   : (r.remaining > 0 ? 'נותר ' + UI.money(r.remaining) : '✓')) + '</div></div>' +
         '</div>';
     }).join('');

@@ -61,7 +61,38 @@ test('per-child rows stay honest: unassigned money is nobody\'s payment', () => 
   const { Store, Calc } = imported();
   const s = Calc.collectionSummary(Store.state);
   assert.ok(s.rows.every(r => r.paid === 0), 'no child is credited with money that is not theirs');
-  assert.equal(s.noneCount, 8);
+});
+
+/* אם 9 אנשים שילמו, אסור למסך לכתוב "8 טרם שילמו". כל עוד יש כסף
+   בלי שם, השאלה מי שילם פתוחה — לא שלילית. */
+test('while money is unassigned nobody is declared a non-payer', () => {
+  const { Store, Calc } = imported();
+  const s = Calc.collectionSummary(Store.state);
+  assert.equal(s.noneCount, 0, 'not one of them "has not paid"');
+  assert.equal(s.unknownCount, 8, 'they are simply not known yet');
+  assert.ok(s.rows.every(r => r.status === 'unknown'));
+});
+
+test('once everything is assigned the counts go back to being definitive', () => {
+  const { Store, Calc } = imported();
+  Store.state.children.forEach((c, i) => {
+    const p = Store.state.payments[i];
+    if (p) Store.update('payments', p.id, { childId: c.id });
+  });
+  Store.update('payments', Store.state.payments[8].id, { childId: Store.state.children[0].id });
+  const s = Calc.collectionSummary(Store.state);
+  assert.equal(s.unassigned, 0);
+  assert.equal(s.unknownCount, 0, 'no open questions left');
+  assert.ok(s.rows.every(r => r.status !== 'unknown'));
+});
+
+test('a child who paid part is partial, not unknown, even beside unassigned money', () => {
+  const { Store, Calc } = imported();
+  Store.update('payments', Store.state.payments[5].id, { childId: Store.state.children[0].id });
+  const s = Calc.collectionSummary(Store.state);
+  assert.equal(s.rows[0].status, 'partial', 'we know something about this one');
+  assert.equal(s.partialCount, 1);
+  assert.equal(s.unknownCount, 7);
 });
 
 test('a payment left on a deleted child is not lost from the total', () => {

@@ -452,6 +452,13 @@ var Calc = (function () {
        נשאר ב-assigned ובשורות עצמן. */
     var unassigned = unassignedTotal(state);
     var paid = round2(assigned + unassigned);
+    /* כל עוד יש בקופה כסף שלא שויך, אי אפשר לטעון שהורה ששורתו ריקה
+       לא שילם — ייתכן מאוד שאחד מאותם תשלומים הוא בדיוק שלו. הוא לא
+       חייב, הוא פשוט לא ידוע. ברגע שהכול משויך החזקה חוזרת להיות
+       ודאית, והספירה חוזרת ל"טרם שילמו". */
+    if (unassigned > 0) {
+      rows.forEach(function (r) { if (r.status === 'none') r.status = 'unknown'; });
+    }
     return {
       rows: rows,
       due: round2(due),
@@ -464,6 +471,7 @@ var Calc = (function () {
       overTotal: round2(rows.reduce(function (s, r) { return s + r.overAmount; }, 0)),
       partialCount: rows.filter(function (r) { return r.status === 'partial'; }).length,
       noneCount: rows.filter(function (r) { return r.status === 'none'; }).length,
+      unknownCount: rows.filter(function (r) { return r.status === 'unknown'; }).length,
       pct: due > 0 ? Math.min(100, Math.round((paid / due) * 100)) : 0
     };
   }
