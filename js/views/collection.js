@@ -788,8 +788,12 @@ Views.collection = (function () {
         var learned = 0;
         picked.forEach(function (r) {
           /* payer — שם המשלם כפי שהוא בקובץ. הוא מה שמזהה תשלום שלא
-             שויך לילד, ובלעדיו הוא היה "לא ידוע" ברשימה. */
-          Store.add('payments', { childId: r.childId || '', payer: r.name || '', amount: r.amount,
+             שויך לילד, ובלעדיו הוא היה "לא ידוע" ברשימה.
+             payerPhone — הראיה החזקה לזהות: הורה שפרס לתשלומים מופיע
+             בקובץ כמה פעמים, ולפעמים בשם בסדר אחר, אבל תמיד מאותו
+             מספר. בלעדיו הספירה של "כמה אנשים שילמו" תלויה באיות. */
+          Store.add('payments', { childId: r.childId || '', payer: r.name || '',
+            payerPhone: r.phone || '', amount: r.amount,
             method: method, date: r.date || UI.todayISO(), installments: 1, note: r.note || '' });
           if (r.level !== 'phone' && r.level !== 'remembered') {
             if (Store.rememberPayer(r.childId, PayImport.keysForRecord(r))) learned++;

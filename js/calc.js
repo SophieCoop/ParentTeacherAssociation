@@ -443,16 +443,56 @@ var Calc = (function () {
     return rest > 0.005 ? rest : 0;
   }
 
-  /* כמה משלמים *שונים* עומדים מאחורי הכסף שלא שויך. שם אחד ששילם
-     שלוש פעמים הוא הורה אחד, לא שלושה, ולכן הספירה היא של שמות ולא
-     של תשלומים. תשלום בלי שם אינו נספר — אי אפשר להעיד עליו. */
+  /* ---------- מי שילם, ולא כמה פעמים ----------
+     הספירה כאן היא של אנשים, לא של תשלומים: אותו הורה מופיע בקובץ
+     של פייבוקס פעמיים כשהוא פורס לתשלומים, ושמו עשוי להופיע בסדר
+     הפוך בין ייצוא לייצוא, ולפעמים עם טלפון ולפעמים בלעדיו. */
+
+  /* טלפון בצורה אחת: ספרות בלבד, בלי קידומת הארץ ובלי האפס המוביל */
+  function payerPhoneKey(v) {
+    var d = String(v == null ? '' : v).replace(/\D/g, '');
+    if (!d) return '';
+    d = d.replace(/^00972/, '').replace(/^972/, '').replace(/^0+/, '');
+    return d.length >= 8 ? d : '';
+  }
+
+  /* שם בצורה אחת. המילים ממוינות, ולכן "דורון וייסברג" ו"וייסברג
+     דורון" הם אותו מפתח — זה בדיוק ההבדל בין שתי צורות של שם אחד
+     לבין שני הורים. */
+  function payerNameKey(v) {
+    var n = String(v == null ? '' : v)
+      .replace(/[\u0591-\u05C7]/g, '')
+      .replace(/['"`\u05F3\u05F4]/g, '')
+      .replace(/[()\[\]{}:,;|\/\\_-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+    return n ? n.split(' ').sort().join(' ') : '';
+  }
+
+  /* כמה אנשים שונים עומדים מאחורי הכסף שלא שויך. שני תשלומים הם
+     אותו אדם אם הם חולקים טלפון או שם, והקשר מתגלגל: אם א' ו-ב'
+     חולקים טלפון ו-ב' ו-ג' חולקים שם, שלושתם אדם אחד — ולכן איחוד
+     קבוצות ולא ספירת מפתחות. תשלום בלי שם ובלי טלפון אינו נספר
+     כלל: אי אפשר להעיד עליו, ומוטב לספור פחות מדי מאשר להכריז
+     "כל ההורים שילמו" על סמך אנונימי. */
   function distinctPayers(state) {
-    var seen = {};
+    var up = {};
+    function add(k) { if (!(k in up)) up[k] = k; return k; }
+    function find(k) { while (up[k] !== k) { up[k] = up[up[k]]; k = up[k]; } return k; }
+    function union(a, b) { var ra = find(add(a)), rb = find(add(b)); if (ra !== rb) up[ra] = rb; }
+
+    var mine = [];
     (state.payments || []).forEach(function (p) {
       if (p.childId) return;                       // משויך — נספר אצל הילד
-      var k = String(p.payer == null ? '' : p.payer).replace(/\s+/g, ' ').trim().toLowerCase();
-      if (k) seen[k] = true;
+      var phone = payerPhoneKey(p.payerPhone);
+      var name = payerNameKey(p.payer);
+      if (!phone && !name) return;
+      if (phone && name) union('t:' + phone, 'n:' + name);
+      mine.push(add(phone ? 't:' + phone : 'n:' + name));
     });
+    var seen = {};
+    mine.forEach(function (k) { seen[find(k)] = true; });
     return Object.keys(seen).length;
   }
 

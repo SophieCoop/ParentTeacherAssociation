@@ -240,3 +240,75 @@ test('a committee with no budget yet has not "collected everything"', () => {
   assert.equal(s.due, 0, 'nothing to collect');
   assert.equal(s.everyonePaid, false, 'and so nothing to declare');
 });
+
+/* ---------- ספירת אנשים, לא ספירת תשלומים ---------- */
+
+function payers(list) {
+  const { Store, Calc } = setup();
+  Store.reset();
+  list.forEach(([payer, phone]) => Store.add('payments',
+    { childId: '', payer: payer, payerPhone: phone || '', amount: 100, method: 'paybox', date: '2025-09-21', installments: 1 }));
+  return Calc.distinctPayers(Store.state);
+}
+
+test('the real PayBox file: 9 payments, 8 people', () => {
+  /* "וייסברג דורון" מופיע פעמיים — הוא פרס לשלושה תשלומים */
+  assert.equal(payers([
+    ['נילה אחמדזנוב', '972-526461000'], ['Itay Elkoub', '972-549491000'],
+    ['וייסברג דורון', '972-546483000'], ['Anna Riger', '972-507766000'],
+    ['אורית חולי', '972-545215000'], ['ברהנו אברהם', '972-505462000'],
+    ['וייסברג דורון', '972-546483000'], ['שירן גנות', '972-543512000'],
+    ['מיכל רדה', '972-529156000']
+  ]), 8);
+});
+
+test('the same name in reversed order is one parent, not two', () => {
+  assert.equal(payers([['דורון וייסברג'], ['וייסברג דורון']]), 1);
+  assert.equal(payers([['דנה כהן'], ['רות לוי']]), 2, 'two real names stay two');
+});
+
+test('one phone, two spellings of the name — one parent', () => {
+  assert.equal(payers([['Doron W', '054-6483000'], ['דורון וייסברג', '972-546483000']]), 1,
+    'the number is the same person however the name is written');
+});
+
+test('the link carries: phone joins A to B, name joins B to C', () => {
+  assert.equal(payers([
+    ['דורון וייסברג', '054-6483000'],   // A
+    ['Doron', '054-6483000'],           // B — same phone as A
+    ['Doron', '']                       // C — same name as B, no phone
+  ]), 1);
+});
+
+test('two payments from one parent in instalments count once', () => {
+  assert.equal(payers([['שירן גנות', '972-543512000'], ['שירן גנות', '972-543512000'],
+                       ['שירן גנות', '972-543512000']]), 1, 'three instalments, one parent');
+});
+
+test('the same name on two different phones is two parents', () => {
+  assert.equal(payers([['דנה כהן', '052-1111111'], ['דנה כהן', '053-2222222']]), 1,
+    'the shared name still joins them — better to undercount than to over-declare');
+});
+
+test('a payment assigned to a child is not counted here', () => {
+  const { Store, Calc } = setup();
+  Store.reset();
+  Store.setHeadcount('children', 2);
+  Store.add('payments', { childId: Store.state.children[0].id, payer: 'רות לוי', amount: 100, method: 'bit', date: '2025-09-21', installments: 1 });
+  Store.add('payments', { childId: '', payer: 'דנה כהן', amount: 100, method: 'paybox', date: '2025-09-21', installments: 1 });
+  assert.equal(Calc.distinctPayers(Store.state), 1, 'only the unassigned ones are being identified');
+});
+
+test('instalments from one parent do not add up to "everyone paid"', () => {
+  const { Store, Calc } = setup();
+  Store.reset();
+  Store.setHeadcount('children', 4);
+  Store.add('budgetItems', { name: 'פעילויות', categoryId: Store.state.categories[0].id, mode: 'total', amount: 4000 });
+  /* הורה אחד סוגר 4,000 ₪ בארבעה תשלומים. הכסף שלם, אבל שילם אדם אחד. */
+  [1000, 1000, 1000, 1000].forEach(a => Store.add('payments',
+    { childId: '', payer: 'וייסברג דורון', payerPhone: '972-546483000', amount: a, method: 'paybox', date: '2025-09-21', installments: 1 }));
+  const s = Calc.collectionSummary(Store.state);
+  assert.equal(s.done, true);
+  assert.equal(Calc.distinctPayers(Store.state), 1);
+  assert.equal(s.everyonePaid, false, 'four payments, one parent, three still open');
+});
