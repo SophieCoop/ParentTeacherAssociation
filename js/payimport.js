@@ -51,7 +51,7 @@ var PayImport = (function () {
     return String(s || '')
       .replace(/[֑-ׇ]/g, '')          // ניקוד
       .replace(/[׳״'"`״׳]/g, '')       // גרשיים וגרש
-      .replace(/[()\[\]{}:,;|\/\\_-]+/g, ' ')
+      .replace(/[()\[\]{}:,;|?!*\/\\_-]+/g, ' ')
       .replace(/\s+/g, ' ')
       .trim()
       .toLowerCase();
@@ -118,7 +118,16 @@ var PayImport = (function () {
     date:   ['תאריך', 'מועד', 'זמן', 'date', 'time', 'created', 'paid at'],
     note:   ['תיאור', 'הערה', 'הערות', 'פרטים', 'עבור', 'מטרה', 'description', 'note', 'notes', 'details', 'memo', 'title', 'reason'],
     status: ['סטטוס', 'מצב', 'status', 'state'],
-    phone:  ['פלאפון', 'פלפון', 'טלפון', 'נייד', 'סלולרי', 'מספר טלפון', 'phone', 'mobile', 'cell', 'tel']
+    phone:  ['פלאפון', 'פלפון', 'טלפון', 'נייד', 'סלולרי', 'מספר טלפון', 'phone', 'mobile', 'cell', 'tel'],
+    /* בפייבוקס אפשר לצרף לגבייה שאלה למשלמים, ומנהלי ועד שואלים בה
+       כמעט תמיד את אותו דבר: בשביל מי התשלום. הכותרת בקובץ היא נוסח
+       השאלה עצמה, ולכן הרשימה כאן מכסה את הניסוחים הנפוצים שלה לצד
+       כותרת "שם הילד/ה" פשוטה. זו התשובה הישירה ביותר לשאלה למי
+       התשלום שייך, ולכן היא גוברת על כל שאר הסימנים. */
+    child:  ['שם הילד', 'שם הילדה', 'שם הילד/ה', 'מה שם הילד', 'מה שם הילדה', 'מה שם הילד/ה',
+             'שם הילד/ה שלך', 'עבור איזה ילד', 'עבור מי', 'בשביל מי', 'שם התלמיד', 'שם התלמידה',
+             'הילד/ה', 'ילד', 'ילדה', 'תלמיד', 'תלמידה', 'שאלת מנהל',
+             'child', 'kid', 'student']
   };
 
   function headerScore(cell, keys) {
@@ -138,14 +147,20 @@ var PayImport = (function () {
     var best = { headerRow: -1, map: {}, score: 0 };
     for (var r = 0; r < Math.min(rows.length, 10); r++) {
       var row = rows[r] || [], map = {}, used = {}, total = 0;
-      ['amount', 'date', 'name', 'phone', 'status', 'note'].forEach(function (kind) {
-        var bi = -1, bs = 0;
-        row.forEach(function (cell, i) {
-          if (used[i]) return;
-          var s = headerScore(cell, KEYS[kind]);
-          if (s > bs) { bs = s; bi = i; }
+      /* שני סבבים, ולא אחד: קודם כל הכותרות שנקראות בדיוק כמו שם
+         הסוג, ורק אחר כך ההתאמות המקורבות. אחרת התאמה מקורבת של
+         סוג אחד חוטפת כותרת מדויקת של סוג אחר — "עבור איזה ילד"
+         מכיל את "עבור", ו-"child name" מכיל את "name". */
+      [3, 1].forEach(function (want) {
+        ['amount', 'date', 'child', 'name', 'phone', 'status', 'note'].forEach(function (kind) {
+          if (map[kind] !== undefined) return;
+          var bi = -1;
+          row.forEach(function (cell, i) {
+            if (used[i] || bi > -1) return;
+            if (headerScore(cell, KEYS[kind]) === want) bi = i;
+          });
+          if (bi > -1) { map[kind] = bi; used[bi] = true; total += want; }
         });
-        if (bi > -1) { map[kind] = bi; used[bi] = true; total += bs; }
       });
       if (map.amount !== undefined && map.name !== undefined && total > best.score) {
         best = { headerRow: r, map: map, score: total };
@@ -203,6 +218,7 @@ var PayImport = (function () {
         amount: Math.round(amount * 100) / 100,
         date: map.date !== undefined ? parseDate(row[map.date]) : '',
         phone: map.phone !== undefined ? phoneKey(row[map.phone]) : '',
+        childName: map.child !== undefined ? String(row[map.child] == null ? '' : row[map.child]).trim() : '',
         note: map.note !== undefined ? String(row[map.note] == null ? '' : row[map.note]).trim() : '',
         status: status.trim(),
         skipped: bad ? 'status' : (map.name !== undefined && isTotalRow(name) ? 'total' : '')
@@ -302,6 +318,15 @@ var PayImport = (function () {
      ואילו המספר זהה בשני הצדדים, ולכן התאמה לפיו ודאית. רק כשאין
      טלפון, או שהוא אינו מוכר, חוזרים להתאמה לפי השם. */
   function matchPayer(rec, children) {
+    /* שם הילד/ה כפי שההורה עצמו כתב אותו בשאלה שבגבייה. זו אמירה
+       מפורשת למי התשלום שייך, ולכן היא קודמת אפילו לטלפון: סבתא
+       שמשלמת מהמספר שלה עבור נכד מסוים מסתדרת רק כך. מה שלא נמצא,
+       או שנמצא ביותר מילד אחד, ממשיך הלאה לשאר הסימנים — התשובה
+       אינה חוסמת, היא רק מקדימה. */
+    if (rec && rec.childName) {
+      var decl = matchChild(rec.childName, children);
+      if (decl.childId) return { childId: decl.childId, level: 'child', candidates: decl.candidates };
+    }
     var t = phoneKey(rec && rec.phone);
     if (t) {
       var byPhone = findByKey(children, 't:' + t);

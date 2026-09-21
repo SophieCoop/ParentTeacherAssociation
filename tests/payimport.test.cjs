@@ -246,3 +246,81 @@ test('amount and date are part of the key, so a second payment is not a duplicat
   const plan = plain(P.importPlan(later, placeholders, stored));
   assert.deepEqual(plan.map(r => r.skipped), ['', '']);
 });
+
+/* ---------- עמודת "שם הילד/ה" / שאלת מנהל ----------
+   בפייבוקס אפשר לצרף לגבייה שאלה למשלמים, ומנהלי ועד שואלים בה
+   כמעט תמיד בשביל מי התשלום. התשובה הזאת היא הראיה הישירה ביותר. */
+
+const QKIDS = [
+  { id: 'a', name: 'תום לוי', parents: [{ name: 'רות לוי', phone: '052-1111111' }] },
+  { id: 'b', name: 'גיל כהן', parents: [{ name: 'דנה כהן', phone: '052-2222222' }] }
+];
+function withQuestion(header, answer, payer, phone) {
+  const rows = [['שם', 'פלאפון', 'סכום', 'תאריך', header],
+                [payer || 'סבתא שרה', phone || '972-509999999', '300', '2025-09-21', answer]];
+  const detected = P.detectColumns(rows);
+  const rec = plain(P.toRecords(rows, detected))[0];
+  return { col: detected.map.child, rec: rec, match: plain(P.matchPayer(rec, QKIDS)) };
+}
+
+test('the admin question column is found however it is phrased', () => {
+  ['מה שם הילד/ה?', 'שם הילד', 'שם התלמיד/ה', 'עבור מי התשלום?', 'שאלת מנהל', 'ילד/ה', 'Child', 'Student']
+    .forEach(header => {
+      const r = withQuestion(header, 'גיל כהן');
+      assert.equal(r.col, 4, header + ' — column not detected');
+      assert.equal(r.rec.childName, 'גיל כהן');
+      assert.deepEqual([r.match.childId, r.match.level], ['b', 'child'], header);
+    });
+});
+
+test('a plain notes column is not mistaken for the question', () => {
+  const r = withQuestion('הערות', 'שולם במזומן');
+  assert.equal(r.col, undefined);
+  assert.equal(r.rec.childName, '');
+});
+
+test('the declared child beats the phone — a grandmother paying for a grandchild', () => {
+  /* המספר רשום אצל תום, אבל ההורה כתב במפורש "גיל כהן" */
+  const r = withQuestion('מה שם הילד/ה?', 'גיל כהן', 'רות לוי', '052-1111111');
+  assert.deepEqual([r.match.childId, r.match.level], ['b', 'child'],
+    'what the payer wrote wins over whose number it came from');
+});
+
+test('an answer that matches nothing does not block the other signals', () => {
+  const r = withQuestion('מה שם הילד/ה?', 'ילד שלא קיים', 'רות לוי', '052-1111111');
+  assert.deepEqual([r.match.childId, r.match.level], ['a', 'phone'], 'falls back to the phone');
+});
+
+test('an answer that fits two children falls through rather than guessing', () => {
+  const kids = [{ id: 'a', name: 'תום לוי', parents: [] }, { id: 'b', name: 'תום לוי', parents: [] }];
+  const rows = [['שם', 'סכום', 'שם הילד'], ['סבתא שרה', '300', 'תום לוי']];
+  const rec = plain(P.toRecords(rows, P.detectColumns(rows)))[0];
+  const m = plain(P.matchPayer(rec, kids));
+  assert.equal(m.childId, '', 'two candidates, so no automatic pick');
+});
+
+test('an empty answer on one row does not spoil the others', () => {
+  const rows = [['שם', 'סכום', 'מה שם הילד/ה?'],
+                ['סבתא שרה', '300', 'גיל כהן'],
+                ['דוד רון', '300', ''],
+                ['רות לוי', '300', 'תום לוי']];
+  const recs = plain(P.toRecords(rows, P.detectColumns(rows)));
+  assert.deepEqual(recs.map(r => r.childName), ['גיל כהן', '', 'תום לוי']);
+  assert.deepEqual(recs.map(r => plain(P.matchPayer(r, QKIDS)).level), ['child', '', 'child']);
+});
+
+test('a question column whose header reads like another kind does not steal it', () => {
+  /* "עבור" היא כותרת של תיאור, ו"עבור איזה ילד" של שאלת המנהל */
+  const rows = [['שם', 'סכום', 'עבור', 'עבור איזה ילד'], ['סבתא שרה', '300', 'ועד', 'גיל כהן']];
+  const d = P.detectColumns(rows);
+  assert.equal(d.map.note, 2, 'the exact header keeps its own kind');
+  assert.equal(d.map.child, 3);
+});
+
+test('the real PayBox export has no question column and is unaffected', () => {
+  const rows = [['שם', 'פלאפון', 'סוג', 'סכום', 'תאריך', 'הערות', 'שורות התשלום', 'מנהל שורות התשלום'],
+                ['וייסברג דורון', '972-546483000', 'העברה לקבוצה', '481.33', '2025-09-21', '💸 תשלומים', 'ב3 תשלומים']];
+  const d = plain(P.detectColumns(rows));
+  assert.equal(d.map.child, undefined, 'nothing here answers "which child"');
+  assert.deepEqual([d.map.name, d.map.phone, d.map.amount, d.map.date, d.map.note], [0, 1, 3, 4, 5]);
+});

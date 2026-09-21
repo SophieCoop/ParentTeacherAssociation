@@ -696,6 +696,10 @@ Views.collection = (function () {
       var unmatched = plan.filter(function (r) { return !r.childId && !r.skipped; }).length;
       var html = '<div class="imp-cols">' +
           columnSelect('name', 'שם המשלם') + columnSelect('amount', 'סכום') + columnSelect('date', 'תאריך') +
+          /* עמודת שם הילד/ה מוצגת תמיד, גם כשלא זוהתה: היא הדרך
+             הקצרה ביותר לשייך את כל השורות בבת אחת, ומי שיש לו
+             כזאת בקובץ צריך לראות שאפשר להצביע עליה. */
+          columnSelect('child', 'שם הילד/ה (לא חובה)') +
         '</div>' +
         '<div class="imp-method"><span class="small muted">אמצעי תשלום לכל השורות</span>' +
           '<select class="input" data-method>' + Store.PAY_METHODS.map(function (pm) {
@@ -711,6 +715,7 @@ Views.collection = (function () {
       }
       html += '<div class="imp-list">' + plan.map(function (r, i) {
         var badge = r.skipped === 'duplicate' ? '<span class="badge warn">כבר קיים</span>'
+          : r.level === 'child' ? '<span class="badge ok">זוהה — לפי שם הילד/ה</span>'
           : r.skipped === 'status' ? '<span class="badge no">' + UI.esc(r.status || 'בוטל') + '</span>'
           : r.skipped === 'total' ? '<span class="badge">שורת סיכום</span>'
           : r.level === 'phone' ? '<span class="badge ok">זוהה לפי טלפון</span>'
