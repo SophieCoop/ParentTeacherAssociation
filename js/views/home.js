@@ -118,10 +118,11 @@ Views.home = (function () {
     var usePct = ov.collected > 0 ? Math.min(100, Math.round((ov.spent / ov.collected) * 100)) : 0;
     var level = usePct >= 100 ? 'over' : (usePct >= 75 ? 'warn' : '');
     var waiting = col.noneCount;
-    /* הורים שאי אפשר לדעת עליהם, כי בקופה יש כסף בלי שם. אסור להכריז
-       "כל ההורים שילמו" כשזה המצב, ואין טעם לספור אותם כחייבים. */
+    /* הורים שאי אפשר לדעת עליהם, כי בקופה יש כסף בלי שם. אין טעם
+       לספור אותם כחייבים. */
     var unknown = col.unknownCount || 0;
     var hasKids = (col.rows || []).length > 0;
+    var done = col.done;
 
     return '<div class="summary pot">' +
       '<div class="pot-top">' +
@@ -140,8 +141,11 @@ Views.home = (function () {
         '<span class="pf-cell">' +
           (!hasKids
             ? '<span class="pf-ico">🌱</span><span class="pf-text"><b class="lead">טרם נוספו ילדים</b></span>'
-            : (waiting === 0 && unknown === 0)
-              ? '<span class="pf-ico ok">✔</span><span class="pf-text"><b class="lead pos">כל ההורים שילמו!</b></span>'
+            : done
+              /* כשהכול משויך אפשר לומר את זה על ההורים עצמם; כשלא,
+                 הידיעה היא על הקופה בלבד, וכך גם הניסוח. */
+              ? '<span class="pf-ico ok">✔</span><span class="pf-text"><b class="lead pos">' +
+                (unknown ? 'הגבייה הושלמה!' : 'כל ההורים שילמו!') + '</b></span>'
               : '<span class="pf-ico warn">⏳</span><span class="pf-text"><b>' + money(col.remaining) + '</b>' +
                 '<small>נותר לגבות</small></span>') +
         '</span>' +

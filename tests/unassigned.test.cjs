@@ -115,3 +115,41 @@ test('with nothing unassigned the extra numbers are simply zero', () => {
   assert.equal(s.paid, 500);
   assert.equal(s.assigned, 500);
 });
+
+/* "כל ההורים שילמו" היא שאלה על הכסף, לא על השמות: אם כל מה שצריך
+   לגבות נכנס, הגבייה נסגרה גם בלי לדעת מי שילם מה. */
+function committee(budget, pays) {
+  const { Store, Calc } = setup();
+  Store.reset();
+  Store.setHeadcount('children', 4);
+  Store.add('budgetItems', { name: 'פעילויות', categoryId: Store.state.categories[0].id, mode: 'total', amount: budget });
+  pays.forEach(([amount, kid]) => Store.add('payments', {
+    childId: kid === null ? '' : Store.state.children[kid].id,
+    payer: kid === null ? 'משלם' : '', amount: amount, method: 'paybox', date: '2025-09-21', installments: 1
+  }));
+  return Calc.collectionSummary(Store.state);
+}
+
+test('money all in without a single assignment still closes the collection', () => {
+  const s = committee(4000, [[1000, null], [1000, null], [1000, null], [1000, null]]);
+  assert.equal(s.done, true, 'the money is the question, not the names');
+  assert.equal(s.unknownCount, 4, 'and we still admit we do not know who');
+  assert.equal(s.pct, 100);
+});
+
+test('money still missing does not close it, assigned or not', () => {
+  assert.equal(committee(4000, [[1000, null], [1000, null], [1000, null]]).done, false);
+  assert.equal(committee(4000, [[1000, 0], [1000, 1], [1000, 2]]).done, false);
+});
+
+test('everyone has a payment but one is partial — not closed', () => {
+  const s = committee(4000, [[1000, 0], [1000, 1], [1000, 2], [500, 3]]);
+  assert.equal(s.noneCount, 0, 'nobody is at zero');
+  assert.equal(s.done, false, 'and yet 500 is missing');
+});
+
+test('part assigned, part not, money complete — closed', () => {
+  const s = committee(4000, [[1000, 0], [1000, 1], [1000, null], [1000, null]]);
+  assert.equal(s.done, true);
+  assert.equal(s.unknownCount, 2);
+});

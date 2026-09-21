@@ -472,6 +472,10 @@ var Calc = (function () {
       partialCount: rows.filter(function (r) { return r.status === 'partial'; }).length,
       noneCount: rows.filter(function (r) { return r.status === 'none'; }).length,
       unknownCount: rows.filter(function (r) { return r.status === 'unknown'; }).length,
+      /* האם הגבייה נסגרה. זו שאלה על הכסף, לא על השמות: אם כל מה
+         שצריך לגבות נכנס, סיימנו — גם אם עוד לא יודעים מי שילם מה.
+         חצי שקל לכל ילד הוא רעש של עיגול החיוב לשקל שלם. */
+      done: round2(due - paid) <= rows.length * 0.5 + 0.5,
       pct: due > 0 ? Math.min(100, Math.round((paid / due) * 100)) : 0
     };
   }
