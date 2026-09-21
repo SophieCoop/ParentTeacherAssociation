@@ -305,9 +305,30 @@ var Cloud = (function () {
   }
 
   /* לאן יחזור הקישור שבמייל. Supabase מקבל את הכתובת רק אם היא ברשימה
-     המאושרת שבהגדרות הפרויקט, ואחרת חוזר מעצמו לכתובת האתר הראשית */
+     המאושרת שבהגדרות הפרויקט, ואחרת חוזר מעצמו לכתובת האתר הראשית.
+
+     הכתובת מקובעת לדומיין הרשמי (js/config.js) ואינה נגזרת מהחלון
+     שבו נרשמו: מי שנכנס מכתובת תצוגה מקדימה של Vercel, או מ-www
+     במקום מהדומיין הראשי, היה מקבל קישור שחוזר לשם — כתובת שעלולה
+     לא להיות ברשימה המאושרת, ודומיין שונה בכל מייל.
+
+     שימו לב שזהו הפרמטר redirect_to בלבד — לאן הדפדפן מופנה *אחרי*
+     שהאסימון אומת. הוא אינו נוגע לאסימון עצמו ואינו משנה את אופן
+     האימות. בפיתוח מקומי לא נוגעים בכלום: שם חוזרים לאן שעובדים. */
+  function isLocal() {
+    try {
+      return location.protocol === 'file:' ||
+             /^(localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0)$/.test(location.hostname);
+    } catch (e) { return false; }
+  }
+
   function returnUrl() {
-    try { return location.origin + location.pathname; } catch (e) { return ''; }
+    try {
+      var path = location.pathname || '/';
+      if (isLocal()) return location.origin + path;
+      var site = (window.SiteConfig && SiteConfig.url) || '';
+      return site ? site.replace(/\/+$/, '') + path : location.origin + path;
+    } catch (e) { return ''; }
   }
 
   function signUp(email, password) {

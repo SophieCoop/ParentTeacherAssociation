@@ -66,8 +66,8 @@ Authentication › Emails › Templates
    נשלח, אבל נוטה ליפול לספאם.
 3. להמתין לאימות הדומיין אצל הספק.
 4. למלא ב-Supabase את פרטי ה-SMTP, ולציין:
-   - **Sender email**: `noreply@vaadhorim.com`
-   - **Sender name**: `ועד הורים גן שלנו`
+   - **Sender email**: `hello@vaadhorim.com`
+   - **Sender name**: `ועד הורים`
 
 אחרי ההפעלה כדאי להעלות ב-Auth › Rate Limits את מכסת המיילים, שנשארת
 נמוכה גם כשה-SMTP כבר חיצוני.
@@ -76,18 +76,29 @@ Authentication › Emails › Templates
 
 Authentication › URL Configuration
 
-- **Site URL**: `https://www.vaadhorim.com`
-- **Redirect URLs**: אותה כתובת, ורצוי גם `https://vaadhorim.com/**`
-  ו-`https://www.vaadhorim.com/**`.
+- **Site URL**: `https://vaadhorim.com` — הדומיין הראשי, בלי `www`.
+- **Redirect URLs**: `https://vaadhorim.com/**`, ורצוי גם
+  `https://www.vaadhorim.com/**` למי שמגיע דרך `www`.
+
+**חשוב שה-Site URL יהיה הדומיין הראשי בדיוק.** האפליקציה מבקשת לחזור
+אליו (`js/config.js` → `SiteConfig.url`), ושתי הכתובות חייבות להיות
+זהות: אחרת כל מייל יוצא עם דומיין אחד וההגדרה מצביעה על אחר, וזה גם
+פוגע באמון של שרתי הדואר וגם מסתכן בדחייה של כתובת שאינה ברשימה.
 
 **חובה לכתוב `https://` בתחילת הכתובת.** בלי הסכמה זו אינה כתובת מוחלטת
 אלא נתיב יחסי: הדפדפן מצרף אותו לכתובת של Supabase ומנסה לפתוח
-`https://<project>.supabase.co/www.vaadhorim.com`, ומקבל
+`https://<project>.supabase.co/vaadhorim.com`, ומקבל
 `{"error":"requested path is invalid"}`. האישור עצמו מצליח — רק ההפניה
 חזרה לאתר נשברת, ולכן קל לטעות ולחשוב שהאישור נכשל.
 
-האפליקציה מבקשת בהרשמה לחזור לכתובת שממנה נרשמו (`redirect_to`).
-כתובת שאינה ברשימה הזו נדחית, ו-Supabase חוזר במקומה ל-Site URL.
+האפליקציה מבקשת לחזור לדומיין הרשמי שב-`js/config.js`, ולא לכתובת
+שממנה נרשמו — כך שגם מי שנכנס מכתובת תצוגה מקדימה של Vercel או
+מ-`www` מקבל קישור שחוזר לדומיין הראשי. פיתוח מקומי (`localhost`) הוא
+היוצא מן הכלל, ושם הקישור חוזר לאן שעובדים.
+
+זהו פרמטר `redirect_to` בלבד — לאן הדפדפן מופנה *אחרי* שהאסימון אומת.
+הוא אינו נוגע לאסימון ואינו משנה את אופן האימות. כתובת שאינה ברשימה
+הזו נדחית, ו-Supabase חוזר במקומה ל-Site URL.
 
 ## 4. מה מייל השחזור צריך להגיד
 
