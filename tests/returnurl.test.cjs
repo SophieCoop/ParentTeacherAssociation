@@ -34,12 +34,12 @@ function redirectTo(href) {
 }
 
 test('the production domain is used whatever host the sign-up came from', () => {
-  assert.equal(redirectTo('https://vaadhorim.com/index.html'), 'https://vaadhorim.com/index.html');
-  assert.equal(redirectTo('https://www.vaadhorim.com/index.html'), 'https://vaadhorim.com/index.html',
-    'www is folded into the main domain');
-  assert.equal(redirectTo('https://vaad-git-preview-x.vercel.app/index.html'), 'https://vaadhorim.com/index.html',
+  assert.equal(redirectTo('https://www.vaadhorim.com/index.html'), 'https://www.vaadhorim.com/index.html');
+  assert.equal(redirectTo('https://vaadhorim.com/index.html'), 'https://www.vaadhorim.com/index.html',
+    'the apex is folded into the host that actually serves the site');
+  assert.equal(redirectTo('https://vaad-git-preview-x.vercel.app/index.html'), 'https://www.vaadhorim.com/index.html',
     'a Vercel preview never reaches a real inbox');
-  assert.equal(redirectTo('https://vaadhorim.com/'), 'https://vaadhorim.com/', 'the path is kept');
+  assert.equal(redirectTo('https://www.vaadhorim.com/'), 'https://www.vaadhorim.com/', 'the path is kept');
 });
 
 test('local development still returns to where the work is happening', () => {
@@ -58,7 +58,7 @@ test('a missing site setting falls back to the current origin, never to nothing'
 
 test('the site setting is the production domain, with no trailing slash', () => {
   const ctx = setup('https://vaadhorim.com/');
-  assert.equal(ctx.SiteConfig.url, 'https://vaadhorim.com');
+  assert.equal(ctx.SiteConfig.url, 'https://www.vaadhorim.com');
   assert.match(ctx.SiteConfig.url, /^https:\/\//, 'absolute, or Supabase treats it as a relative path');
   assert.ok(!/\/$/.test(ctx.SiteConfig.url), 'no trailing slash, or the path would double up');
 });

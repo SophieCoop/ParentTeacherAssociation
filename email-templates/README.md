@@ -76,14 +76,18 @@ Authentication › Emails › Templates
 
 Authentication › URL Configuration
 
-- **Site URL**: `https://vaadhorim.com` — הדומיין הראשי, בלי `www`.
-- **Redirect URLs**: `https://vaadhorim.com/**`, ורצוי גם
-  `https://www.vaadhorim.com/**` למי שמגיע דרך `www`.
+- **Site URL**: `https://www.vaadhorim.com`
+- **Redirect URLs**: `https://www.vaadhorim.com/**`, ורצוי גם
+  `https://vaadhorim.com/**` למי שמקליד את הכתובת בלי `www`.
 
-**חשוב שה-Site URL יהיה הדומיין הראשי בדיוק.** האפליקציה מבקשת לחזור
-אליו (`js/config.js` → `SiteConfig.url`), ושתי הכתובות חייבות להיות
-זהות: אחרת כל מייל יוצא עם דומיין אחד וההגדרה מצביעה על אחר, וזה גם
-פוגע באמון של שרתי הדואר וגם מסתכן בדחייה של כתובת שאינה ברשימה.
+**למה `www` ולא הדומיין הראשי.** ב-Vercel `vaadhorim.com` מוגדר
+כהפניה 308 אל `www.vaadhorim.com`, כלומר `www` הוא זה שמגיש את האתר
+בפועל. קישור שמכוון לדומיין הראשי עובד — האסימון שב-fragment שורד את
+ההפניה — אבל מוסיף קפיצה מיותרת לכל קישור אימות. הכתובת כאן צריכה
+להיות זהה ל-`SiteConfig.url` שב-`js/config.js`.
+
+אם בעתיד הכיוון ב-Vercel יתהפך והדומיין הראשי יגיש ישירות, יש לעדכן
+את שתי הכתובות יחד.
 
 **חובה לכתוב `https://` בתחילת הכתובת.** בלי הסכמה זו אינה כתובת מוחלטת
 אלא נתיב יחסי: הדפדפן מצרף אותו לכתובת של Supabase ומנסה לפתוח
