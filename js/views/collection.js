@@ -43,6 +43,13 @@ Views.collection = (function () {
           (sum.overCount === 1 ? ' הורה שילם' : ' הורים שילמו') + ' מעבר למכסה</span>' +
           '<b class="over-paid">עודף ' + UI.money(sum.overTotal) + '</b></div>'
         : '') +
+      /* הכסף הלא משויך נספר למעלה אבל לא בשורות שמתחת, ובלי המשפט
+         הזה נראה כאילו איש לא שילם בזמן שהקופה מלאה. */
+      (sum.unassigned
+        ? '<div class="flex-between small mt"><span>💡 ' + UI.money(sum.unassigned) +
+          ' נכנסו בלי שיוך להורה</span>' +
+          '<button class="btn sm soft" data-action="col-unassigned">לשיוך</button></div>'
+        : '') +
       '</div>';
 
     html += '<div class="field"><input class="input" placeholder="🔍 חיפוש הורה או ילד…" ' +
@@ -75,7 +82,8 @@ Views.collection = (function () {
     html += '<div class="row" style="background:var(--green);box-shadow:none;margin-top:14px">' +
       '<div class="r-ico has-art" style="background:#fff">' + UI.art('collection') + '</div>' +
       '<div class="r-body"><div class="r-name">סיכום גבייה</div>' +
-      '<div class="r-sub" style="opacity:.75">' + st.children.length + ' ילדים</div></div>' +
+      '<div class="r-sub" style="opacity:.75">' + st.children.length + ' ילדים' +
+        (sum.unassigned ? ' · ' + UI.money(sum.unassigned) + ' ללא שיוך' : '') + '</div></div>' +
       '<div class="r-end"><div class="r-amount">' + UI.money(sum.paid) + '</div>' +
       '<div class="r-pct">נותר ' + UI.money(sum.remaining) + '</div></div></div>';
 
@@ -91,6 +99,18 @@ Views.collection = (function () {
 
     if (!pays.length) {
       return html + UI.empty({ art: 'collection', title: 'עוד לא נרשמו תשלומים', text: 'כל תשלום שנרשם מתעדכן מיד במצב הגבייה.' });
+    }
+
+    /* סינון לתשלומים שאין להם הורה — הדרך מ"יש כסף בלי שם" אל
+       השיוך עצמו, תשלום אחרי תשלום */
+    if (App.vs('colUnassigned', false)) {
+      pays = pays.filter(function (p) { return !Store.find('children', p.childId); });
+      html += '<div class="flex-between small mb" style="margin-bottom:10px">' +
+        '<span><b>' + pays.length + '</b> תשלומים ללא שיוך · הקישו על תשלום כדי לשייך</span>' +
+        '<button class="btn sm soft" data-action="col-all-pays">הצגת הכל</button></div>';
+      if (!pays.length) {
+        return html + UI.empty({ art: 'collection', title: 'הכול משויך', text: 'לכל תשלום שנרשם יש הורה.' });
+      }
     }
 
     html += pays.map(function (p) {
@@ -137,6 +157,10 @@ Views.collection = (function () {
         row('ילד שהיה כל השנה משלם', '<b>' + UI.money(perFull) + '</b>') +
         (showGap ? row('סה״כ לגבייה', UI.money(sum.due)) : '') +
         row('נגבה בפועל', '<span class="pos">' + UI.money(sum.paid) + '</span>') +
+        /* כסף שנכנס בלי שם הורה — מהייבוא, או אחרי מחיקת ילד. הוא
+           כלול בשורה שמעליו, והשורה הזאת רק אומרת כמה ממנו עוד לא
+           יודעים על מי לרשום. */
+        (sum.unassigned ? row('↳ מתוכם ללא שיוך להורה', UI.money(sum.unassigned)) : '') +
         row('נותר לגבייה', '<span class="' + (sum.remaining > 0 ? 'neg' : 'pos') + '">' + UI.money(sum.remaining) + '</span>') +
       '</tbody></table>' +
       (showGap ? gapNote(st, gap) : '') +
@@ -800,7 +824,17 @@ Views.collection = (function () {
     /* חשוף לבדיקה, ולכל מי שרוצה לשאול אם היכולת דולקת */
     importEnabled: importEnabled,
     actions: {
-      'col-tab': function (el) { App.setVs('colTab', el.getAttribute('data-tab')); App.render(); },
+      'col-tab': function (el) {
+        App.setVs('colTab', el.getAttribute('data-tab'));
+        App.setVs('colUnassigned', false);        // מעבר בין לשוניות מנקה את הסינון
+        App.render();
+      },
+      'col-unassigned': function () {
+        App.setVs('colTab', 'payments');
+        App.setVs('colUnassigned', true);
+        App.render();
+      },
+      'col-all-pays': function () { App.setVs('colUnassigned', false); App.render(); },
       'col-search': function (el) {
         App.setVs('colQuery', el.value);
         var pos = el.selectionStart;

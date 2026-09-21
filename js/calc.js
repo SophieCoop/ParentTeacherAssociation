@@ -432,14 +432,32 @@ var Calc = (function () {
     return (state.children || []).map(function (c) { return childCollection(state, c); });
   }
 
+  /* כסף שנכנס לקופה בלי שהוא רשום על שם ילד מסוים — כך נראה ייבוא
+     מפייבוקס לוועד שהוזן בו רק מספר הילדים, ואין למי לשייך. הוא נגבה
+     לכל דבר, ולכן הוא נספר בסכום הגבייה; מה שחסר הוא רק הידיעה בשם
+     מי. ההפרש מול סך התשלומים, ולא סינון לפי childId ריק, תופס גם
+     תשלום ששויך לילד שנמחק מאז — כסף שאחרת היה נעלם מהמסך. */
+  function unassignedTotal(state) {
+    var assigned = (state.children || []).reduce(function (s, c) { return s + paidBy(state, c.id); }, 0);
+    var rest = round2(collectedTotal(state) - assigned);
+    return rest > 0.005 ? rest : 0;
+  }
+
   function collectionSummary(state) {
     var rows = collectionRows(state);
     var due = rows.reduce(function (s, r) { return s + r.due; }, 0);
-    var paid = rows.reduce(function (s, r) { return s + r.paid; }, 0);
+    var assigned = rows.reduce(function (s, r) { return s + r.paid; }, 0);
+    /* paid הוא כל מה שנגבה, כולל הלא משויך: זה המספר שהמשתמש מחפש
+       במסך הגבייה, והוא זהה לסכום שבקופה במסך הבית. הפילוח לפי ילד
+       נשאר ב-assigned ובשורות עצמן. */
+    var unassigned = unassignedTotal(state);
+    var paid = round2(assigned + unassigned);
     return {
       rows: rows,
       due: round2(due),
-      paid: round2(paid),
+      paid: paid,
+      assigned: round2(assigned),
+      unassigned: unassigned,
       remaining: round2(due - paid),
       fullCount: rows.filter(function (r) { return r.status === 'full' || r.status === 'over'; }).length,
       overCount: rows.filter(function (r) { return r.status === 'over'; }).length,
@@ -825,6 +843,7 @@ var Calc = (function () {
     expensesTotal: expensesTotal, expensesByCategory: expensesByCategory,
     budgetItem: budgetItem, expensesByBudgetItem: expensesByBudgetItem,
     paymentsOf: paymentsOf, paidBy: paidBy, collectedTotal: collectedTotal,
+    unassignedTotal: unassignedTotal,
     totalShareUnits: totalShareUnits, fullChildShare: fullChildShare,
     childCollection: childCollection, collectionRows: collectionRows,
     collectionSummary: collectionSummary, byMethod: byMethod,
