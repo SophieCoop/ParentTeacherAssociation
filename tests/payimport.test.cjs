@@ -199,3 +199,50 @@ test('a real phone still beats a remembered name', () => {
   const m = P.matchPayer({ name: 'רות לוי', phone: '972-521111111' }, kids);
   assert.deepEqual([m.childId, m.level], ['a', 'phone'], 'the phone is the harder evidence');
 });
+
+/* ---------- ייבוא בלי שיוך ---------- */
+/* ועד שהוזן בו רק מספר ילדים ולא שמות: אין למה לשייך, והכסף עדיין
+   אמיתי. השורות נכנסות בלי שיוך, ושם המשלם מהקובץ הוא מה שמחזיק
+   אותן — גם בתצוגה וגם בזיהוי כפילויות בייבוא הבא. */
+const placeholders = [1, 2, 3].map(i => ({ id: 'c' + i, name: 'ילד ' + i, placeholder: true, parents: [] }));
+const file = [
+  { name: 'נילה אחמדזנוב', amount: 1444, date: '2025-09-21' },
+  { name: 'Itay Elkoub', amount: 1444, date: '2025-09-21' },
+  { name: 'וייסברג דורון', amount: 481.33, date: '2025-09-21' }
+];
+
+test('with placeholder children nothing matches, and nothing is dropped', () => {
+  const plan = plain(P.importPlan(file, placeholders, []));
+  assert.equal(plan.length, 3);
+  assert.deepEqual(plan.map(r => r.childId), ['', '', ''], 'no child to attach to');
+  assert.deepEqual(plan.map(r => r.skipped), ['', '', ''], 'and yet none is filtered out');
+  assert.deepEqual(plan.map(r => r.name), file.map(r => r.name), 'the payer name survives');
+});
+
+test('the same file twice: the payer name is what catches the duplicate', () => {
+  const stored = file.map((r, i) => ({ id: 'p' + i, childId: '', payer: r.name, amount: r.amount, date: r.date }));
+  const plan = plain(P.importPlan(file, placeholders, stored));
+  assert.deepEqual(plan.map(r => r.skipped), ['duplicate', 'duplicate', 'duplicate']);
+});
+
+test('a payment assigned by hand after the import is still caught next time', () => {
+  const stored = [{ id: 'p0', childId: 'c1', payer: 'נילה אחמדזנוב', amount: 1444, date: '2025-09-21' }];
+  const plan = plain(P.importPlan(file, placeholders, stored));
+  assert.equal(plan[0].skipped, 'duplicate', 'the payer key still matches although the child changed');
+  assert.equal(plan[1].skipped, '', 'and the row with the same amount but another payer does not');
+});
+
+test('a stored payment with neither child nor payer blocks nothing', () => {
+  const stored = [{ id: 'p0', childId: '', payer: '', amount: 1444, date: '2025-09-21' }];
+  const plan = plain(P.importPlan(file, placeholders, stored));
+  assert.deepEqual(plan.map(r => r.skipped), ['', '', ''], 'better a double than a real row blocked');
+  assert.deepEqual(plain(P.dupKeys('', '', 1444, '2025-09-21')), []);
+});
+
+test('amount and date are part of the key, so a second payment is not a duplicate', () => {
+  const stored = [{ id: 'p0', childId: '', payer: 'נילה אחמדזנוב', amount: 1444, date: '2025-09-21' }];
+  const later = [{ name: 'נילה אחמדזנוב', amount: 1444, date: '2025-11-02' },
+                 { name: 'נילה אחמדזנוב', amount: 200, date: '2025-09-21' }];
+  const plan = plain(P.importPlan(later, placeholders, stored));
+  assert.deepEqual(plan.map(r => r.skipped), ['', '']);
+});

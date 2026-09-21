@@ -435,8 +435,11 @@ Views.collection = (function () {
      היכולת כולה תלויה במתג אחד ב-js/config.js. ברירת המחדל דולקת,
      וקובץ הגדרות ישן שאין בו את המתג אינו מכבה אותה בטעות. */
   /* ערך הסימון ל"לא לייבא" בתפריט השיוך. ריק כבר תפוס — הוא אומר
-     "לייבא בלי שיוך" — ולכן צריך ערך משלו שאינו מזהה של ילד. */
-  var SKIP = '\u0000skip';
+     "לייבא בלי שיוך" — ולכן צריך ערך משלו שאינו מזהה של ילד. מזהים
+     נראים כך: chi-xxxx-yyyyy, ולכן '#' פוסל התנגשות. תו בקרה לא
+     מתאים כאן: הדפדפן מחליף U+0000 בתוך HTML בתו אחר, והערך שחוזר
+     מהתפריט כבר אינו זהה לקבוע. */
+  var SKIP = '#skip';
 
   function importEnabled() {
     if (typeof Features === 'undefined' || !Features) return true;
@@ -724,10 +727,12 @@ Views.collection = (function () {
             r.childId = '';
             r.include = false;
           } else {
-            r.childId = sel.value;                                      // ריק = ללא שיוך
-            if (r.skipped === 'duplicate' && sel.value) r.skipped = ''; // בחירה מפורשת גוברת על אזהרת הכפילות
-            // שורה שסוננה נכנסת רק בשיוך מפורש לילד
-            r.include = !r.skipped || !!sel.value;
+            /* בחירה מפורשת בתפריט גוברת על הסינון האוטומטי — כפילות,
+               ביטול או שורת סיכום: המשתמש ראה את השורה והחליט לייבא
+               אותה, עם שיוך לילד או בלעדיו (ערך ריק = ללא שיוך). */
+            r.childId = sel.value;
+            r.skipped = '';
+            r.include = true;
           }
           sel.closest('.imp-row').classList.toggle('off', !r.include);
           var ready = plan.filter(function (x) { return x.include; }).length;

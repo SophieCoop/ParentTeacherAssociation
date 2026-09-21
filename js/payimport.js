@@ -322,26 +322,27 @@ var PayImport = (function () {
   }
 
   /* ---------- תוכנית ייבוא: התאמות וכפילויות ---------- */
-  /* מפתח כפילות. תשלום משויך מזוהה לפי הילד; תשלום בלי שיוך לפי שם
-     המשלם שנשמר איתו — אחרת ייבוא חוזר של אותו קובץ היה מכפיל בדיוק
-     את השורות שלא זוהו. בלי ילד ובלי שם אין על מה להישען, ואז מוטב
-     לא לטעון לכפילות מאשר לחסום שורה אמיתית. */
-  function dupKey(childId, payer, amount, date) {
-    var who = childId ? 'c:' + childId : 'p:' + normName(payer);
-    if (who === 'p:') return '';
-    return who + '|' + Math.round(Calcish(amount) * 100) + '|' + (date || '');
+  /* מפתחות כפילות לתשלום אחד: אחד לפי הילד המשויך, אחד לפי שם המשלם.
+     שניהם נרשמים ושניהם נבדקים, כי השיוך יכול להשתנות בין הייבוא לבין
+     הייבוא הבא — תשלום שיובא בלי שיוך ושויך אחר כך ביד עדיין צריך
+     להיתפס כשאותו קובץ נטען שוב. תשלום בלי ילד ובלי שם אינו מייצר
+     מפתח כלל: מוטב לא לטעון לכפילות מאשר לחסום שורה אמיתית. */
+  function dupKeys(childId, payer, amount, date) {
+    var tail = '|' + Math.round(Calcish(amount) * 100) + '|' + (date || '');
+    var keys = [];
+    if (childId) keys.push('c:' + childId + tail);
+    if (normName(payer)) keys.push('p:' + normName(payer) + tail);
+    return keys;
   }
 
   function importPlan(records, children, payments) {
     var existing = {};
     (payments || []).forEach(function (p) {
-      var k = dupKey(p.childId, p.payer, p.amount, p.date);
-      if (k) existing[k] = true;
+      dupKeys(p.childId, p.payer, p.amount, p.date).forEach(function (k) { existing[k] = true; });
     });
     return records.map(function (r) {
       var m = matchPayer(r, children);
-      var key = dupKey(m.childId, r.name, r.amount, r.date);
-      var dup = !!(key && existing[key]);
+      var dup = dupKeys(m.childId, r.name, r.amount, r.date).some(function (k) { return existing[k]; });
       return Object.assign({}, r, {
         childId: m.childId, level: m.level, candidates: m.candidates,
         duplicate: dup,
@@ -355,7 +356,7 @@ var PayImport = (function () {
     parseCSV: parseCSV, normName: normName, parseAmount: parseAmount, parseDate: parseDate,
     detectColumns: detectColumns, toRecords: toRecords, matchChild: matchChild, importPlan: importPlan,
     matchPayer: matchPayer, phoneKey: phoneKey, keysForRecord: keysForRecord,
-    dupKey: dupKey,
+    dupKeys: dupKeys,
     KINDS: ['name', 'amount', 'date', 'note', 'status', 'phone']
   };
 })();
