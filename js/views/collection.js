@@ -104,7 +104,7 @@ Views.collection = (function () {
         var how = g.count === 1 ? 'תשלום אחד'
           : g.sameAmount ? g.count + ' תשלומים של ' + UI.money(g.payments[0].amount)
           : g.count + ' תשלומים';
-        return '<div class="row" data-action="col-unassigned">' +
+        return '<div class="row" data-action="col-payer" data-key="' + UI.esc(g.key) + '">' +
           '<div class="avatar" style="background:' + UI.toneVar(UI.toneFor(name)) + '">' + UI.faceFor(name) + '</div>' +
           '<div class="r-body"><div class="r-name">' + UI.esc(name) + '</div>' +
             '<div class="r-sub">' + UI.esc(how) + '</div></div>' +
@@ -383,6 +383,111 @@ Views.collection = (function () {
     return body;
   }
 
+  /* ---------- כרטיס משלם שטרם שויך ----------
+     אותה תצוגה מאוחדת שיש להורה ברשימה: שם אחד, סכום אחד, והתשלומים
+     מתחתיו. ההבדל היחיד הוא שאין כאן ילד, ולכן אין "נותר" אישי —
+     מה שאפשר להשוות אליו הוא המכסה הרגילה לילד. */
+  function payerGroup(key) {
+    return Calc.payerGroups(Store.state).filter(function (g) { return g.key === key; })[0] || null;
+  }
+
+  function payerCardBody(key) {
+    var g = payerGroup(key);
+    if (!g) return '<p class="muted small">התשלומים של המשלם הזה שויכו להורה ברשימה.</p>';
+    var name = g.name || 'ללא שם';
+    var share = Math.round(Calc.fullChildShare(Store.state));
+    var left = Calc.round2(share - g.total);
+
+    var body = '<div class="row" style="background:' + UI.toneVar(UI.toneFor(name)) + ';box-shadow:none">' +
+        '<div class="avatar" style="background:#fff">' + UI.faceFor(name) + '</div>' +
+        '<div class="r-body"><div class="r-name">' + UI.esc(name) + '</div>' +
+        '<div class="r-sub">שילם/ה · טרם שויך להורה ברשימה</div></div>' +
+      '</div>' +
+      '<div class="stat-grid" style="margin-bottom:14px">' +
+        '<div class="stat"><div class="s-val pos">' + UI.money(g.total) + '</div><div class="s-lab">שולם</div></div>' +
+        '<div class="stat"><div class="s-val">' + g.count + '</div><div class="s-lab">' +
+          (g.count === 1 ? 'תשלום' : 'תשלומים') + '</div></div>' +
+        '<div class="stat"><div class="s-val">' + (share > 0 ? UI.money(share) : '—') +
+          '</div><div class="s-lab">מכסה לילד</div></div>' +
+      '</div>';
+
+    /* פריסה לתשלומים אינה מוגדרת כאן ביד — היא נקראת מהקובץ: אותו
+       משלם, כמה שורות, ובכולן אותו סכום בדיוק. */
+    if (g.count > 1) {
+      body += '<div class="note"><div class="n-ico">' + UI.art('dates') + '</div><div>' +
+        '<b>' + (g.sameAmount ? 'פריסה ל-' + g.count + ' תשלומים' : g.count + ' תשלומים נפרדים') + '</b>' +
+        (g.sameAmount
+          ? 'כל תשלום ' + UI.money(g.payments[0].amount) + ', סך הכול ' + UI.money(g.total) + '.'
+          : 'בסכומים שונים, סך הכול ' + UI.money(g.total) + '.') +
+        '</div></div>';
+    }
+
+    if (share > 0 && left > 0.5) {
+      body += '<div class="note" style="background:var(--orange)"><div class="n-ico">⏳</div><div>' +
+        '<b>פחות מהמכסה הרגילה</b>המכסה לילד היא ' + UI.money(share) + ', וכאן נכנסו ' +
+        UI.money(g.total) + ' — הפרש של ' + UI.money(left) + '.</div></div>';
+    }
+
+    body += '<div class="section-title" style="margin-top:6px"><span>היסטוריית תשלומים</span></div>';
+    body += g.payments.slice().sort(function (a, b) {
+      return String(a.date || '').localeCompare(String(b.date || ''));
+    }).map(function (p) {
+      return '<div class="row" style="box-shadow:none;background:#FAF8FD">' +
+        '<div class="r-ico" style="background:#fff">' + Store.methodIcon(p.method) + '</div>' +
+        '<div class="r-body">' +
+          '<div class="r-name" style="display:flex;align-items:baseline;gap:8px">' +
+            '<span>' + UI.money(p.amount) + '</span>' +
+            (p.note ? '<span class="pay-note" title="' + UI.esc(p.note) + '">' + UI.esc(p.note) + '</span>' : '') +
+          '</div>' +
+          '<div class="r-sub">' + UI.esc(Store.methodName(p.method)) + ' · ' + UI.dateShort(p.date) + '</div>' +
+        '</div>' +
+        '<button class="iconbtn plain" data-action="pay-edit" data-id="' + p.id + '">✏️</button></div>';
+    }).join('');
+
+    body += '<button class="btn mt" data-action="payer-assign" data-key="' + UI.esc(key) + '">' +
+      'שיוך כל התשלומים להורה ברשימה</button>';
+    return body;
+  }
+
+  function openPayer(key) {
+    if (!payerGroup(key)) return;
+    var m = UI.modal({ title: 'פרטי תשלום', subtitle: 'טרם שויך להורה', body: payerCardBody(key) });
+    openCard = { payerKey: key, api: m };
+  }
+
+  /* שיוך כל התשלומים של אותו משלם לילד אחד, בפעולה אחת. זה מה
+     שהופך את הייבוא ללא שיוך לשלב ביניים ולא למצב קבוע. */
+  function assignPayer(key) {
+    var g = payerGroup(key);
+    var kids = Store.state.children;
+    if (!g || !kids.length) return;
+    UI.formModal({
+      title: 'שיוך תשלומים',
+      subtitle: (g.name || 'ללא שם') + ' · ' + g.count + (g.count === 1 ? ' תשלום' : ' תשלומים') +
+        ' · ' + UI.money(g.total),
+      fields: [{ name: 'childId', label: 'ההורה של', type: 'select', required: true,
+        hint: 'כל התשלומים של ' + (g.name || 'המשלם') + ' יעברו לילד/ה שתבחרו, והייבוא הבא יזהה אותו לבד.',
+        options: kids.map(function (c) {
+          var pn = c.parents && c.parents[0] ? c.parents[0].name : c.name;
+          return { value: c.id, label: pn + ' (' + c.name + ')' };
+        }) }],
+      submitLabel: 'שיוך',
+      onSubmit: function (v) {
+        if (!v.childId) return;
+        g.payments.forEach(function (p) { Store.update('payments', p.id, { childId: v.childId }); });
+        /* מה שנקבע ביד נשמר על הילד, כדי שהקובץ הבא יזהה את אותו
+           משלם בלי לשאול שוב. הכרטיס מופיע גם כשמתג הייבוא כבוי —
+           תשלומים מייבוא קודם נשארים — ולכן הלמידה מותנית. */
+        if (typeof PayImport !== 'undefined') {
+          Store.rememberPayer(v.childId, PayImport.keysForRecord({ name: g.name, phone: g.phone }));
+        }
+        if (openCard && openCard.payerKey === key) { openCard.api.close(); openCard = null; }
+        App.render();
+        UI.toast('שויכו ' + g.count + (g.count === 1 ? ' תשלום ✓' : ' תשלומים ✓'));
+      }
+    });
+  }
+
   function openChild(childId) {
     var c = Store.find('children', childId);
     if (!c) return;
@@ -394,7 +499,9 @@ Views.collection = (function () {
   function refreshCard() {
     if (!openCard) return;
     if (!openCard.api.isOpen()) { openCard = null; return; }
-    openCard.api.setBody(childCardBody(openCard.childId));
+    openCard.api.setBody(openCard.payerKey
+      ? payerCardBody(openCard.payerKey)
+      : childCardBody(openCard.childId));
   }
 
   /* ---------- טופס תשלום ---------- */
@@ -983,6 +1090,8 @@ Views.collection = (function () {
         if (again) { again.focus(); try { again.setSelectionRange(pos, pos); } catch (e) {} }
       },
       'col-open': function (el) { openChild(el.getAttribute('data-id')); },
+      'col-payer': function (el) { openPayer(el.getAttribute('data-key')); },
+      'payer-assign': function (el) { assignPayer(el.getAttribute('data-key')); },
       'pay-add': function (el) { payForm(null, el.getAttribute('data-child')); },
       /* גם הפעולה עצמה נבדקת: הכפתורים נעלמים כשהמתג כבוי, אבל
          הפעולה גלובלית ואסור שתישאר פתוחה מאחוריהם */

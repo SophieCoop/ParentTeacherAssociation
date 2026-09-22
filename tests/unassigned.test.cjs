@@ -435,3 +435,39 @@ test('an anonymous payment does not turn anyone into a payer', () => {
   assert.equal(Calc.payerGroups(Store.state).length, 0, 'no name, no phone, no person');
   assert.equal(s.unknownCount, 6);
 });
+
+/* ---------- שיוך כל התשלומים של משלם אחד ---------- */
+
+test('assigning a payer\'s payments empties that group and fills the child', () => {
+  const { Store, Calc } = payersOnly([
+    ['אילנה וייסברג דורון', '972-546483000', 481.33],
+    ['אילנה וייסברג דורון', '972-546483000', 481.33],
+    ['אילנה וייסברג דורון', '972-546483000', 481.33],
+    ['שירן גנות', '972-543512000', 1444]
+  ]);
+  const before = Calc.payerGroups(Store.state);
+  assert.equal(before.length, 2);
+  const kid = Store.state.children[0];
+  before[0].payments.forEach(p => Store.update('payments', p.id, { childId: kid.id }));
+  const after = Calc.payerGroups(Store.state);
+  assert.equal(after.length, 1, 'the assigned group is gone from the unassigned list');
+  assert.equal(after[0].name, 'שירן גנות');
+  assert.equal(Calc.paidBy(Store.state, kid.id), 1443.99, 'and the child now carries all three');
+});
+
+test('the group key is stable across reads, so a card can be reopened', () => {
+  const { Store, Calc } = payersOnly([['דנה כהן', '052-1111111', 100], ['דנה כהן', '052-1111111', 100]]);
+  const a = Calc.payerGroups(Store.state)[0].key;
+  const b = Calc.payerGroups(Store.state)[0].key;
+  assert.equal(a, b);
+  assert.ok(a, 'and it is not empty');
+});
+
+test('what gets remembered from a group is the phone and the name', () => {
+  const { Store, Calc } = payersOnly([['אילנה וייסברג דורון', '972-546483000', 481.33]]);
+  const g = Calc.payerGroups(Store.state)[0];
+  const kid = Store.state.children[0];
+  Store.rememberPayer(kid.id, ['t:546483000', 'n:' + g.name]);
+  assert.equal(Store.find('children', kid.id).payerKeys.join(','),
+    't:546483000,n:אילנה וייסברג דורון');
+});
