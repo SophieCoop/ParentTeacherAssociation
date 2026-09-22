@@ -712,6 +712,15 @@ Views.collection = (function () {
 
       if (!plan.length) {
         html += '<p class="small muted center" style="margin:14px 0">לא נמצאו שורות עם סכום. אפשר לבחור עמודות אחרות למעלה.</p>';
+      } else if (!ready) {
+        /* בלי המשפט הזה המסך נראה תקוע: רשימה מלאה, כפתור אפור,
+           ואין רמז למה. הסיבה הנפוצה היא ייבוא שני של אותו קובץ —
+           הנתונים כבר בפנים, ואין מה לעשות כאן. */
+        html += '<p class="small center" style="margin:14px 0">' +
+          (dups === plan.length
+            ? '✅ כל התשלומים שבקובץ כבר רשומים באפליקציה — אין מה לייבא.'
+            : 'כל השורות מסומנות "לא לייבא". אפשר לבחור שיוך לשורה כדי להכניס אותה.') +
+          '</p>';
       }
       html += '<div class="imp-list">' + plan.map(function (r, i) {
         var badge = r.skipped === 'duplicate' ? '<span class="badge warn">כבר קיים</span>'
@@ -740,9 +749,13 @@ Views.collection = (function () {
           '<select class="input imp-pick" data-pick="' + i + '" aria-label="שיוך להורה">' + opts + '</select>' +
           '</div>';
       }).join('') + '</div>' +
+      /* כשאין מה לייבא, כפתור מושבת הוא מבוי סתום. במקומו יציאה
+         אמיתית — המשתמש סיים כאן בין אם התכוון ובין אם לא. */
       '<div class="btn-row mt">' +
         '<button type="button" class="btn soft js-back">קובץ אחר</button>' +
-        '<button type="button" class="btn js-import"' + (ready ? '' : ' disabled') + '>ייבוא ' + ready + ' תשלומים</button>' +
+        (ready
+          ? '<button type="button" class="btn js-import">ייבוא ' + ready + ' תשלומים</button>'
+          : '<button type="button" class="btn js-done">סגירה</button>') +
       '</div>';
       return html;
     }
@@ -775,10 +788,7 @@ Views.collection = (function () {
             r.include = true;
           }
           sel.closest('.imp-row').classList.toggle('off', !r.include);
-          var ready = plan.filter(function (x) { return x.include; }).length;
-          var btn = root.querySelector('.js-import');
-          btn.disabled = !ready;
-          btn.textContent = 'ייבוא ' + ready + ' תשלומים';
+          refreshFoot();
         });
       });
       root.querySelector('.js-back').addEventListener('click', function () {
@@ -786,12 +796,21 @@ Views.collection = (function () {
         root.innerHTML = stepFileHTML();
         mountStepFile(root, close);
       });
-      root.querySelector('.js-import').addEventListener('click', function () {
+      /* כפתור אחד שמשנה תפקיד: כל עוד יש מה לייבא הוא מייבא, וכשאין
+         הוא יציאה. הקישור נעשה פעם אחת, וההחלטה מתקבלת בלחיצה, כך
+         שבחירה בשורה אחת לא מחייבת לחבר מאזין מחדש. */
+      var foot = root.querySelector('.js-import, .js-done');
+      function refreshFoot() {
+        var n = plan.filter(function (x) { return x.include; }).length;
+        foot.className = 'btn' + (n ? ' js-import' : ' js-done');
+        foot.textContent = n ? 'ייבוא ' + n + ' תשלומים' : 'סגירה';
+      }
+      foot.addEventListener('click', function () {
         var picked = plan.filter(function (r) {
           if (!r.include) return false;
           return !r.childId || !!Store.find('children', r.childId);
         });
-        if (!picked.length) return;
+        if (!picked.length) { close(); return; }
         /* שיוך שנעשה ביד נשמר על הילד, כדי שהייבוא הבא יזהה את אותו
            משלם לבד. מה שזוהה מראש לפי טלפון כבר ידוע ואין מה לזכור. */
         var learned = 0;
