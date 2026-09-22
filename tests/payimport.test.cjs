@@ -417,3 +417,47 @@ test('which questions are read as asking for the child\'s name', () => {
    'מה מספר הטלפון שלך?', ''].forEach(q =>
     assert.equal(P.asksChildName(q), false, q));
 });
+
+/* ---------- ההורה שהגיע מהקובץ נרשם אצל הילד ---------- */
+
+test('a payer matched by the child column becomes one of that child\'s parents', () => {
+  const child = { id: 'a', name: 'אביבה כהן', parents: [] };
+  const parents = plain(P.mergeParent(child, { name: 'סופי קופרמן', phone: '972-542117000' }));
+  assert.deepEqual(parents, [{ name: 'סופי קופרמן', phone: '054-2117000' }],
+    'the number is stored the way a person would dial it');
+});
+
+test('a parent already on the record is not added twice', () => {
+  const child = { id: 'a', name: 'אביבה כהן', parents: [{ name: 'סופי קופרמן', phone: '054-2117000' }] };
+  assert.equal(P.mergeParent(child, { name: 'סופי קופרמן', phone: '972-542117000' }), null);
+});
+
+test('the same name in another word order is the same parent', () => {
+  const child = { id: 'a', name: 'ירדן דורון', parents: [{ name: 'דורון וייסברג', phone: '054-6483000' }] };
+  assert.equal(P.mergeParent(child, { name: 'וייסברג דורון', phone: '972-546483000' }), null,
+    'two orders of one name are not two people');
+});
+
+test('a parent listed without a phone gets the one from the file', () => {
+  const child = { id: 'a', name: 'ירדן דורון', parents: [{ name: 'אילנה וייסברג דורון', phone: '' }] };
+  const parents = plain(P.mergeParent(child, { name: 'אילנה וייסברג דורון', phone: '972-546483000' }));
+  assert.deepEqual(parents, [{ name: 'אילנה וייסברג דורון', phone: '054-6483000' }],
+    'that alone is worth the merge');
+});
+
+test('a second, different parent joins the first', () => {
+  const child = { id: 'a', name: 'אביבה כהן', parents: [{ name: 'סופי קופרמן', phone: '054-2117000' }] };
+  const parents = plain(P.mergeParent(child, { name: 'דני כהן', phone: '' }));
+  assert.equal(parents.length, 2);
+  assert.deepEqual(parents[1], { name: 'דני כהן', phone: '' });
+});
+
+test('a row with no payer name changes nothing', () => {
+  assert.equal(P.mergeParent({ id: 'a', name: 'אביבה', parents: [] }, { name: '', phone: '972-5' }), null);
+});
+
+test('phones are written the way they are dialled', () => {
+  assert.equal(P.localPhone('972-546483000'), '054-6483000');
+  assert.equal(P.localPhone('054-6483000'), '054-6483000');
+  assert.equal(P.localPhone(''), '');
+});

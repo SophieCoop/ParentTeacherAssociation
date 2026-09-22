@@ -1037,8 +1037,16 @@ Views.collection = (function () {
         if (!picked.length) { close(); return; }
         /* שיוך שנעשה ביד נשמר על הילד, כדי שהייבוא הבא יזהה את אותו
            משלם לבד. מה שזוהה מראש לפי טלפון כבר ידוע ואין מה לזכור. */
-        var learned = 0;
+        var learned = 0, adopted = 0;
         picked.forEach(function (r) {
+          /* השיוך נעשה לפי עמודת שם הילד/ה — כלומר ההורה עצמו כתב
+             עבור מי הוא משלם. זו הצהרה מפורשת, ולכן היא נרשמת
+             ברשומת הילד ולא נשארת רק על התשלום. */
+          if (r.level === 'child' && r.childId) {
+            var kid = Store.find('children', r.childId);
+            var parents = kid && PayImport.mergeParent(kid, r);
+            if (parents) { Store.update('children', r.childId, { parents: parents }); adopted++; }
+          }
           /* payer — שם המשלם כפי שהוא בקובץ. הוא מה שמזהה תשלום שלא
              שויך לילד, ובלעדיו הוא היה "לא ידוע" ברשימה.
              payerPhone — הראיה החזקה לזהות: הורה שפרס לתשלומים מופיע
@@ -1055,6 +1063,7 @@ Views.collection = (function () {
         App.render();
         refreshCard();
         UI.toast('יובאו ' + picked.length + ' תשלומים ✓' +
+          (adopted ? ' · ' + adopted + (adopted === 1 ? ' הורה נוסף' : ' הורים נוספו') + ' לרשימה' : '') +
           (learned ? ' · ' + learned + ' משלמים ייזכרו לפעם הבאה' : ''));
       });
     }

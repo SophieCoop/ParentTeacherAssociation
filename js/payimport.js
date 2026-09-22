@@ -309,6 +309,45 @@ var PayImport = (function () {
     return { childId: '', level: '', candidates: [] };
   }
 
+  /* ---------- ההורה שהגיע מהקובץ ----------
+     כשהשיוך נעשה לפי עמודת שם הילד/ה, הקובץ אמר במפורש מי משלם עבור
+     מי — וזה בדיוק המידע שחסר ברשומת הילד. השם נכנס אליה, אלא אם
+     הוא כבר שם. */
+
+  /* שם בצורה שמתעלמת מסדר המילים: "וייסברג דורון" ו"דורון וייסברג"
+     הם אותו אדם, ולהוסיף את שניהם פירושו שני הורים לאותו ילד. */
+  function sortedName(v) {
+    var n = normName(v);
+    return n ? n.split(' ').sort().join(' ') : '';
+  }
+
+  /* מספר מקומי לתצוגה. מה שנשמר ברשומה הוא ספרות בלבד, וברשומת
+     ההורה הוא אמור להיראות כמו מספר שאפשר לחייג אליו. */
+  function localPhone(v) {
+    var d = phoneKey(v);
+    return d.length === 9 ? '0' + d.slice(0, 2) + '-' + d.slice(2) : (d ? '0' + d : '');
+  }
+
+  /* מחזיר מערך הורים מעודכן, או null כשאין מה לשנות. המקרה השני
+     שמצדיק שינוי הוא הורה שכבר רשום בלי טלפון: הקובץ משלים אותו. */
+  function mergeParent(child, rec) {
+    var name = String((rec && rec.name) || '').trim();
+    if (!name) return null;
+    var parents = ((child && child.parents) || []).slice();
+    var key = sortedName(name);
+    var phone = localPhone(rec && rec.phone);
+    for (var i = 0; i < parents.length; i++) {
+      if (sortedName(parents[i] && parents[i].name) !== key) continue;
+      if (phone && !phoneKey(parents[i] && parents[i].phone)) {
+        parents[i] = Object.assign({}, parents[i], { phone: phone });
+        return parents;
+      }
+      return null;
+    }
+    parents.push({ name: name, phone: phone });
+    return parents;
+  }
+
   /* ---------- מפתחות משלם ----------
      מפתח מזהה משלם בקובץ. שני סוגים, עם תחילית שמבדילה ביניהם:
        t:<ספרות>  — טלפון
@@ -419,6 +458,7 @@ var PayImport = (function () {
     detectColumns: detectColumns, toRecords: toRecords, matchChild: matchChild, importPlan: importPlan,
     matchPayer: matchPayer, phoneKey: phoneKey, keysForRecord: keysForRecord,
     dupKeys: dupKeys, asksChildName: asksChildName,
+    mergeParent: mergeParent, localPhone: localPhone,
     KINDS: ['name', 'amount', 'date', 'note', 'status', 'phone']
   };
 })();
