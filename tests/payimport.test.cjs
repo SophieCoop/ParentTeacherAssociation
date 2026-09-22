@@ -461,3 +461,76 @@ test('phones are written the way they are dialled', () => {
   assert.equal(P.localPhone('054-6483000'), '054-6483000');
   assert.equal(P.localPhone(''), '');
 });
+
+/* ---------- הצבה בילדים הזמניים ---------- */
+
+const PLACEHOLDERS = n => Array.from({ length: n }, (_, i) =>
+  ({ id: 'c' + i, name: 'ילד ' + (i + 1), placeholder: true, parents: [] }));
+
+function planOf(list) {
+  return list.map(([name, phone, amount, date]) =>
+    ({ name: name, phone: P.phoneKey(phone), amount: amount, date: date || '2025-09-21', childId: '', level: '' }));
+}
+
+test('rows of one payer are one group, however many payments', () => {
+  const g = plain(P.groupRows(planOf([
+    ['אילנה וייסברג דורון', '972-546483000', 481.33],
+    ['אילנה וייסברג דורון', '972-546483000', 481.33],
+    ['לודמילה אחמדזנוב', '972-526461000', 1444]
+  ])));
+  assert.equal(g.length, 2);
+  assert.equal(g[0].rows.length, 2, 'the two instalments stay together');
+  assert.equal(g[1].name, 'לודמילה אחמדזנוב');
+});
+
+test('each payer takes one free placeholder, instalments included', () => {
+  const plan = planOf([
+    ['אילנה וייסברג דורון', '972-546483000', 481.33],
+    ['אילנה וייסברג דורון', '972-546483000', 481.33],
+    ['אילנה וייסברג דורון', '972-546483000', 481.33],
+    ['לודמילה אחמדזנוב', '972-526461000', 1444]
+  ]);
+  P.allocatePlaceholders(plan, PLACEHOLDERS(5), []);
+  assert.equal(plan[0].childId, plan[1].childId, 'three instalments, one child');
+  assert.equal(plan[1].childId, plan[2].childId);
+  assert.notEqual(plan[3].childId, plan[0].childId, 'a different payer, a different child');
+  assert.deepEqual(plan.map(r => r.level), ['allocated', 'allocated', 'allocated', 'allocated']);
+});
+
+test('more payers than free places leaves the rest unassigned', () => {
+  const plan = planOf([['א', '972-500000001', 100], ['ב', '972-500000002', 100], ['ג', '972-500000003', 100]]);
+  P.allocatePlaceholders(plan, PLACEHOLDERS(2), []);
+  assert.equal(plan.filter(r => r.childId).length, 2);
+  assert.equal(plan[2].childId, '', 'and it is not squeezed in next to someone else');
+});
+
+test('a child that already has a payment is not a free place', () => {
+  const kids = PLACEHOLDERS(2);
+  const plan = planOf([['א', '972-500000001', 100], ['ב', '972-500000002', 100]]);
+  P.allocatePlaceholders(plan, kids, [{ id: 'p', childId: 'c0', amount: 50 }]);
+  assert.equal(plan[0].childId, 'c1', 'the occupied one is skipped');
+  assert.equal(plan[1].childId, '', 'and there is nothing left for the second');
+});
+
+test('children with real names are never allocated to', () => {
+  const kids = [{ id: 'a', name: 'תום לוי', parents: [] }, { id: 'b', name: 'גיל כהן', parents: [] }];
+  const plan = planOf([['סבתא שרה', '972-500000001', 100]]);
+  P.allocatePlaceholders(plan, kids, []);
+  assert.equal(plan[0].childId, '', 'a named child belongs to someone, not to a free slot');
+});
+
+test('a row already matched keeps its child, and does not consume a free place', () => {
+  const kids = PLACEHOLDERS(2);
+  const plan = planOf([['א', '972-500000001', 100], ['ב', '972-500000002', 100]]);
+  plan[0].childId = 'c1'; plan[0].level = 'phone';
+  P.allocatePlaceholders(plan, kids, []);
+  assert.equal(plan[0].childId, 'c1', 'untouched');
+  assert.equal(plan[0].level, 'phone');
+  assert.equal(plan[1].childId, 'c0', 'the other one takes what is left');
+});
+
+test('a row with neither name nor phone is not allocated', () => {
+  const plan = planOf([['', '', 100]]);
+  P.allocatePlaceholders(plan, PLACEHOLDERS(3), []);
+  assert.equal(plan[0].childId, '', 'there is nobody to put anywhere');
+});

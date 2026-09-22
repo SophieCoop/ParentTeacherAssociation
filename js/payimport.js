@@ -451,6 +451,64 @@ var PayImport = (function () {
       });
     });
   }
+  /* ---------- קיבוץ לפי משלם, והצבה בילדים הזמניים ---------- */
+
+  /* שורות התוכנית מקובצות לפי אדם: אותו טלפון או אותו שם, בלי תלות
+     בסדר המילים, והקשר מתגלגל. זה הכרחי לפני כל הקצאה — פריסה
+     לשלושה תשלומים היא הורה אחד, והקצאה לכל שורה בנפרד היתה מפזרת
+     אותו על שלושה ילדים שונים. */
+  function groupRows(plan) {
+    var up = {};
+    function add(k) { if (!(k in up)) up[k] = k; return k; }
+    function find(k) { while (up[k] !== k) { up[k] = up[up[k]]; k = up[k]; } return k; }
+    function union(a, b) { var ra = find(add(a)), rb = find(add(b)); if (ra !== rb) up[ra] = rb; }
+
+    var tagged = (plan || []).map(function (r, i) {
+      var t = phoneKey(r && r.phone), n = sortedName(r && r.name);
+      var key = t ? 't:' + t : (n ? 'n:' + n : '#' + i);   // בלי שם ובלי טלפון — לעצמו
+      if (t && n) union('t:' + t, 'n:' + n);
+      return { r: r, key: add(key) };
+    });
+    var byRoot = {}, order = [];
+    tagged.forEach(function (x) {
+      var root = find(x.key);
+      if (!byRoot[root]) { byRoot[root] = { key: root, name: '', phone: '', rows: [] }; order.push(root); }
+      var g = byRoot[root];
+      if (String(x.r.name || '').length > g.name.length) g.name = String(x.r.name || '');
+      if (!g.phone && x.r.phone) g.phone = x.r.phone;
+      g.rows.push(x.r);
+    });
+    return order.map(function (k) { return byRoot[k]; });
+  }
+
+  /* ילד זמני ("ילד 3") אינו ילד מסוים אלא מקום פנוי ברשימה, ולכן
+     אפשר להציב בו משלם שלא זוהה. ההצבה עצמה שרירותית — אין שום
+     סימן שקושר דווקא את המשלם הזה דווקא למקום הזה — וזו בדיוק
+     הסיבה שהיא מסומנת כהצעה שממתינה לאישור ולא כזיהוי.
+
+     מקום נחשב פנוי אם אין עליו תשלום קודם ואף שורה בתוכנית הזאת
+     כבר לא שויכה אליו. כשנגמרים המקומות, השאר נשארים ללא שיוך. */
+  function allocatePlaceholders(plan, children, payments) {
+    var taken = {};
+    (payments || []).forEach(function (p) { if (p.childId) taken[p.childId] = true; });
+    (plan || []).forEach(function (r) { if (r.childId) taken[r.childId] = true; });
+    var free = (children || []).filter(function (c) {
+      return c && c.placeholder && !taken[c.id];
+    });
+    if (!free.length) return plan;
+
+    var next = 0;
+    groupRows(plan).forEach(function (g) {
+      if (next >= free.length) return;
+      /* קבוצה שכבר שויכה, או שאין בה על מה להישען, אינה מוצבת */
+      if (g.rows.some(function (r) { return r.childId; })) return;
+      if (!g.name && !g.phone) return;
+      var kid = free[next++];
+      g.rows.forEach(function (r) { r.childId = kid.id; r.level = 'allocated'; });
+    });
+    return plan;
+  }
+
   function Calcish(v) { var n = parseFloat(v); return isFinite(n) ? n : 0; }
 
   return {
@@ -459,6 +517,7 @@ var PayImport = (function () {
     matchPayer: matchPayer, phoneKey: phoneKey, keysForRecord: keysForRecord,
     dupKeys: dupKeys, asksChildName: asksChildName,
     mergeParent: mergeParent, localPhone: localPhone,
+    groupRows: groupRows, allocatePlaceholders: allocatePlaceholders,
     KINDS: ['name', 'amount', 'date', 'note', 'status', 'phone']
   };
 })();
