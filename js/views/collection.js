@@ -66,18 +66,16 @@ Views.collection = (function () {
       return html + UI.empty({ art: 'children', title: 'אין ילדים ברשימה', text: 'הוסיפו את ' + Lang.t('childrenOf') + ' כדי להתחיל בגבייה.', action: { act: 'nav-children', label: 'לרשימת הילדים' } });
     }
 
-    /* ---------- שתי רשימות או אחת ----------
+    /* ---------- רשימה אחת ----------
        רשומה זמנית שאין עליה תשלום אינה אומרת דבר: "הורה · ילד 3 · —".
        כל עוד אין לצדה רשימת משלמים היא לפחות מזכירה שיש ילד כזה, אבל
        ברגע שנכנסו תשלומים בשם אמיתי היא מכפילה את אותו כסף פעם שנייה
-       בשם ריק — שש שורות חלולות מעל תשע שורות שיש בהן מידע. לכן היא
-       מתקפלת לשורה אחת שסופרת אותן ומזמינה להזין שמות. */
+       בשם ריק — שש שורות חלולות מעל תשע שורות שיש בהן מידע. במצב
+       הזה היא יורדת מהמסך; מספר הילדים ממשיך להופיע בשורת הסיכום
+       שבתחתית, ומסך הילדים נשאר בתפריט למי שבא להזין שמות. */
     var payers = Calc.payerGroups(st);
-    var blanks = payers.length && !q
-      ? rows.filter(function (r) { return r.child.placeholder && r.paid <= 0; })
-      : [];
-    if (blanks.length) {
-      rows = rows.filter(function (r) { return blanks.indexOf(r) < 0; });
+    if (payers.length && !q) {
+      rows = rows.filter(function (r) { return !(r.child.placeholder && r.paid <= 0); });
     }
     /* כותרת נדרשת רק כששתי הרשימות על המסך יחד — אחרת היא רעש */
     if (rows.length && payers.length && !q) {
@@ -107,15 +105,6 @@ Views.collection = (function () {
                   : (r.remaining > 0 ? 'נותר ' + UI.money(r.remaining) : '✓')) + '</div></div>' +
         '</div>';
     }).join('');
-
-    if (blanks.length) {
-      html += '<div class="row" data-action="nav-children" style="background:#FAF8FD;box-shadow:none">' +
-        '<div class="r-ico has-art" style="background:#fff">' + UI.art('children') + '</div>' +
-        '<div class="r-body"><div class="r-name">' + blanks.length + ' ' +
-          (blanks.length === 1 ? 'ילד/ה ללא שם' : 'ילדים ללא שמות') + '</div>' +
-        '<div class="r-sub">הזנת השמות תאפשר לשייך אליהם את התשלומים שלמטה</div></div>' +
-        '<div class="r-end"><span class="r-pct">←</span></div></div>';
-    }
 
     /* ההורים ששילמו ואין להם שורה משלהם ברשימה. בלי הקטע הזה הכסף
        שלהם נמצא בסיכום אבל שמם אינו מופיע בשום מקום במסך הגבייה. */
