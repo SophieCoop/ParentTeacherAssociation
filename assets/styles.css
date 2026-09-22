@@ -49,8 +49,14 @@ body{
   color:var(--ink);
   font-size:15px;
   line-height:1.55;
+  /* dvh הוא הגובה הנראה בפועל. ב-iOS ‏vh מודד את המסך כשסרגלי הדפדפן
+     מוסתרים, ולכן 100vh גבוה מהשטח הגלוי והתפריט התחתון, שמוצמד
+     לתחתית, נדחף אל מתחת לקצה הנראה */
   min-height:100vh;
-  overflow-x:hidden;
+  min-height:100dvh;
+  /* אין כאן overflow-x:hidden בכוונה: ב-iOS הוא מבטל את ההצמדה של
+     position:fixed, והתפריט התחתון מתחיל לגלול עם העמוד במקום
+     להישאר במקומו. נבדק שאף מסך אינו גולש הצידה בלעדיו. */
 }
 body::before{
   /* כתמי רקע פסטליים רכים */
@@ -74,6 +80,7 @@ ul{margin:0;padding:0;list-style:none}
   margin:0 auto;
   padding:0 16px calc(var(--nav-h) + 26px);
   min-height:100vh;
+  min-height:100dvh;
 }
 .shell.shell-plain{display:block;max-width:560px}
 /* כשהאתר רץ מהאייקון שבמסך הבית אין סרגל דפדפן שמרחיק את התוכן
