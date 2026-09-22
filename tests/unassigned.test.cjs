@@ -233,8 +233,11 @@ test('assigned and unassigned together: the names cover what is missing', () => 
   ['אמא ג', 'אבא ד'].forEach(n => Store.add('payments',
     { childId: '', payer: n, amount: 1000, method: 'paybox', date: '2025-09-21', installments: 1 }));
   const s = Calc.collectionSummary(Store.state);
-  assert.equal(s.unknownCount, 2, 'two children are still open');
-  assert.equal(s.everyonePaid, true, 'and there are exactly two different payers to explain them');
+  assert.equal(s.everyonePaid, true, 'there are exactly two different payers to explain the two open rows');
+  assert.equal(s.unknownCount, 0, 'so nothing is open any more');
+  assert.equal(s.fullCount, 4, 'all four count as paid');
+  assert.equal(s.rows.map(r => r.status).join(','), 'full,full,covered,covered',
+    'the two that were unknown are now covered — paid, but not on a name');
 });
 
 test('a committee with no budget yet has not "collected everything"', () => {
@@ -361,4 +364,74 @@ test('unassigned money does not paper over a known debt', () => {
   assert.equal(s.cashGap, 0, 'the budget is covered');
   assert.equal(s.owed, 800, 'but child 0 is 800 short of their own share');
   assert.equal(s.done, false);
+});
+
+/* ---------- ההורים ששילמו, בשמם ---------- */
+
+function payersOnly(list) {
+  const { Store, Calc } = setup();
+  Store.reset();
+  Store.setHeadcount('children', 6);
+  Store.add('budgetItems', { name: 'פעילויות', categoryId: Store.state.categories[0].id, mode: 'total', amount: 8000 });
+  list.forEach(([payer, phone, amount]) => Store.add('payments',
+    { childId: '', payer: payer, payerPhone: phone, amount: amount, method: 'paybox', date: '2025-09-21', installments: 1 }));
+  return { Store, Calc };
+}
+
+test('payments are grouped per person, with the total and how many times', () => {
+  const { Store, Calc } = payersOnly([
+    ['לודמילה אחמדזנוב', '972-526461000', 1444],
+    ['אילנה וייסברג דורון', '972-546483000', 481.33],
+    ['אילנה וייסברג דורון', '972-546483000', 481.33],
+    ['אילנה וייסברג דורון', '972-546483000', 481.33]
+  ]);
+  const g = Calc.payerGroups(Store.state);
+  assert.equal(g.length, 2, 'two people, four payments');
+  assert.equal(g[0].name, 'לודמילה אחמדזנוב');
+  assert.equal(g[0].count, 1);
+  assert.equal(g[1].count, 3, 'three instalments');
+  assert.equal(g[1].total, 1443.99);
+  assert.equal(g[1].sameAmount, true, 'identical amounts — that is what a PayBox split looks like');
+});
+
+test('two payments of different amounts are not called instalments', () => {
+  const { Store, Calc } = payersOnly([['דנה כהן', '', 300], ['דנה כהן', '', 700]]);
+  const g = Calc.payerGroups(Store.state);
+  assert.equal(g[0].count, 2);
+  assert.equal(g[0].sameAmount, false, 'a split has one repeating amount, this is two separate payments');
+  assert.equal(g[0].total, 1000);
+});
+
+test('the fullest spelling of the name represents the group', () => {
+  const { Store, Calc } = payersOnly([['דורון', '972-546483000', 100], ['אילנה וייסברג דורון', '972-546483000', 100]]);
+  const g = Calc.payerGroups(Store.state);
+  assert.equal(g.length, 1, 'one phone, one person');
+  assert.equal(g[0].name, 'אילנה וייסברג דורון');
+});
+
+test('as many payers as children means they paid, not "not known yet"', () => {
+  const six = ['אמא א', 'אבא ב', 'אמא ג', 'אבא ד', 'אמא ה', 'אבא ו']
+    .map(n => [n, '', 1333]);
+  const { Store, Calc } = payersOnly(six);
+  const s = Calc.collectionSummary(Store.state);
+  assert.equal(Calc.distinctPayers(Store.state), 6);
+  assert.equal(s.unknownCount, 0, 'nothing is open');
+  assert.equal(s.rows.map(r => r.status).join(','), 'covered,covered,covered,covered,covered,covered');
+  assert.equal(s.fullCount, 6, 'all six count as paid');
+});
+
+test('fewer payers than children leaves the question open', () => {
+  const { Store, Calc } = payersOnly([['אמא א', '', 4000], ['אבא ב', '', 4000]]);
+  const s = Calc.collectionSummary(Store.state);
+  assert.equal(Calc.distinctPayers(Store.state), 2);
+  assert.equal(s.unknownCount, 6, 'two people cannot vouch for six children');
+  assert.equal(s.fullCount, 0);
+});
+
+test('an anonymous payment does not turn anyone into a payer', () => {
+  const six = [1, 2, 3, 4, 5, 6].map(() => ['', '', 1333]);
+  const { Store, Calc } = payersOnly(six);
+  const s = Calc.collectionSummary(Store.state);
+  assert.equal(Calc.payerGroups(Store.state).length, 0, 'no name, no phone, no person');
+  assert.equal(s.unknownCount, 6);
 });

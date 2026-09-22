@@ -10,6 +10,9 @@ Views.collection = (function () {
     if (r.due <= 0) return '<span class="badge neutral">אין חיוב</span>';
     if (r.status === 'full') return '<span class="badge ok">שולם במלואו</span>';
     if (r.status === 'partial') return '<span class="badge warn">חלקי</span>';
+    /* יש מספיק משלמים שונים כדי להסביר את כל מי שחסר — הכסף נכנס
+       והשאלה נסגרה, גם אם אי אפשר לומר איזה תשלום שייך למי */
+    if (r.status === 'covered') return '<span class="badge ok">שולם</span>';
     /* יש בקופה כסף שאיש לא יודע של מי — ייתכן שהוא של ההורה הזה */
     if (r.status === 'unknown') return '<span class="badge neutral">טרם ידוע</span>';
     return '<span class="badge no">טרם שולם</span>';
@@ -73,7 +76,7 @@ Views.collection = (function () {
           '<div class="r-sub">' + UI.esc(c.name) + ' · ' +
             /* אפס שקלים זו קביעה. כשהשאלה עדיין פתוחה מוטב קו מאשר מספר */
             (r.over ? '<b class="over-paid">' + UI.money(r.paid) + '</b>'
-             : r.status === 'unknown' ? '—' : UI.money(r.paid)) +
+             : (r.status === 'unknown' || r.status === 'covered') ? '—' : UI.money(r.paid)) +
             ' מתוך ' + UI.money(r.due) +
             (r.percent < 100 ? ' · ' + r.percent + '%' : '') + '</div>' +
           UI.bar(r.paid, r.due, r.status === 'full' ? 'ok' : 'thin') +
@@ -81,10 +84,35 @@ Views.collection = (function () {
         '<div class="r-end">' + statusBadge(r) +
         '<div class="r-pct" style="margin-top:4px">' +
           (r.over ? '<span class="over-paid">עודף ' + UI.money(r.overAmount) + '</span>'
+                  : r.status === 'covered' ? '✓'
                   : r.status === 'unknown' ? '—'
                   : (r.remaining > 0 ? 'נותר ' + UI.money(r.remaining) : '✓')) + '</div></div>' +
         '</div>';
     }).join('');
+
+    /* ההורים ששילמו ואין להם שורה משלהם ברשימה. בלי הקטע הזה הכסף
+       שלהם נמצא בסיכום אבל שמם אינו מופיע בשום מקום במסך הגבייה. */
+    var groups = Calc.payerGroups(st);
+    if (groups.length && !q) {
+      html += '<div class="section-title" style="margin-top:18px"><span>שילמו — טרם שויכו להורה</span>' +
+        '<span class="small muted">' + groups.length +
+        (groups.length === 1 ? ' משלם' : ' משלמים') + '</span></div>';
+      html += groups.map(function (g) {
+        var name = g.name || 'ללא שם';
+        /* פריסה לתשלומים בפייבוקס: אותו משלם, כמה שורות, אותו סכום
+           בכולן. זה מה שמבדיל בינה לבין שני תשלומים על דברים שונים. */
+        var how = g.count === 1 ? 'תשלום אחד'
+          : g.sameAmount ? g.count + ' תשלומים של ' + UI.money(g.payments[0].amount)
+          : g.count + ' תשלומים';
+        return '<div class="row" data-action="col-unassigned">' +
+          '<div class="avatar" style="background:' + UI.toneVar(UI.toneFor(name)) + '">' + UI.faceFor(name) + '</div>' +
+          '<div class="r-body"><div class="r-name">' + UI.esc(name) + '</div>' +
+            '<div class="r-sub">' + UI.esc(how) + '</div></div>' +
+          '<div class="r-end"><div class="r-amount">' + UI.money(g.total) + '</div>' +
+            '<div class="r-pct"><span class="badge ok">שולם</span></div></div>' +
+          '</div>';
+      }).join('');
+    }
 
     html += '<div class="row" style="background:var(--green);box-shadow:none;margin-top:14px">' +
       '<div class="r-ico has-art" style="background:#fff">' + UI.art('collection') + '</div>' +

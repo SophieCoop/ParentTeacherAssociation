@@ -476,7 +476,7 @@ var Calc = (function () {
      קבוצות ולא ספירת מפתחות. תשלום בלי שם ובלי טלפון אינו נספר
      כלל: אי אפשר להעיד עליו, ומוטב לספור פחות מדי מאשר להכריז
      "כל ההורים שילמו" על סמך אנונימי. */
-  function distinctPayers(state) {
+  function payerGroups(state) {
     var up = {};
     function add(k) { if (!(k in up)) up[k] = k; return k; }
     function find(k) { while (up[k] !== k) { up[k] = up[up[k]]; k = up[k]; } return k; }
@@ -489,11 +489,40 @@ var Calc = (function () {
       var name = payerNameKey(p.payer);
       if (!phone && !name) return;
       if (phone && name) union('t:' + phone, 'n:' + name);
-      mine.push(add(phone ? 't:' + phone : 'n:' + name));
+      mine.push({ p: p, key: add(phone ? 't:' + phone : 'n:' + name) });
     });
-    var seen = {};
-    mine.forEach(function (k) { seen[find(k)] = true; });
-    return Object.keys(seen).length;
+    var byRoot = {}, order = [];
+    mine.forEach(function (m) {
+      var root = find(m.key);
+      if (!byRoot[root]) { byRoot[root] = { key: root, name: '', phone: '', total: 0, payments: [] }; order.push(root); }
+      var g = byRoot[root];
+      /* השם המלא ביותר מנצח: "אילנה וייסברג דורון" עדיף על "דורון" */
+      if (String(m.p.payer || '').length > g.name.length) g.name = String(m.p.payer || '');
+      if (!g.phone && m.p.payerPhone) g.phone = String(m.p.payerPhone);
+      g.total = round2(g.total + num(m.p.amount));
+      g.payments.push(m.p);
+    });
+    return order.map(function (root) {
+      var g = byRoot[root];
+      /* פריסה לתשלומים בפייבוקס נראית תמיד אותו דבר: אותו משלם,
+         כמה שורות, ובכולן אותו סכום בדיוק. זה מה שמבדיל בין הורה
+         שפרס את החוב לבין הורה ששילם פעמיים על דברים שונים. */
+      var amounts = g.payments.map(function (p) { return Math.round(num(p.amount) * 100); });
+      g.count = g.payments.length;
+      g.sameAmount = g.count > 1 && amounts.every(function (a) { return a === amounts[0]; });
+      g.installments = g.count > 1;
+      return g;
+    });
+  }
+
+  /* כמה אנשים שונים עומדים מאחורי הכסף שלא שויך. שני תשלומים הם
+     אותו אדם אם הם חולקים טלפון או שם, והקשר מתגלגל: אם א' ו-ב'
+     חולקים טלפון ו-ב' ו-ג' חולקים שם, שלושתם אדם אחד — ולכן איחוד
+     קבוצות ולא ספירת מפתחות. תשלום בלי שם ובלי טלפון אינו נספר
+     כלל: אי אפשר להעיד עליו, ומוטב לספור פחות מדי מאשר להכריז
+     "כל ההורים שילמו" על סמך אנונימי. */
+  function distinctPayers(state) {
+    return payerGroups(state).length;
   }
 
   function collectionSummary(state) {
@@ -535,6 +564,13 @@ var Calc = (function () {
        רוצה לראות במסך הבית. */
     var everyonePaid = rows.length > 0 && due > 0 && done &&
       (short === 0 || (unassigned > 0 && distinctPayers(state) >= short));
+    /* יש מספיק משלמים שונים כדי להסביר את כל מי שחסר — אז כולם
+       שילמו, וזו כבר לא שאלה פתוחה. הסטטוס נפרד מ-full כי הכסף
+       עדיין אינו רשום על שם הילד: הסכום בשורה נשאר "—", אבל
+       התשובה לשאלה "שילם?" היא כן. */
+    if (everyonePaid) {
+      rows.forEach(function (r) { if (r.status === 'unknown') r.status = 'covered'; });
+    }
     return {
       rows: rows,
       due: round2(due),
@@ -546,7 +582,9 @@ var Calc = (function () {
       remaining: round2(toCollect),
       cashGap: cashGap,
       owed: owed,
-      fullCount: rows.filter(function (r) { return r.status === 'full' || r.status === 'over'; }).length,
+      fullCount: rows.filter(function (r) {
+        return r.status === 'full' || r.status === 'over' || r.status === 'covered';
+      }).length,
       overCount: rows.filter(function (r) { return r.status === 'over'; }).length,
       overTotal: round2(rows.reduce(function (s, r) { return s + r.overAmount; }, 0)),
       partialCount: rows.filter(function (r) { return r.status === 'partial'; }).length,
@@ -939,7 +977,7 @@ var Calc = (function () {
     expensesTotal: expensesTotal, expensesByCategory: expensesByCategory,
     budgetItem: budgetItem, expensesByBudgetItem: expensesByBudgetItem,
     paymentsOf: paymentsOf, paidBy: paidBy, collectedTotal: collectedTotal,
-    unassignedTotal: unassignedTotal, distinctPayers: distinctPayers,
+    unassignedTotal: unassignedTotal, distinctPayers: distinctPayers, payerGroups: payerGroups,
     totalShareUnits: totalShareUnits, fullChildShare: fullChildShare,
     childCollection: childCollection, collectionRows: collectionRows,
     collectionSummary: collectionSummary, byMethod: byMethod,
