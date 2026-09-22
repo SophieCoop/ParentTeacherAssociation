@@ -49,8 +49,14 @@ body{
   color:var(--ink);
   font-size:15px;
   line-height:1.55;
+  /* dvh הוא הגובה הנראה בפועל. ב-iOS ‏vh מודד את המסך כשסרגלי הדפדפן
+     מוסתרים, ולכן 100vh גבוה מהשטח הגלוי והתפריט התחתון, שמוצמד
+     לתחתית, נדחף אל מתחת לקצה הנראה */
   min-height:100vh;
-  overflow-x:hidden;
+  min-height:100dvh;
+  /* אין כאן overflow-x:hidden בכוונה: ב-iOS הוא מבטל את ההצמדה של
+     position:fixed, והתפריט התחתון מתחיל לגלול עם העמוד במקום
+     להישאר במקומו. נבדק שאף מסך אינו גולש הצידה בלעדיו. */
 }
 body::before{
   /* כתמי רקע פסטליים רכים */
@@ -74,6 +80,7 @@ ul{margin:0;padding:0;list-style:none}
   margin:0 auto;
   padding:0 16px calc(var(--nav-h) + 26px);
   min-height:100vh;
+  min-height:100dvh;
 }
 .shell.shell-plain{display:block;max-width:560px}
 /* כשהאתר רץ מהאייקון שבמסך הבית אין סרגל דפדפן שמרחיק את התוכן
@@ -666,6 +673,18 @@ textarea.input{min-height:78px;resize:vertical}
 .stepper .st-val{width:86px;height:44px;border:1px solid var(--line);border-radius:12px;background:#fff;text-align:center;font:inherit;font-size:16px;font-weight:600;color:var(--ink);-moz-appearance:textfield}
 .stepper .st-val::-webkit-outer-spin-button,.stepper .st-val::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .stepper .st-val:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(155,140,224,.16)}
+/* ---- סטפר מוקטן: יושב בשורה אחת עם טקסט, בכרטיס ולא במסך שלם ---- */
+.stepper.sm{gap:8px}
+.stepper.sm .st-btn{width:36px;height:36px;font-size:20px}
+.stepper.sm .st-val{width:64px;height:40px;font-size:15px}
+
+/* ---- רשימת הילדים: מספר סידורי וחץ פתיחה ---- */
+.k-idx{
+  width:26px;height:26px;border-radius:50%;flex:none;display:grid;place-items:center;
+  background:var(--primary-soft);color:var(--primary-dark);
+  font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;
+}
+.k-chev{color:var(--muted);display:grid;place-items:center}
 .more-card{display:flex;align-items:center;gap:12px;width:100%;margin-top:16px;padding:12px 14px;border-radius:14px;background:#F6F3FA;text-align:start;font:inherit;color:var(--ink);cursor:pointer}
 .more-card .mc-ico{font-size:22px;flex:none}
 .more-card .mc-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}

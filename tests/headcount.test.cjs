@@ -125,3 +125,22 @@ test('children saved before payer keys existed get an empty list, not undefined'
   Store.importJSON(JSON.stringify({ children: [{ id: 'c1', name: 'ותיק', parents: [] }] }));
   assert.deepEqual(plain(Store.find('children', 'c1').payerKeys), []);
 });
+
+test('renaming children survives later changes to the headcount, in both directions', () => {
+  const { Store } = setup();
+  Store.setHeadcount('children', 4);
+  Store.update('children', Store.state.children[1].id, { name: 'נועה' });
+  Store.update('children', Store.state.children[3].id, { name: 'איתי' });
+
+  // העלאת המספר אינה נוגעת בשמות שהוזנו, ואינה יוצרת שם כפול
+  Store.setHeadcount('children', 6);
+  const up = plain(Store.state.children).map(c => c.name);
+  assert.ok(up.includes('נועה') && up.includes('איתי'));
+  assert.equal(new Set(up).size, up.length, 'no duplicate names');
+  assert.equal(up.length, 6);
+
+  // הורדתו מוחקת רק את הזמניים, והרצפה היא מספר השמות האמיתיים
+  assert.equal(Store.setHeadcount('children', 1), 2);
+  assert.deepEqual(plain(Store.state.children).map(c => c.name).sort(), ['איתי', 'נועה']);
+  assert.equal(Store.headcountFloor('children'), 2);
+});
