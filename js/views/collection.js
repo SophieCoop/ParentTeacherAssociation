@@ -469,13 +469,6 @@ Views.collection = (function () {
   /* ---------- הוספה ידנית לצד ייבוא מקובץ ----------
      היכולת כולה תלויה במתג אחד ב-js/config.js. ברירת המחדל דולקת,
      וקובץ הגדרות ישן שאין בו את המתג אינו מכבה אותה בטעות. */
-  /* ערך הסימון ל"לא לייבא" בתפריט השיוך. ריק כבר תפוס — הוא אומר
-     "לייבא בלי שיוך" — ולכן צריך ערך משלו שאינו מזהה של ילד. מזהים
-     נראים כך: chi-xxxx-yyyyy, ולכן '#' פוסל התנגשות. תו בקרה לא
-     מתאים כאן: הדפדפן מחליף U+0000 בתוך HTML בתו אחר, והערך שחוזר
-     מהתפריט כבר אינו זהה לקבוע. */
-  var SKIP = '#skip';
-
   function importEnabled() {
     if (typeof Features === 'undefined' || !Features) return true;
     return Features.payboxImport !== false;
@@ -778,7 +771,7 @@ Views.collection = (function () {
         html += '<p class="small center" style="margin:14px 0">' +
           (dups === plan.length
             ? '✅ כל התשלומים שבקובץ כבר רשומים באפליקציה — אין מה לייבא.'
-            : 'כל השורות מסומנות "לא לייבא". אפשר לבחור שיוך לשורה כדי להכניס אותה.') +
+            : 'אף שורה אינה מסומנת. סמנו שורה כדי להכניס אותה.') +
           '</p>';
       }
       html += '<div class="imp-list">' + plan.map(function (r, i) {
@@ -792,16 +785,18 @@ Views.collection = (function () {
           : r.level === 'reversed' ? '<span class="badge info">זוהה — סדר הפוך</span>'
           : r.level === 'partial' ? '<span class="badge info">זוהה חלקית</span>'
           : '<span class="badge">ללא שיוך</span>';
-        /* שלוש אפשרויות שונות זו מזו: לייבא בלי שיוך (ברירת המחדל
-           לשורה שלא זוהתה), לשייך לילד, או לא לייבא כלל. */
-        var skipped = !r.include && !r.childId;
-        var opts = '<option value=""' + (!r.childId && r.include ? ' selected' : '') + '>— ללא שיוך —</option>' +
-          '<option value="' + SKIP + '"' + (skipped ? ' selected' : '') + '>— לא לייבא —</option>' +
+        /* תיבת הסימון היא שקובעת אם השורה נכנסת, והתפריט רק למי.
+           הפרדה כזאת אומרת שאפשר לראות בבת אחת אילו שורות ייכנסו,
+           בלי לפתוח תפריט אחרי תפריט. */
+        var opts = '<option value=""' + (r.childId ? '' : ' selected') + '>— ללא שיוך —</option>' +
           kids.map(function (c) {
             return '<option value="' + c.id + '"' + (r.childId === c.id ? ' selected' : '') + '>' + UI.esc(childLabel(c)) + '</option>';
           }).join('');
         return '<div class="imp-row' + (r.include ? '' : ' off') + '" data-i="' + i + '">' +
-          '<div class="imp-top"><span class="imp-name">' + UI.esc(r.name || 'ללא שם') + '</span>' +
+          '<div class="imp-top">' +
+            '<label class="imp-on"><input type="checkbox" data-on="' + i + '"' + (r.include ? ' checked' : '') +
+              ' aria-label="לייבא את התשלום של ' + UI.esc(r.name || 'ללא שם') + '">' +
+              '<span class="imp-name">' + UI.esc(r.name || 'ללא שם') + '</span></label>' +
             '<span class="imp-amt">' + UI.money(r.amount) + '</span></div>' +
           '<div class="imp-sub"><span class="small muted">' + (r.date ? UI.dateShort(r.date) : 'ללא תאריך') +
             (r.note ? ' · ' + UI.esc(r.note) : '') + '</span>' + badge + '</div>' +
@@ -838,21 +833,22 @@ Views.collection = (function () {
       });
       var ms = root.querySelector('[data-method]');
       if (ms) ms.addEventListener('change', function () { method = ms.value; });
+      /* התיבה קובעת אם השורה נכנסת. סימון ידני גובר על הסינון
+         האוטומטי — כפילות, ביטול או שורת סיכום: המשתמש ראה את
+         השורה והחליט בכל זאת להכניס אותה. */
+      root.querySelectorAll('[data-on]').forEach(function (box) {
+        box.addEventListener('change', function () {
+          var r = plan[parseInt(box.getAttribute('data-on'), 10)];
+          r.include = box.checked;
+          if (box.checked) r.skipped = '';
+          box.closest('.imp-row').classList.toggle('off', !r.include);
+          refreshFoot();
+        });
+      });
+      /* התפריט קובע רק למי השורה שייכת. ערך ריק = ללא שיוך. */
       root.querySelectorAll('[data-pick]').forEach(function (sel) {
         sel.addEventListener('change', function () {
-          var r = plan[parseInt(sel.getAttribute('data-pick'), 10)];
-          if (sel.value === SKIP) {
-            r.childId = '';
-            r.include = false;
-          } else {
-            /* בחירה מפורשת בתפריט גוברת על הסינון האוטומטי — כפילות,
-               ביטול או שורת סיכום: המשתמש ראה את השורה והחליט לייבא
-               אותה, עם שיוך לילד או בלעדיו (ערך ריק = ללא שיוך). */
-            r.childId = sel.value;
-            r.skipped = '';
-            r.include = true;
-          }
-          sel.closest('.imp-row').classList.toggle('off', !r.include);
+          plan[parseInt(sel.getAttribute('data-pick'), 10)].childId = sel.value;
           refreshFoot();
         });
       });

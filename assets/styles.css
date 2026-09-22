@@ -1592,6 +1592,8 @@ table.ye-tbl td:nth-child(2),table.ye-tbl td:nth-child(3){text-align:center}
    פשוט לא היה ניתן להגעה בקובץ עם הרבה שורות. */
 .imp-list{display:flex;flex-direction:column;gap:8px;padding:2px}
 /* שורת הפעולה נשארת לנגד העיניים בזמן הגלילה */
+.imp-on{display:flex;align-items:center;gap:9px;cursor:pointer;min-width:0;flex:1}
+.imp-on input{width:20px;height:20px;flex:none;accent-color:var(--primary-dark);margin:0}
 .imp-cover{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:-4px 0 10px}
 .imp-cover .btn{flex:none}
 .imp-missing{display:flex;flex-wrap:wrap;gap:6px;margin:-4px 0 12px}
