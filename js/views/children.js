@@ -5,33 +5,87 @@ var Views = (typeof Views === 'undefined') ? {} : Views;
 
 Views.children = (function () {
 
+  /* ---------- מספר הילדים ----------
+     הדרך המהירה להקים רשימה: מזינים כמה ילדים יש, והרשומות נוצרות
+     עם שמות זמניים ("ילד 1"). שינוי המספר לעולם אינו דורס שם שכבר
+     הוזן — Store.setHeadcount מוחק רשומות זמניות בלבד, ו-headcountFloor
+     הוא הרצפה שמתחתיה המספר אינו יורד. */
+  function countCard() {
+    var n = Store.state.children.length;
+    var floor = Store.headcountFloor('children');
+    return '<div class="card">' +
+      '<div class="count-block">' +
+        '<div class="cb-body">' +
+          '<div class="cb-q">מספר הילדים</div>' +
+          '<div class="small muted">עדכנו את מספר הילדים והם יתעדכנו ברשימה באופן אוטומטי</div>' +
+        '</div>' +
+        '<div class="stepper sm" style="margin-top:0">' +
+          '<button type="button" class="st-btn" data-action="kid-count-step" data-d="-1" ' +
+            'aria-label="ילד אחד פחות"' + (n <= floor ? ' disabled' : '') + '>−</button>' +
+          '<input class="st-val" id="kid-count" type="number" inputmode="numeric" min="' + floor + '" max="999" ' +
+            'value="' + n + '" data-input="kid-count" data-change="kid-count-done" aria-label="מספר הילדים">' +
+          '<button type="button" class="st-btn" data-action="kid-count-step" data-d="1" aria-label="ילד אחד יותר">+</button>' +
+        '</div>' +
+      '</div>' +
+      (floor ? '<div class="hint">' + (floor === 1 ? 'לילד אחד כבר הוזן שם' : floor + ' ילדים כבר קיבלו שם') +
+               ', ולכן המספר אינו יורד מתחת ל-' + floor + '.</div>' : '') +
+      '</div>';
+  }
+
+  /* מיון אוטומטי, ועם numeric כדי ש"ילד 2" יבוא לפני "ילד 10" */
+  function sorted() {
+    return Store.state.children.slice().sort(function (a, b) {
+      return a.name.localeCompare(b.name, 'he', { numeric: true });
+    });
+  }
+
   function tabList() {
     var st = Store.state;
-    var kids = st.children.slice().sort(function (a, b) { return a.name.localeCompare(b.name, 'he'); });
-
-    var html = UI.addBtn({ act: 'child-add', label: 'הוספת ילד', cls: 'mb-add' });
+    var kids = sorted();
+    var html = countCard();
 
     if (!kids.length) {
-      return html + UI.empty({ art: 'children', title: 'עוד אין ילדים ברשימה', text: 'הוסיפו את ' + Lang.t('childrenOf') + ', ההורים והטלפונים.' });
+      return html + UI.empty({ art: 'children', title: 'עוד אין ילדים ברשימה',
+        text: 'אפשר להזין כאן למעלה כמה ילדים יש, והרשימה תיווצר לבד.' });
     }
 
-    html += kids.map(function (c) {
+    html += '<div class="section-title"><span>רשימת הילדים (' + kids.length + ')</span>' +
+            '<span class="sub">⇅ מיון אוטומטי</span></div>';
+
+    html += kids.map(function (c, i) {
       var pct = Calc.sharePercentOf(st, c);
       var parents = (c.parents || []).map(function (p) { return p.name; }).join(' · ');
+      var sub = Store.isPlaceholder(c)
+        ? 'שם זמני — אפשר לערוך'
+        : (c.birthDate ? '🎂 ' + UI.dateShort(c.birthDate) : 'ללא תאריך לידה') +
+          (parents ? ' · ' + UI.esc(parents) : '');
       return '<div class="row" data-action="child-open" data-id="' + c.id + '">' +
+        '<div class="k-idx">' + (i + 1) + '</div>' +
         '<div class="avatar" style="background:' + UI.toneVar(UI.toneFor(c.name)) + '">' + UI.faceFor(c.name) + '</div>' +
         '<div class="r-body"><div class="r-name">' + UI.esc(c.name) + '</div>' +
-        '<div class="r-sub">' + (c.birthDate ? '🎂 ' + UI.dateShort(c.birthDate) : 'ללא תאריך לידה') +
-        (parents ? ' · ' + UI.esc(parents) : '') + '</div></div>' +
+        '<div class="r-sub">' + sub + '</div></div>' +
         '<div class="r-end">' +
           (Calc.childOutOfYear(c, st.settings)
             ? '<span class="badge over">מחוץ לשנה</span>'
-            : (pct < 100 ? '<span class="badge warn">' + pct + '%</span>' : '')) + '</div>' +
+            : (pct < 100 ? '<span class="badge warn">' + pct + '%</span>' : '')) +
+          '<span class="k-chev">' + UI.svgIcon('chevron', 15) + '</span>' +
+        '</div>' +
         '</div>';
     }).join('');
 
+    html += UI.addBtn({ act: 'child-add', label: 'הוספת ילד/ה עם שם', cls: 'soft mt-add' });
+
+    html += '<div class="note" style="margin-top:14px"><div class="n-ico">ℹ️</div><div>' +
+      '<b>רוצים לעדכן פרטים נוספים?</b>' +
+      'לחיצה על ילד פותחת את הכרטיס שלו — שם, תאריך לידה, הורים וטלפונים. ' +
+      'אפשר להשלים את זה בהמשך, ואין חובה למלא שמות כדי שהתקציב והגבייה יעבדו.' +
+      '</div></div>';
+
     return html;
   }
+
+  /* עדכון המספר. clamp נעשה ב-Store, ולכן די להעביר את מה שהוזן */
+  function setCount(v) { Store.setHeadcount('children', v); }
 
   function tabContacts() {
     var kids = Store.state.children;
@@ -223,7 +277,10 @@ Views.children = (function () {
 
   function render() {
     var tab = App.vs('kidTab', 'list');
-    var html = UI.pageHead({ title: Lang.t('childrenOf'), subtitle: Store.state.children.length + ' ילדים רשומים', art: 'children', tone: 'blue', back: 'home' });
+    var html = UI.pageHead({ title: Lang.t('childrenOf'),
+      subtitle: tab === 'contacts' ? Store.state.children.length + ' ילדים רשומים'
+                                   : 'ניהול מספר הילדים ' + Lang.t('placeIn'),
+      art: 'children', tone: 'blue', back: 'home' });
     html += '<div class="segment">' +
       '<button data-action="kid-tab" data-tab="contacts" class="' + (tab === 'contacts' ? 'on' : '') + '">פרטים</button>' +
       '<button data-action="kid-tab" data-tab="list" class="' + (tab === 'list' ? 'on' : '') + '">רשימה</button>' +
@@ -237,6 +294,18 @@ Views.children = (function () {
     childForm: childForm,
     actions: {
       'kid-tab': function (el) { App.setVs('kidTab', el.getAttribute('data-tab')); App.render(); },
+      'kid-count-step': function (el) {
+        setCount(Store.state.children.length + Calc.num(el.getAttribute('data-d')));
+        App.render();
+      },
+      /* הקלדה ישירה נשמרת בלי ציור מחדש, כדי לא להוציא את הסמן מהשדה;
+         הרשימה מתיישרת כשעוזבים אותו (change) */
+      'kid-count': function (el) { if (el.value !== '') setCount(el.value); },
+      'kid-count-done': function (el) {
+        if (el.value === '') return App.render();
+        setCount(el.value);
+        App.render();
+      },
       'child-add': function () { childForm(null); },
       'child-open': function (el) { openChild(el.getAttribute('data-id')); },
       'child-edit': function (el, ev) {
