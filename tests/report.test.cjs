@@ -126,3 +126,17 @@ test('the file name stays ASCII, whatever the committee is called', () => {
   assert.equal(Report.fileName(), 'vaad-report-2027-01-15.xlsx');
   assert.match(Report.fileName(), /^[\x20-\x7e]+$/, 'ASCII only');
 });
+
+test('the income sheet names who paid, even without a child to attach to', () => {
+  const ctx = setup();
+  const { Store } = ctx;
+  Store.reset();
+  Store.setHeadcount('children', 3);
+  Store.add('payments', { childId: '', payer: 'נילה אחמדזנוב', amount: 1444, method: 'paybox', date: '2025-09-21', installments: 1 });
+  Store.add('payments', { childId: Store.state.children[0].id, amount: 500, method: 'bit', date: '2025-09-22', installments: 1 });
+  const rows = sheetsOf(ctx)['הכנסות'].rows;
+  assert.deepEqual(rows[1].slice(1, 4), ['ללא שיוך', 'נילה אחמדזנוב', 1444],
+    'the payer from the file stands in for the missing child');
+  assert.equal(rows[2][1], 'ילד 1', 'an assigned payment is unchanged');
+  assert.equal(rows[rows.length - 1][3], 1944, 'and both are in the total');
+});

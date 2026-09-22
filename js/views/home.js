@@ -65,7 +65,9 @@ Views.home = (function () {
       '<div class="flex wrap mt" style="gap:8px">' +
         '<span class="badge ok">שילמו במלואו · ' + col.fullCount + '</span>' +
         '<span class="badge warn">שילמו חלקית · ' + col.partialCount + '</span>' +
-        '<span class="badge no">טרם שילמו · ' + col.noneCount + '</span>' +
+        (col.unknownCount
+          ? '<span class="badge neutral">טרם ידוע · ' + col.unknownCount + '</span>'
+          : '<span class="badge no">טרם שילמו · ' + col.noneCount + '</span>') +
       '</div></button>';
 
     /* אירועים קרובים — כרטיס אחד, באותו מבנה שורה של עמוד התאריכים */
@@ -116,7 +118,11 @@ Views.home = (function () {
     var usePct = ov.collected > 0 ? Math.min(100, Math.round((ov.spent / ov.collected) * 100)) : 0;
     var level = usePct >= 100 ? 'over' : (usePct >= 75 ? 'warn' : '');
     var waiting = col.noneCount;
+    /* הורים שאי אפשר לדעת עליהם, כי בקופה יש כסף בלי שם. אין טעם
+       לספור אותם כחייבים. */
+    var unknown = col.unknownCount || 0;
     var hasKids = (col.rows || []).length > 0;
+    var done = col.done;
 
     return '<div class="summary pot">' +
       '<div class="pot-top">' +
@@ -135,15 +141,22 @@ Views.home = (function () {
         '<span class="pf-cell">' +
           (!hasKids
             ? '<span class="pf-ico">🌱</span><span class="pf-text"><b class="lead">טרם נוספו ילדים</b></span>'
-            : waiting === 0
-              ? '<span class="pf-ico ok">✔</span><span class="pf-text"><b class="lead pos">כל ההורים שילמו!</b></span>'
+            : col.due <= 0
+              ? '<span class="pf-ico">📋</span><span class="pf-text"><b class="lead">טרם נקבע תקציב</b></span>'
+            : done
+              /* יש ראיה לכל הורה בנפרד — אז אפשר לומר את זה עליהם.
+                 אחרת הידיעה היא על הקופה בלבד, וכך גם הניסוח. */
+              ? '<span class="pf-ico ok">✔</span><span class="pf-text"><b class="lead pos">' +
+                (col.everyonePaid ? 'כל ההורים שילמו!' : 'הגבייה הושלמה!') + '</b></span>'
               : '<span class="pf-ico warn">⏳</span><span class="pf-text"><b>' + money(col.remaining) + '</b>' +
                 '<small>נותר לגבות</small></span>') +
         '</span>' +
         '<i class="pf-div"></i>' +
         '<span class="pf-cell">' +
           '<span class="pf-ico kids">' + UI.svgIcon('children', 24) + '</span>' +
-          '<span class="pf-text"><b>' + waiting + '</b><small>הורים טרם שילמו</small></span>' +
+          (unknown
+            ? '<span class="pf-text"><b>' + money(col.unassigned) + '</b><small>נכנסו ללא שיוך</small></span>'
+            : '<span class="pf-text"><b>' + waiting + '</b><small>הורים טרם שילמו</small></span>') +
         '</span>' +
       '</button>' +
       '</div>';

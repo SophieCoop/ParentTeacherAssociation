@@ -108,7 +108,9 @@ var Report = (function () {
     });
     list.forEach(function (p) {
       rows.push([
-        day(p.date), childName(state, p.childId), parentsOf(state, p.childId),
+        /* תשלום בלי שיוך נושא את שם המשלם שהגיע מהקובץ — בלעדיו
+           העמודה היתה ריקה, והדוח לא היה אומר מי שילם */
+        day(p.date), childName(state, p.childId), parentsOf(state, p.childId) || p.payer || '',
         n(p.amount), methodName(p.method), Calc.num(p.installments) || 1, p.note || ''
       ]);
     });

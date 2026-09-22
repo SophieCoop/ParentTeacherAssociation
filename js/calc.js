@@ -432,20 +432,134 @@ var Calc = (function () {
     return (state.children || []).map(function (c) { return childCollection(state, c); });
   }
 
+  /* כסף שנכנס לקופה בלי שהוא רשום על שם ילד מסוים — כך נראה ייבוא
+     מפייבוקס לוועד שהוזן בו רק מספר הילדים, ואין למי לשייך. הוא נגבה
+     לכל דבר, ולכן הוא נספר בסכום הגבייה; מה שחסר הוא רק הידיעה בשם
+     מי. ההפרש מול סך התשלומים, ולא סינון לפי childId ריק, תופס גם
+     תשלום ששויך לילד שנמחק מאז — כסף שאחרת היה נעלם מהמסך. */
+  function unassignedTotal(state) {
+    var assigned = (state.children || []).reduce(function (s, c) { return s + paidBy(state, c.id); }, 0);
+    var rest = round2(collectedTotal(state) - assigned);
+    return rest > 0.005 ? rest : 0;
+  }
+
+  /* ---------- מי שילם, ולא כמה פעמים ----------
+     הספירה כאן היא של אנשים, לא של תשלומים: אותו הורה מופיע בקובץ
+     של פייבוקס פעמיים כשהוא פורס לתשלומים, ושמו עשוי להופיע בסדר
+     הפוך בין ייצוא לייצוא, ולפעמים עם טלפון ולפעמים בלעדיו. */
+
+  /* טלפון בצורה אחת: ספרות בלבד, בלי קידומת הארץ ובלי האפס המוביל */
+  function payerPhoneKey(v) {
+    var d = String(v == null ? '' : v).replace(/\D/g, '');
+    if (!d) return '';
+    d = d.replace(/^00972/, '').replace(/^972/, '').replace(/^0+/, '');
+    return d.length >= 8 ? d : '';
+  }
+
+  /* שם בצורה אחת. המילים ממוינות, ולכן "דורון וייסברג" ו"וייסברג
+     דורון" הם אותו מפתח — זה בדיוק ההבדל בין שתי צורות של שם אחד
+     לבין שני הורים. */
+  function payerNameKey(v) {
+    var n = String(v == null ? '' : v)
+      .replace(/[\u0591-\u05C7]/g, '')
+      .replace(/['"`\u05F3\u05F4]/g, '')
+      .replace(/[()\[\]{}:,;|\/\\_-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+    return n ? n.split(' ').sort().join(' ') : '';
+  }
+
+  /* כמה אנשים שונים עומדים מאחורי הכסף שלא שויך. שני תשלומים הם
+     אותו אדם אם הם חולקים טלפון או שם, והקשר מתגלגל: אם א' ו-ב'
+     חולקים טלפון ו-ב' ו-ג' חולקים שם, שלושתם אדם אחד — ולכן איחוד
+     קבוצות ולא ספירת מפתחות. תשלום בלי שם ובלי טלפון אינו נספר
+     כלל: אי אפשר להעיד עליו, ומוטב לספור פחות מדי מאשר להכריז
+     "כל ההורים שילמו" על סמך אנונימי. */
+  function distinctPayers(state) {
+    var up = {};
+    function add(k) { if (!(k in up)) up[k] = k; return k; }
+    function find(k) { while (up[k] !== k) { up[k] = up[up[k]]; k = up[k]; } return k; }
+    function union(a, b) { var ra = find(add(a)), rb = find(add(b)); if (ra !== rb) up[ra] = rb; }
+
+    var mine = [];
+    (state.payments || []).forEach(function (p) {
+      if (p.childId) return;                       // משויך — נספר אצל הילד
+      var phone = payerPhoneKey(p.payerPhone);
+      var name = payerNameKey(p.payer);
+      if (!phone && !name) return;
+      if (phone && name) union('t:' + phone, 'n:' + name);
+      mine.push(add(phone ? 't:' + phone : 'n:' + name));
+    });
+    var seen = {};
+    mine.forEach(function (k) { seen[find(k)] = true; });
+    return Object.keys(seen).length;
+  }
+
   function collectionSummary(state) {
     var rows = collectionRows(state);
     var due = rows.reduce(function (s, r) { return s + r.due; }, 0);
-    var paid = rows.reduce(function (s, r) { return s + r.paid; }, 0);
+    var assigned = rows.reduce(function (s, r) { return s + r.paid; }, 0);
+    /* paid הוא כל מה שנגבה, כולל הלא משויך: זה המספר שהמשתמש מחפש
+       במסך הגבייה, והוא זהה לסכום שבקופה במסך הבית. הפילוח לפי ילד
+       נשאר ב-assigned ובשורות עצמן. */
+    var unassigned = unassignedTotal(state);
+    var paid = round2(assigned + unassigned);
+    /* כל עוד יש בקופה כסף שלא שויך, אי אפשר לטעון שהורה ששורתו ריקה
+       לא שילם — ייתכן מאוד שאחד מאותם תשלומים הוא בדיוק שלו. הוא לא
+       חייב, הוא פשוט לא ידוע. ברגע שהכול משויך החזקה חוזרת להיות
+       ודאית, והספירה חוזרת ל"טרם שילמו". */
+    if (unassigned > 0) {
+      rows.forEach(function (r) { if (r.status === 'none') r.status = 'unknown'; });
+    }
+    /* "נותר לגבות" הוא בעצם שני חסרים שונים שהתחפשו למספר אחד.
+       cashGap הוא הפער מול התקציב, ו-owed הוא מה שהורים מסוימים
+       עדיין חייבים. בדרך כלל הם זהים, אבל לא תמיד: הורה אחד ששילם
+       לבדו את כל התקציב סוגר את הפער ומשאיר שלושה חייבים, והמסך
+       הכריז "הגבייה הושלמה". מה שנותר לגבות הוא הגדול מביניהם.
+       שורה שעדיין לא ידועה אינה חוב — ייתכן שהכסף שלה כבר בקופה
+       בלי שם; רק מי שידוע שלא שילם או שילם חלקית נספר. */
+    var cashGap = round2(due - paid);
+    var owed = round2(rows.reduce(function (s, r) {
+      return s + (r.status === 'none' || r.status === 'partial' ? Math.max(0, r.remaining) : 0);
+    }, 0));
+    var toCollect = Math.max(0, cashGap, owed);
+    var done = toCollect <= rows.length * 0.5 + 0.5;
+    /* ילדים שאין להם כיסוי משלהם — מי שלא שילם, מי ששילם חלקית, ומי
+       שעדיין לא ידוע. כל עוד יש כזה, "כל ההורים שילמו" אינו נכון,
+       אלא אם הכסף שלא שויך מגיע ממספיק משלמים שונים כדי להסביר
+       בדיוק אותם. */
+    var short = rows.filter(function (r) { return r.status !== 'full' && r.status !== 'over'; }).length;
+    /* בלי תקציב אין מה לגבות, ולכן גם אין על מה להכריז: ועד שרק
+       הוקם עונה טכנית על "אף אחד לא חייב", וזו לא הכרזה שמישהו
+       רוצה לראות במסך הבית. */
+    var everyonePaid = rows.length > 0 && due > 0 && done &&
+      (short === 0 || (unassigned > 0 && distinctPayers(state) >= short));
     return {
       rows: rows,
       due: round2(due),
-      paid: round2(paid),
-      remaining: round2(due - paid),
+      paid: paid,
+      assigned: round2(assigned),
+      unassigned: unassigned,
+      /* remaining הוא מה שנותר לגבות בפועל — כך הוא מוצג בכל מסך.
+         שני המרכיבים שלו חשופים לצדו למי שצריך להבחין ביניהם. */
+      remaining: round2(toCollect),
+      cashGap: cashGap,
+      owed: owed,
       fullCount: rows.filter(function (r) { return r.status === 'full' || r.status === 'over'; }).length,
       overCount: rows.filter(function (r) { return r.status === 'over'; }).length,
       overTotal: round2(rows.reduce(function (s, r) { return s + r.overAmount; }, 0)),
       partialCount: rows.filter(function (r) { return r.status === 'partial'; }).length,
       noneCount: rows.filter(function (r) { return r.status === 'none'; }).length,
+      unknownCount: rows.filter(function (r) { return r.status === 'unknown'; }).length,
+      /* האם הגבייה נסגרה. זו שאלה על הכסף, לא על השמות: אם כל מה
+         שצריך לגבות נכנס, סיימנו — גם אם עוד לא יודעים מי שילם מה.
+         חצי שקל לכל ילד הוא רעש של עיגול החיוב לשקל שלם. */
+      done: done,
+      /* "כל ההורים שילמו" היא קביעה על אנשים, והיא דורשת ראיה לכל
+         אחד מהם. תשלום אחד גדול שסוגר את כל הסכום אינו ראיה כזאת —
+         הוא רק אומר שהכסף נכנס. */
+      everyonePaid: everyonePaid,
       pct: due > 0 ? Math.min(100, Math.round((paid / due) * 100)) : 0
     };
   }
@@ -825,6 +939,7 @@ var Calc = (function () {
     expensesTotal: expensesTotal, expensesByCategory: expensesByCategory,
     budgetItem: budgetItem, expensesByBudgetItem: expensesByBudgetItem,
     paymentsOf: paymentsOf, paidBy: paidBy, collectedTotal: collectedTotal,
+    unassignedTotal: unassignedTotal, distinctPayers: distinctPayers,
     totalShareUnits: totalShareUnits, fullChildShare: fullChildShare,
     childCollection: childCollection, collectionRows: collectionRows,
     collectionSummary: collectionSummary, byMethod: byMethod,

@@ -10,6 +10,8 @@ Views.collection = (function () {
     if (r.due <= 0) return '<span class="badge neutral">אין חיוב</span>';
     if (r.status === 'full') return '<span class="badge ok">שולם במלואו</span>';
     if (r.status === 'partial') return '<span class="badge warn">חלקי</span>';
+    /* יש בקופה כסף שאיש לא יודע של מי — ייתכן שהוא של ההורה הזה */
+    if (r.status === 'unknown') return '<span class="badge neutral">טרם ידוע</span>';
     return '<span class="badge no">טרם שולם</span>';
   }
 
@@ -36,12 +38,21 @@ Views.collection = (function () {
       '<div class="stat-grid">' +
         '<div class="stat"><div class="s-val pos">' + sum.fullCount + '</div><div class="s-lab">שילמו מלא</div></div>' +
         '<div class="stat"><div class="s-val" style="color:var(--warn)">' + sum.partialCount + '</div><div class="s-lab">חלקי</div></div>' +
-        '<div class="stat"><div class="s-val neg">' + sum.noneCount + '</div><div class="s-lab">טרם שילמו</div></div>' +
+        (sum.unknownCount
+          ? '<div class="stat"><div class="s-val muted">' + sum.unknownCount + '</div><div class="s-lab">טרם ידוע</div></div>'
+          : '<div class="stat"><div class="s-val neg">' + sum.noneCount + '</div><div class="s-lab">טרם שילמו</div></div>') +
       '</div>' +
       (sum.overCount
         ? '<div class="flex-between small mt"><span class="over-paid">⚠️ ' + sum.overCount +
           (sum.overCount === 1 ? ' הורה שילם' : ' הורים שילמו') + ' מעבר למכסה</span>' +
           '<b class="over-paid">עודף ' + UI.money(sum.overTotal) + '</b></div>'
+        : '') +
+      /* הכסף הלא משויך נספר למעלה אבל לא בשורות שמתחת, ובלי המשפט
+         הזה נראה כאילו איש לא שילם בזמן שהקופה מלאה. */
+      (sum.unassigned
+        ? '<div class="flex-between small mt"><span>💡 ' + UI.money(sum.unassigned) +
+          ' נכנסו בלי שיוך להורה</span>' +
+          '<button class="btn sm soft" data-action="col-unassigned">לשיוך</button></div>'
         : '') +
       '</div>';
 
@@ -60,7 +71,9 @@ Views.collection = (function () {
         '<div class="r-body">' +
           '<div class="r-name">' + UI.esc(parent) + '</div>' +
           '<div class="r-sub">' + UI.esc(c.name) + ' · ' +
-            (r.over ? '<b class="over-paid">' + UI.money(r.paid) + '</b>' : UI.money(r.paid)) +
+            /* אפס שקלים זו קביעה. כשהשאלה עדיין פתוחה מוטב קו מאשר מספר */
+            (r.over ? '<b class="over-paid">' + UI.money(r.paid) + '</b>'
+             : r.status === 'unknown' ? '—' : UI.money(r.paid)) +
             ' מתוך ' + UI.money(r.due) +
             (r.percent < 100 ? ' · ' + r.percent + '%' : '') + '</div>' +
           UI.bar(r.paid, r.due, r.status === 'full' ? 'ok' : 'thin') +
@@ -68,6 +81,7 @@ Views.collection = (function () {
         '<div class="r-end">' + statusBadge(r) +
         '<div class="r-pct" style="margin-top:4px">' +
           (r.over ? '<span class="over-paid">עודף ' + UI.money(r.overAmount) + '</span>'
+                  : r.status === 'unknown' ? '—'
                   : (r.remaining > 0 ? 'נותר ' + UI.money(r.remaining) : '✓')) + '</div></div>' +
         '</div>';
     }).join('');
@@ -75,7 +89,8 @@ Views.collection = (function () {
     html += '<div class="row" style="background:var(--green);box-shadow:none;margin-top:14px">' +
       '<div class="r-ico has-art" style="background:#fff">' + UI.art('collection') + '</div>' +
       '<div class="r-body"><div class="r-name">סיכום גבייה</div>' +
-      '<div class="r-sub" style="opacity:.75">' + st.children.length + ' ילדים</div></div>' +
+      '<div class="r-sub" style="opacity:.75">' + st.children.length + ' ילדים' +
+        (sum.unassigned ? ' · ' + UI.money(sum.unassigned) + ' ללא שיוך' : '') + '</div></div>' +
       '<div class="r-end"><div class="r-amount">' + UI.money(sum.paid) + '</div>' +
       '<div class="r-pct">נותר ' + UI.money(sum.remaining) + '</div></div></div>';
 
@@ -93,12 +108,29 @@ Views.collection = (function () {
       return html + UI.empty({ art: 'collection', title: 'עוד לא נרשמו תשלומים', text: 'כל תשלום שנרשם מתעדכן מיד במצב הגבייה.' });
     }
 
+    /* סינון לתשלומים שאין להם הורה — הדרך מ"יש כסף בלי שם" אל
+       השיוך עצמו, תשלום אחרי תשלום */
+    if (App.vs('colUnassigned', false)) {
+      pays = pays.filter(function (p) { return !Store.find('children', p.childId); });
+      html += '<div class="flex-between small mb" style="margin-bottom:10px">' +
+        '<span><b>' + pays.length + '</b> תשלומים ללא שיוך · הקישו על תשלום כדי לשייך</span>' +
+        '<button class="btn sm soft" data-action="col-all-pays">הצגת הכל</button></div>';
+      if (!pays.length) {
+        return html + UI.empty({ art: 'collection', title: 'הכול משויך', text: 'לכל תשלום שנרשם יש הורה.' });
+      }
+    }
+
     html += pays.map(function (p) {
       var c = Store.find('children', p.childId);
-      var parent = c && c.parents && c.parents[0] ? c.parents[0].name : (c ? c.name : 'לא ידוע');
+      /* תשלום שלא שויך לילד נושא את שם המשלם שהגיע מהקובץ — הוא מה
+         שמבדיל בין "לא ידוע" לבין שורה שאפשר לזהות ולשייך בהמשך */
+      var parent = c && c.parents && c.parents[0] ? c.parents[0].name
+                 : c ? c.name
+                 : (p.payer || 'לא ידוע');
       return '<div class="row" data-action="pay-edit" data-id="' + p.id + '">' +
         '<div class="r-ico" style="background:var(--blue)">' + Store.methodIcon(p.method) + '</div>' +
-        '<div class="r-body"><div class="r-name">' + UI.esc(parent) + '</div>' +
+        '<div class="r-body"><div class="r-name">' + UI.esc(parent) +
+        (c ? '' : ' <span class="badge">ללא שיוך</span>') + '</div>' +
         '<div class="r-sub">' + UI.esc(Store.methodName(p.method)) + ' · ' + UI.dateShort(p.date) +
         (p.installments > 1 ? ' · ' + p.installments + ' תשלומים' : '') +
         (p.note ? ' · 📝 ' + UI.esc(p.note) : '') + '</div></div>' +
@@ -132,6 +164,14 @@ Views.collection = (function () {
         row('ילד שהיה כל השנה משלם', '<b>' + UI.money(perFull) + '</b>') +
         (showGap ? row('סה״כ לגבייה', UI.money(sum.due)) : '') +
         row('נגבה בפועל', '<span class="pos">' + UI.money(sum.paid) + '</span>') +
+        /* כסף שנכנס בלי שם הורה — מהייבוא, או אחרי מחיקת ילד. הוא
+           כלול בשורה שמעליו, והשורה הזאת רק אומרת כמה ממנו עוד לא
+           יודעים על מי לרשום. */
+        (sum.unassigned ? row('↳ מתוכם ללא שיוך להורה', UI.money(sum.unassigned)) : '') +
+        /* בלי השורה הזאת החשבון נראה שבור: נגבו 4,000 ₪ מתוך תקציב
+           של 4,000, ובכל זאת נותרו 3,000 לגבייה. ההסבר הוא שחלק
+           מהכסף שנגבה שייך להורה ששילם יותר מחלקו וממתין להחזר. */
+        (sum.overTotal ? row('↳ מתוכם שולם ביתר וממתין להחזר', UI.money(sum.overTotal)) : '') +
         row('נותר לגבייה', '<span class="' + (sum.remaining > 0 ? 'neg' : 'pos') + '">' + UI.money(sum.remaining) + '</span>') +
       '</tbody></table>' +
       (showGap ? gapNote(st, gap) : '') +
@@ -359,11 +399,17 @@ Views.collection = (function () {
       title: isNew ? 'רישום תשלום' : 'עריכת תשלום',
       fields: [
         { name: isNew ? 'childIds' : 'childId', label: isNew ? 'בחרו הורה/ים' : 'ההורה של',
-          type: isNew ? 'multiselect' : 'select', value: isNew ? (presetChild ? [presetChild] : []) : pay.childId, required: true,
-          options: kids.map(function (c) {
-            var p = c.parents && c.parents[0] ? c.parents[0].name : c.name;
-            return { value: c.id, label: p + ' (' + c.name + ')' };
-          }) },
+          type: isNew ? 'multiselect' : 'select',
+          value: isNew ? (presetChild ? [presetChild] : []) : pay.childId,
+          /* בעריכה השיוך אינו חובה: תשלום שיובא בלי שיוך נשאר חוקי,
+             וזה גם המקום לשייך אותו כשהילדים יקבלו שמות */
+          required: isNew,
+          hint: (!isNew && !pay.childId && pay.payer) ? 'שולם על ידי ' + pay.payer : '',
+          options: (isNew ? [] : [{ value: '', label: '— ללא שיוך —' }]).concat(
+            kids.map(function (c) {
+              var p = c.parents && c.parents[0] ? c.parents[0].name : c.name;
+              return { value: c.id, label: p + ' (' + c.name + ')' };
+            })) },
         { name: 'amount', label: isNew ? 'סכום לכל הורה (₪)' : 'סכום (₪)', type: 'number', value: pay.amount, required: true, placeholder: '0', min: 0,
           hint: isNew ? 'הסכום ופרטי התשלום יירשמו בנפרד לכל הורה שנבחר.' : '' },
         { name: 'method', label: 'אמצעי תשלום', type: 'chips', value: pay.method,
@@ -423,6 +469,13 @@ Views.collection = (function () {
   /* ---------- הוספה ידנית לצד ייבוא מקובץ ----------
      היכולת כולה תלויה במתג אחד ב-js/config.js. ברירת המחדל דולקת,
      וקובץ הגדרות ישן שאין בו את המתג אינו מכבה אותה בטעות. */
+  /* ערך הסימון ל"לא לייבא" בתפריט השיוך. ריק כבר תפוס — הוא אומר
+     "לייבא בלי שיוך" — ולכן צריך ערך משלו שאינו מזהה של ילד. מזהים
+     נראים כך: chi-xxxx-yyyyy, ולכן '#' פוסל התנגשות. תו בקרה לא
+     מתאים כאן: הדפדפן מחליף U+0000 בתוך HTML בתו אחר, והערך שחוזר
+     מהתפריט כבר אינו זהה לקבוע. */
+  var SKIP = '#skip';
+
   function importEnabled() {
     if (typeof Features === 'undefined' || !Features) return true;
     return Features.payboxImport !== false;
@@ -614,7 +667,11 @@ Views.collection = (function () {
     function rebuildPlan() {
       var recs = PayImport.toRecords(rows, detected);
       plan = PayImport.importPlan(recs, kids, Store.state.payments);
-      plan.forEach(function (r) { r.include = !r.skipped && !!r.childId; });
+      /* שורה שלא זוהה לה הורה נכנסת בכל זאת, בלי שיוך: הכסף אמיתי
+         והוא שייך לקופה. שם המשלם נשמר איתה, והשיוך אפשרי בכל רגע
+         מאוחר יותר. רק שורה שסוננה (כפילות, בוטלה, שורת סיכום)
+         נשארת בחוץ. */
+      plan.forEach(function (r) { r.include = !r.skipped; });
     }
 
     function childLabel(c) {
@@ -639,6 +696,10 @@ Views.collection = (function () {
       var unmatched = plan.filter(function (r) { return !r.childId && !r.skipped; }).length;
       var html = '<div class="imp-cols">' +
           columnSelect('name', 'שם המשלם') + columnSelect('amount', 'סכום') + columnSelect('date', 'תאריך') +
+          /* עמודת שם הילד/ה מוצגת תמיד, גם כשלא זוהתה: היא הדרך
+             הקצרה ביותר לשייך את כל השורות בבת אחת, ומי שיש לו
+             כזאת בקובץ צריך לראות שאפשר להצביע עליה. */
+          columnSelect('child', 'שם הילד/ה (לא חובה)') +
         '</div>' +
         '<div class="imp-method"><span class="small muted">אמצעי תשלום לכל השורות</span>' +
           '<select class="input" data-method>' + Store.PAY_METHODS.map(function (pm) {
@@ -647,13 +708,14 @@ Views.collection = (function () {
         '<p class="small muted imp-summary">' +
           'נמצאו <b>' + plan.length + '</b> תשלומים בקובץ' +
           (dups ? ' · <b>' + dups + '</b> כבר רשומים' : '') +
-          (unmatched ? ' · <b>' + unmatched + '</b> ללא הורה מזוהה' : '') + '</p>';
+          (unmatched ? ' · <b>' + unmatched + '</b> ייובאו ללא שיוך' : '') + '</p>';
 
       if (!plan.length) {
         html += '<p class="small muted center" style="margin:14px 0">לא נמצאו שורות עם סכום. אפשר לבחור עמודות אחרות למעלה.</p>';
       }
       html += '<div class="imp-list">' + plan.map(function (r, i) {
         var badge = r.skipped === 'duplicate' ? '<span class="badge warn">כבר קיים</span>'
+          : r.level === 'child' ? '<span class="badge ok">זוהה — לפי שם הילד/ה</span>'
           : r.skipped === 'status' ? '<span class="badge no">' + UI.esc(r.status || 'בוטל') + '</span>'
           : r.skipped === 'total' ? '<span class="badge">שורת סיכום</span>'
           : r.level === 'phone' ? '<span class="badge ok">זוהה לפי טלפון</span>'
@@ -661,10 +723,15 @@ Views.collection = (function () {
           : r.level === 'exact' ? '<span class="badge ok">זוהה</span>'
           : r.level === 'reversed' ? '<span class="badge info">זוהה — סדר הפוך</span>'
           : r.level === 'partial' ? '<span class="badge info">זוהה חלקית</span>'
-          : '<span class="badge no">לבדיקה</span>';
-        var opts = '<option value="">— לא לייבא —</option>' + kids.map(function (c) {
-          return '<option value="' + c.id + '"' + (r.childId === c.id ? ' selected' : '') + '>' + UI.esc(childLabel(c)) + '</option>';
-        }).join('');
+          : '<span class="badge">ללא שיוך</span>';
+        /* שלוש אפשרויות שונות זו מזו: לייבא בלי שיוך (ברירת המחדל
+           לשורה שלא זוהתה), לשייך לילד, או לא לייבא כלל. */
+        var skipped = !r.include && !r.childId;
+        var opts = '<option value=""' + (!r.childId && r.include ? ' selected' : '') + '>— ללא שיוך —</option>' +
+          '<option value="' + SKIP + '"' + (skipped ? ' selected' : '') + '>— לא לייבא —</option>' +
+          kids.map(function (c) {
+            return '<option value="' + c.id + '"' + (r.childId === c.id ? ' selected' : '') + '>' + UI.esc(childLabel(c)) + '</option>';
+          }).join('');
         return '<div class="imp-row' + (r.include ? '' : ' off') + '" data-i="' + i + '">' +
           '<div class="imp-top"><span class="imp-name">' + UI.esc(r.name || 'ללא שם') + '</span>' +
             '<span class="imp-amt">' + UI.money(r.amount) + '</span></div>' +
@@ -696,9 +763,17 @@ Views.collection = (function () {
       root.querySelectorAll('[data-pick]').forEach(function (sel) {
         sel.addEventListener('change', function () {
           var r = plan[parseInt(sel.getAttribute('data-pick'), 10)];
-          r.childId = sel.value;
-          r.include = !!sel.value;
-          if (r.skipped === 'duplicate' && sel.value) r.skipped = '';   // בחירה מפורשת גוברת על אזהרת הכפילות
+          if (sel.value === SKIP) {
+            r.childId = '';
+            r.include = false;
+          } else {
+            /* בחירה מפורשת בתפריט גוברת על הסינון האוטומטי — כפילות,
+               ביטול או שורת סיכום: המשתמש ראה את השורה והחליט לייבא
+               אותה, עם שיוך לילד או בלעדיו (ערך ריק = ללא שיוך). */
+            r.childId = sel.value;
+            r.skipped = '';
+            r.include = true;
+          }
           sel.closest('.imp-row').classList.toggle('off', !r.include);
           var ready = plan.filter(function (x) { return x.include; }).length;
           var btn = root.querySelector('.js-import');
@@ -712,14 +787,23 @@ Views.collection = (function () {
         mountStepFile(root, close);
       });
       root.querySelector('.js-import').addEventListener('click', function () {
-        var picked = plan.filter(function (r) { return r.include && r.childId && Store.find('children', r.childId); });
+        var picked = plan.filter(function (r) {
+          if (!r.include) return false;
+          return !r.childId || !!Store.find('children', r.childId);
+        });
         if (!picked.length) return;
         /* שיוך שנעשה ביד נשמר על הילד, כדי שהייבוא הבא יזהה את אותו
            משלם לבד. מה שזוהה מראש לפי טלפון כבר ידוע ואין מה לזכור. */
         var learned = 0;
         picked.forEach(function (r) {
-          Store.add('payments', { childId: r.childId, amount: r.amount, method: method,
-            date: r.date || UI.todayISO(), installments: 1, note: r.note || '' });
+          /* payer — שם המשלם כפי שהוא בקובץ. הוא מה שמזהה תשלום שלא
+             שויך לילד, ובלעדיו הוא היה "לא ידוע" ברשימה.
+             payerPhone — הראיה החזקה לזהות: הורה שפרס לתשלומים מופיע
+             בקובץ כמה פעמים, ולפעמים בשם בסדר אחר, אבל תמיד מאותו
+             מספר. בלעדיו הספירה של "כמה אנשים שילמו" תלויה באיות. */
+          Store.add('payments', { childId: r.childId || '', payer: r.name || '',
+            payerPhone: r.phone || '', amount: r.amount,
+            method: method, date: r.date || UI.todayISO(), installments: 1, note: r.note || '' });
           if (r.level !== 'phone' && r.level !== 'remembered') {
             if (Store.rememberPayer(r.childId, PayImport.keysForRecord(r))) learned++;
           }
@@ -760,7 +844,17 @@ Views.collection = (function () {
     /* חשוף לבדיקה, ולכל מי שרוצה לשאול אם היכולת דולקת */
     importEnabled: importEnabled,
     actions: {
-      'col-tab': function (el) { App.setVs('colTab', el.getAttribute('data-tab')); App.render(); },
+      'col-tab': function (el) {
+        App.setVs('colTab', el.getAttribute('data-tab'));
+        App.setVs('colUnassigned', false);        // מעבר בין לשוניות מנקה את הסינון
+        App.render();
+      },
+      'col-unassigned': function () {
+        App.setVs('colTab', 'payments');
+        App.setVs('colUnassigned', true);
+        App.render();
+      },
+      'col-all-pays': function () { App.setVs('colUnassigned', false); App.render(); },
       'col-search': function (el) {
         App.setVs('colQuery', el.value);
         var pos = el.selectionStart;

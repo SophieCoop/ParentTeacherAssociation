@@ -199,3 +199,128 @@ test('a real phone still beats a remembered name', () => {
   const m = P.matchPayer({ name: 'רות לוי', phone: '972-521111111' }, kids);
   assert.deepEqual([m.childId, m.level], ['a', 'phone'], 'the phone is the harder evidence');
 });
+
+/* ---------- ייבוא בלי שיוך ---------- */
+/* ועד שהוזן בו רק מספר ילדים ולא שמות: אין למה לשייך, והכסף עדיין
+   אמיתי. השורות נכנסות בלי שיוך, ושם המשלם מהקובץ הוא מה שמחזיק
+   אותן — גם בתצוגה וגם בזיהוי כפילויות בייבוא הבא. */
+const placeholders = [1, 2, 3].map(i => ({ id: 'c' + i, name: 'ילד ' + i, placeholder: true, parents: [] }));
+const file = [
+  { name: 'נילה אחמדזנוב', amount: 1444, date: '2025-09-21' },
+  { name: 'Itay Elkoub', amount: 1444, date: '2025-09-21' },
+  { name: 'וייסברג דורון', amount: 481.33, date: '2025-09-21' }
+];
+
+test('with placeholder children nothing matches, and nothing is dropped', () => {
+  const plan = plain(P.importPlan(file, placeholders, []));
+  assert.equal(plan.length, 3);
+  assert.deepEqual(plan.map(r => r.childId), ['', '', ''], 'no child to attach to');
+  assert.deepEqual(plan.map(r => r.skipped), ['', '', ''], 'and yet none is filtered out');
+  assert.deepEqual(plan.map(r => r.name), file.map(r => r.name), 'the payer name survives');
+});
+
+test('the same file twice: the payer name is what catches the duplicate', () => {
+  const stored = file.map((r, i) => ({ id: 'p' + i, childId: '', payer: r.name, amount: r.amount, date: r.date }));
+  const plan = plain(P.importPlan(file, placeholders, stored));
+  assert.deepEqual(plan.map(r => r.skipped), ['duplicate', 'duplicate', 'duplicate']);
+});
+
+test('a payment assigned by hand after the import is still caught next time', () => {
+  const stored = [{ id: 'p0', childId: 'c1', payer: 'נילה אחמדזנוב', amount: 1444, date: '2025-09-21' }];
+  const plan = plain(P.importPlan(file, placeholders, stored));
+  assert.equal(plan[0].skipped, 'duplicate', 'the payer key still matches although the child changed');
+  assert.equal(plan[1].skipped, '', 'and the row with the same amount but another payer does not');
+});
+
+test('a stored payment with neither child nor payer blocks nothing', () => {
+  const stored = [{ id: 'p0', childId: '', payer: '', amount: 1444, date: '2025-09-21' }];
+  const plan = plain(P.importPlan(file, placeholders, stored));
+  assert.deepEqual(plan.map(r => r.skipped), ['', '', ''], 'better a double than a real row blocked');
+  assert.deepEqual(plain(P.dupKeys('', '', 1444, '2025-09-21')), []);
+});
+
+test('amount and date are part of the key, so a second payment is not a duplicate', () => {
+  const stored = [{ id: 'p0', childId: '', payer: 'נילה אחמדזנוב', amount: 1444, date: '2025-09-21' }];
+  const later = [{ name: 'נילה אחמדזנוב', amount: 1444, date: '2025-11-02' },
+                 { name: 'נילה אחמדזנוב', amount: 200, date: '2025-09-21' }];
+  const plan = plain(P.importPlan(later, placeholders, stored));
+  assert.deepEqual(plan.map(r => r.skipped), ['', '']);
+});
+
+/* ---------- עמודת "שם הילד/ה" / שאלת מנהל ----------
+   בפייבוקס אפשר לצרף לגבייה שאלה למשלמים, ומנהלי ועד שואלים בה
+   כמעט תמיד בשביל מי התשלום. התשובה הזאת היא הראיה הישירה ביותר. */
+
+const QKIDS = [
+  { id: 'a', name: 'תום לוי', parents: [{ name: 'רות לוי', phone: '052-1111111' }] },
+  { id: 'b', name: 'גיל כהן', parents: [{ name: 'דנה כהן', phone: '052-2222222' }] }
+];
+function withQuestion(header, answer, payer, phone) {
+  const rows = [['שם', 'פלאפון', 'סכום', 'תאריך', header],
+                [payer || 'סבתא שרה', phone || '972-509999999', '300', '2025-09-21', answer]];
+  const detected = P.detectColumns(rows);
+  const rec = plain(P.toRecords(rows, detected))[0];
+  return { col: detected.map.child, rec: rec, match: plain(P.matchPayer(rec, QKIDS)) };
+}
+
+test('the admin question column is found however it is phrased', () => {
+  ['מה שם הילד/ה?', 'שם הילד', 'שם התלמיד/ה', 'עבור מי התשלום?', 'שאלת מנהל', 'ילד/ה', 'Child', 'Student']
+    .forEach(header => {
+      const r = withQuestion(header, 'גיל כהן');
+      assert.equal(r.col, 4, header + ' — column not detected');
+      assert.equal(r.rec.childName, 'גיל כהן');
+      assert.deepEqual([r.match.childId, r.match.level], ['b', 'child'], header);
+    });
+});
+
+test('a plain notes column is not mistaken for the question', () => {
+  const r = withQuestion('הערות', 'שולם במזומן');
+  assert.equal(r.col, undefined);
+  assert.equal(r.rec.childName, '');
+});
+
+test('the declared child beats the phone — a grandmother paying for a grandchild', () => {
+  /* המספר רשום אצל תום, אבל ההורה כתב במפורש "גיל כהן" */
+  const r = withQuestion('מה שם הילד/ה?', 'גיל כהן', 'רות לוי', '052-1111111');
+  assert.deepEqual([r.match.childId, r.match.level], ['b', 'child'],
+    'what the payer wrote wins over whose number it came from');
+});
+
+test('an answer that matches nothing does not block the other signals', () => {
+  const r = withQuestion('מה שם הילד/ה?', 'ילד שלא קיים', 'רות לוי', '052-1111111');
+  assert.deepEqual([r.match.childId, r.match.level], ['a', 'phone'], 'falls back to the phone');
+});
+
+test('an answer that fits two children falls through rather than guessing', () => {
+  const kids = [{ id: 'a', name: 'תום לוי', parents: [] }, { id: 'b', name: 'תום לוי', parents: [] }];
+  const rows = [['שם', 'סכום', 'שם הילד'], ['סבתא שרה', '300', 'תום לוי']];
+  const rec = plain(P.toRecords(rows, P.detectColumns(rows)))[0];
+  const m = plain(P.matchPayer(rec, kids));
+  assert.equal(m.childId, '', 'two candidates, so no automatic pick');
+});
+
+test('an empty answer on one row does not spoil the others', () => {
+  const rows = [['שם', 'סכום', 'מה שם הילד/ה?'],
+                ['סבתא שרה', '300', 'גיל כהן'],
+                ['דוד רון', '300', ''],
+                ['רות לוי', '300', 'תום לוי']];
+  const recs = plain(P.toRecords(rows, P.detectColumns(rows)));
+  assert.deepEqual(recs.map(r => r.childName), ['גיל כהן', '', 'תום לוי']);
+  assert.deepEqual(recs.map(r => plain(P.matchPayer(r, QKIDS)).level), ['child', '', 'child']);
+});
+
+test('a question column whose header reads like another kind does not steal it', () => {
+  /* "עבור" היא כותרת של תיאור, ו"עבור איזה ילד" של שאלת המנהל */
+  const rows = [['שם', 'סכום', 'עבור', 'עבור איזה ילד'], ['סבתא שרה', '300', 'ועד', 'גיל כהן']];
+  const d = P.detectColumns(rows);
+  assert.equal(d.map.note, 2, 'the exact header keeps its own kind');
+  assert.equal(d.map.child, 3);
+});
+
+test('the real PayBox export has no question column and is unaffected', () => {
+  const rows = [['שם', 'פלאפון', 'סוג', 'סכום', 'תאריך', 'הערות', 'שורות התשלום', 'מנהל שורות התשלום'],
+                ['וייסברג דורון', '972-546483000', 'העברה לקבוצה', '481.33', '2025-09-21', '💸 תשלומים', 'ב3 תשלומים']];
+  const d = plain(P.detectColumns(rows));
+  assert.equal(d.map.child, undefined, 'nothing here answers "which child"');
+  assert.deepEqual([d.map.name, d.map.phone, d.map.amount, d.map.date, d.map.note], [0, 1, 3, 4, 5]);
+});
