@@ -59,6 +59,17 @@ Views.collection = (function () {
         : '') +
       '</div>';
 
+    /* בלי תקציב אין לאיש חיוב, וכל המספרים למעלה אפסים. במקום מסך
+       שנראה כאילו שום דבר לא קרה — השלב הבא. */
+    if (sum.due <= 0 && st.children.length) {
+      html += '<button type="button" class="import-note" data-action="nav" data-view="budget">' +
+        '<span class="in-art" aria-hidden="true">' + UI.art('budget') + '</span>' +
+        '<span class="in-body"><b>עוד לא נקבע תקציב</b>' +
+          '<span>הסכום שכל הורה משלם מחושב מהתקציב השנתי. אחרי שתכננו אותו, ' +
+          'המסך הזה יתחיל להראות מי שילם וכמה נותר.</span></span>' +
+        '</button>';
+    }
+
     html += '<div class="field"><input class="input" placeholder="🔍 חיפוש הורה או ילד…" ' +
       'data-input="col-search" value="' + UI.esc(q) + '"></div>';
 
@@ -101,7 +112,9 @@ Views.collection = (function () {
         '<div class="r-pct" style="margin-top:4px">' +
           (r.over ? '<span class="over-paid">עודף ' + UI.money(r.overAmount) + '</span>'
                   : r.status === 'covered' ? '✓'
-                  : r.status === 'unknown' ? '—'
+                  /* אין חיוב ואין תשלום — ✓ היה נקרא כאן כ"סגור",
+                     וזה בדיוק חוסר ההבחנה שגרם למסך לשקר */
+                  : (r.status === 'unknown' || r.status === 'nodue') ? '—'
                   : (r.remaining > 0 ? 'נותר ' + UI.money(r.remaining) : '✓')) + '</div></div>' +
         '</div>';
     }).join('');

@@ -415,7 +415,13 @@ var Calc = (function () {
       remaining: remaining,
       over: over > 0.5,              // שולם יותר מהמכסה
       overAmount: over > 0.5 ? over : 0,
-      status: over > 0.5 ? 'over' : (remaining <= 0.5 ? 'full' : (paid > 0 ? 'partial' : 'none')),
+      /* ילד שאין לו חיוב אינו "שילם במלואו". לפני שנקבע תקציב
+         due הוא אפס לכולם, ו-remaining יוצא אפס גם הוא — כך ועד
+         שרק הוקם ראה "9 שילמו מלא" בלי ששולמה אגורה. זה מצב
+         משלו, ולא סוג של תשלום. */
+      status: over > 0.5 ? 'over'
+        : due <= 0 ? 'nodue'
+        : (remaining <= 0.5 ? 'full' : (paid > 0 ? 'partial' : 'none')),
       payments: pays,
       installments: plan,
       // החלוקה המקורית, לצורך השוואה בלבד
@@ -558,7 +564,9 @@ var Calc = (function () {
        שעדיין לא ידוע. כל עוד יש כזה, "כל ההורים שילמו" אינו נכון,
        אלא אם הכסף שלא שויך מגיע ממספיק משלמים שונים כדי להסביר
        בדיוק אותם. */
-    var short = rows.filter(function (r) { return r.status !== 'full' && r.status !== 'over'; }).length;
+    var short = rows.filter(function (r) {
+      return r.status !== 'full' && r.status !== 'over' && r.status !== 'nodue';
+    }).length;
     /* בלי תקציב אין מה לגבות, ולכן גם אין על מה להכריז: ועד שרק
        הוקם עונה טכנית על "אף אחד לא חייב", וזו לא הכרזה שמישהו
        רוצה לראות במסך הבית. */
