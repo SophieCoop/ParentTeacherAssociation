@@ -576,6 +576,7 @@ Views.collection = (function () {
     var rows = null, detected = null, plan = null, method = 'paybox';
     /* נפתח רק כשהמשתמש ביקש לשנות את העמודות, ונשאר פתוח משם והלאה */
     var showCols = false;
+    var showMissing = false;
 
     /* גוף החלון, לשימוש שלבים שרצים מחוץ ל-onMount (שאלת הסיסמה) */
     var host = null, hostClose = null;
@@ -707,6 +708,40 @@ Views.collection = (function () {
       return pm ? pm.icon + ' ' + pm.name : '';
     }
 
+    /* כמה מההורים שברשימה מיוצגים בקובץ, ומי לא. זה הצד השני של
+       הייבוא: "4 ייובאו ללא שיוך" מספר על שורות שאין להן הורה, וכאן
+       ההפך — הורים שאין להם שורה. השניים ביחד הם בדרך כלל אותם
+       אנשים בשמות אחרים, ולראות אותם זה לצד זה מזמין לחבר ביניהם.
+       ברשומות זמניות ("ילד 1") אין על מה לדבר, ולכן אין שורה כזאת. */
+    function coverage() {
+      var real = kids.filter(function (c) { return !c.placeholder; });
+      if (!real.length) return null;
+      var seen = {};
+      plan.forEach(function (r) { if (r.include && r.childId) seen[r.childId] = true; });
+      var missing = real.filter(function (c) { return !seen[c.id]; });
+      return { total: real.length, covered: real.length - missing.length, missing: missing };
+    }
+
+    function coverageHTML() {
+      var cov = coverage();
+      if (!cov) return '';
+      /* "מופיעים בקובץ" ולא "שילמו": מי שאינו בקובץ עשוי לשלם במזומן,
+         או להופיע בו בשם שלא זוהה. זו תצפית, לא האשמה. */
+      var html = '<div class="imp-cover"><span class="small muted">' +
+        '<b>' + cov.covered + '</b> מתוך <b>' + cov.total + '</b> הורים ברשימה מופיעים בקובץ</span>' +
+        (cov.missing.length
+          ? '<button type="button" class="btn sm soft js-missing">' + (showMissing ? 'הסתרה' : 'מי לא') + '</button>'
+          : '') + '</div>';
+      if (showMissing && cov.missing.length) {
+        html += '<div class="imp-missing">' + cov.missing.map(function (c) {
+          var pn = c.parents && c.parents[0] && c.parents[0].name;
+          return '<span class="badge neutral">' + UI.esc(pn || c.name) +
+            (pn ? ' <span class="muted">(' + UI.esc(c.name) + ')</span>' : '') + '</span>';
+        }).join('') + '</div>';
+      }
+      return html;
+    }
+
     function stepPreviewHTML() {
       var ready = plan.filter(function (r) { return r.include; }).length;
       var dups = plan.filter(function (r) { return r.skipped === 'duplicate'; }).length;
@@ -731,7 +766,8 @@ Views.collection = (function () {
       html += '<p class="small muted imp-summary">' +
           'נמצאו <b>' + plan.length + '</b> תשלומים בקובץ' +
           (dups ? ' · <b>' + dups + '</b> כבר רשומים' : '') +
-          (unmatched ? ' · <b>' + unmatched + '</b> ייובאו ללא שיוך' : '') + '</p>';
+          (unmatched ? ' · <b>' + unmatched + '</b> ייובאו ללא שיוך' : '') + '</p>' +
+        '<div class="imp-cover-box">' + coverageHTML() + '</div>';
 
       if (!plan.length) {
         html += '<p class="small muted center" style="margin:14px 0">לא נמצאו שורות עם סכום. אפשר לבחור עמודות אחרות למעלה.</p>';
@@ -829,10 +865,22 @@ Views.collection = (function () {
          הוא יציאה. הקישור נעשה פעם אחת, וההחלטה מתקבלת בלחיצה, כך
          שבחירה בשורה אחת לא מחייבת לחבר מאזין מחדש. */
       var foot = root.querySelector('.js-import, .js-done');
+      function bindMissing() {
+        var mb = root.querySelector('.js-missing');
+        if (mb) mb.addEventListener('click', function () { showMissing = !showMissing; refreshCover(); });
+      }
+      function refreshCover() {
+        var box = root.querySelector('.imp-cover-box');
+        if (!box) return;
+        box.innerHTML = coverageHTML();
+        bindMissing();
+      }
+      bindMissing();
       function refreshFoot() {
         var n = plan.filter(function (x) { return x.include; }).length;
         foot.className = 'btn' + (n ? ' js-import' : ' js-done');
         foot.textContent = n ? 'ייבוא ' + n + ' תשלומים' : 'סגירה';
+        refreshCover();
       }
       foot.addEventListener('click', function () {
         var picked = plan.filter(function (r) {
