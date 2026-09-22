@@ -1555,12 +1555,21 @@ table.ye-tbl td:nth-child(2),table.ye-tbl td:nth-child(3){text-align:center}
 /* שני כפתורים זה לצד זה: הוספה ידנית (לבן) וייבוא מקובץ (סגול) */
 .pay-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
 .pay-actions .btn{margin:0;min-height:64px;border-radius:18px;padding:10px 10px}
-.pay-actions .add-btn.manual{background:#fff;color:var(--ink);box-shadow:var(--shadow);border:1px solid var(--line);
+/* הבולט מבין השניים הוא ההזנה הידנית: זו הפעולה היומיומית, וייבוא
+   מקובץ הוא מבצע שנעשה פעם או פעמיים בשנה. הצבע הולך אחרי התדירות. */
+.pay-actions .add-btn.manual{
   display:flex;align-items:center;justify-content:center;gap:8px;font-weight:700;font-size:13.5px;line-height:1.25}
-.pay-actions .add-btn.manual .ab-label{white-space:normal;text-align:start}
-.pay-actions .add-btn.manual .ab-plus{width:26px;height:26px;border-radius:50%;background:var(--primary);color:#fff;
+.pay-actions .add-btn.manual .ab-label{white-space:normal;text-align:start;padding:0;border:0}
+.pay-actions .add-btn.manual .ab-plus{width:26px;height:26px;border-radius:50%;
+  background:rgba(255,255,255,.24);color:#fff;
   display:grid;place-items:center;font-size:18px;line-height:1;flex:none;border:0;padding:0;margin:0}
-.pay-actions .add-btn.manual .ab-label{padding:0;border:0}
+/* וכפתור הייבוא לובש את המראה השקט שהיה קודם להזנה הידנית */
+.pay-actions .import-btn{background:#fff;color:var(--ink);box-shadow:var(--shadow);border:1px solid var(--line)}
+/* קווי האייקון מצוירים ב-currentColor, ולכן די בצבע הטקסט של
+   העוטף כדי לצבוע אותם — ולא בדריסת stroke על ה-svg עצמו, שהם
+   ממילא לא יורשים ממנו. */
+.pay-actions .import-btn .imp-ico{color:var(--primary-dark)}
+.pay-actions .import-btn .imp-txt small{color:var(--muted);opacity:1}
 .import-btn{display:flex;align-items:center;justify-content:center;gap:10px;text-align:start}
 .import-btn .imp-ico{flex:none;display:grid;place-items:center}
 .import-btn .imp-ico .svg-ico{stroke:#fff}
