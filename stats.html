@@ -78,6 +78,21 @@
     border-radius:var(--r-xs);padding:9px 11px;max-height:92px;overflow:auto;margin-top:12px;
   }
 
+  .flag-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .flag-row:last-of-type{border-bottom:0}
+  .flag-row .fr-body{flex:1;min-width:0}
+  .flag-key{font-weight:700;font-size:13.5px;unicode-bidi:plaintext}
+  .flag-note{font-size:11.5px;color:var(--muted);margin-top:1px}
+  .sw{position:relative;width:46px;height:27px;flex:none}
+  .sw input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;z-index:1}
+  .sw i{position:absolute;inset:0;border-radius:999px;background:#DED8E8;transition:background .15s}
+  .sw i::after{content:'';position:absolute;top:3px;inset-inline-start:3px;width:21px;height:21px;
+               border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(60,50,85,.25);transition:transform .15s}
+  .sw input:checked + i{background:var(--ok)}
+  .sw input:checked + i::after{transform:translateX(-19px)}
+  .sw input:disabled + i{opacity:.45}
+  .sw input:focus-visible + i{outline:2px solid var(--primary);outline-offset:2px}
+
   .foot{font-size:11.5px;color:var(--muted);line-height:1.8;margin-top:22px}
   .foot b{color:var(--ink-2);font-weight:500}
 
@@ -158,6 +173,21 @@
           <tbody id="rows"></tbody>
         </table>
       </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><h2>דגלי תכונות</h2><span class="small muted" id="flags-state"></span></div>
+      <p class="small muted" style="margin:0 0 6px">הדלקה וכיבוי מיידיים, בלי פריסה מחדש. האפליקציה קוראת את הדגלים בכל טעינה ובכל חזרה ללשונית.</p>
+      <div id="flags"></div>
+      <form id="flag-add" style="margin-top:14px">
+        <div class="field" style="margin-bottom:9px">
+          <label for="flag-key">הוספת דגל</label>
+          <input class="input" id="flag-key" placeholder="payboxImport" autocomplete="off" required>
+          <div class="hint">בדיוק כפי שהקוד בודק אותו — <span dir="ltr">Features.&lt;שם&gt;</span>. הדגל נוצר כבוי.</div>
+        </div>
+        <input class="input" id="flag-note" placeholder="על מה הוא שולט (רשות)" autocomplete="off">
+        <button class="btn mt" type="submit" id="flag-add-go">הוספה</button>
+      </form>
     </div>
 
     <dialog class="as-dlg" id="as-dlg">
@@ -266,6 +296,7 @@
       showBoard();
       showError(null);
       render();
+      loadFlags();
     }, function (err) {
       if (err.expired && !retried) {
         return refresh().then(function () { return load(true); }, function () { signOut(); });
@@ -506,6 +537,124 @@
     document.getElementById('dot').className = 'dot live';
     document.getElementById('state').textContent = 'עודכן ' + fmt(dataAt, true);
   }
+
+  /* ============================================================
+     דגלי תכונות
+     ------------------------------------------------------------
+     הקריאה והכתיבה הן ישירות מול הטבלה: מדיניות ה-RLS שעליה כבר
+     מתירה קריאה לכולם וכתיבה לחשבון הבעלים בלבד, ולכן אין צורך
+     בפונקציית ענן נוספת.
+     ============================================================ */
+
+  /* הדגלים שהקוד באמת בודק. מה שאינו כאן ייווצר בטבלה אבל לא ישנה דבר */
+  var KNOWN = {
+    payboxImport: 'ייבוא תשלומים מקובץ PayBox או אקסל — מסך הגבייה'
+  };
+
+  var REST = API + '/rest/v1/feature_flags';
+
+  function restHeaders(extra) {
+    var h = { 'apikey': KEY, 'Authorization': 'Bearer ' + session.access_token };
+    Object.keys(extra || {}).forEach(function (k) { h[k] = extra[k]; });
+    return h;
+  }
+
+  function flagsState(msg, bad) {
+    var el2 = document.getElementById('flags-state');
+    el2.textContent = msg || '';
+    el2.style.color = bad ? 'var(--danger)' : '';
+  }
+
+  function loadFlags() {
+    return fetch(REST + '?select=key,enabled,note,updated_at&order=key', { headers: restHeaders() })
+      .then(function (r) { return r.ok ? r.json() : r.json().then(function (d) { throw new Error(d.message || 'קריאת הדגלים נכשלה'); }); })
+      .then(renderFlags, function (err) { flagsState(err.message, true); });
+  }
+
+  function renderFlags(rows) {
+    var box = document.getElementById('flags');
+    box.textContent = '';
+    flagsState(rows.length ? rows.length + ' דגלים' : '');
+
+    if (!rows.length) {
+      box.appendChild(el('p', 'small muted', 'אין עדיין דגלים.'));
+      return;
+    }
+
+    rows.forEach(function (f) {
+      var row = el('div', 'flag-row');
+
+      var body = el('div', 'fr-body');
+      body.appendChild(el('div', 'flag-key', f.key));
+      var note = f.note || KNOWN[f.key] || '';
+      if (!(f.key in KNOWN)) {
+        note = (note ? note + ' · ' : '') + 'הקוד אינו בודק את הדגל הזה';
+      }
+      if (note) body.appendChild(el('div', 'flag-note', note));
+      row.appendChild(body);
+
+      var sw = el('label', 'sw');
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = !!f.enabled;
+      cb.setAttribute('aria-label', f.key);
+      cb.addEventListener('change', function () { setFlag(f.key, cb.checked, cb); });
+      sw.appendChild(cb);
+      sw.appendChild(document.createElement('i'));
+      row.appendChild(sw);
+
+      box.appendChild(row);
+    });
+  }
+
+  function setFlag(key, enabled, cb) {
+    cb.disabled = true;
+    flagsState('שומר…');
+    fetch(REST + '?key=eq.' + encodeURIComponent(key), {
+      method: 'PATCH',
+      headers: restHeaders({ 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ enabled: enabled })
+    }).then(function (r) {
+      cb.disabled = false;
+      if (!r.ok) {
+        cb.checked = !enabled;   // לא נשמר — המתג חוזר למה שבשרת
+        return r.json().then(function (d) { flagsState(d.message || 'השמירה נכשלה', true); },
+                             function () { flagsState('השמירה נכשלה', true); });
+      }
+      flagsState(key + (enabled ? ' — דלוק ✓' : ' — כבוי ✓'));
+    }, function () {
+      cb.disabled = false;
+      cb.checked = !enabled;
+      flagsState('השמירה נכשלה', true);
+    });
+  }
+
+  document.getElementById('flag-add').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var keyEl = document.getElementById('flag-key');
+    var noteEl = document.getElementById('flag-note');
+    var btn = document.getElementById('flag-add-go');
+    var key = keyEl.value.trim();
+    if (!key) return;
+
+    btn.disabled = true;
+    flagsState('מוסיף…');
+    fetch(REST, {
+      method: 'POST',
+      headers: restHeaders({ 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ key: key, enabled: false, note: noteEl.value.trim() || null })
+    }).then(function (r) {
+      btn.disabled = false;
+      if (!r.ok) {
+        return r.json().then(function (d) {
+          flagsState(r.status === 409 ? 'הדגל כבר קיים' : (d.message || 'ההוספה נכשלה'), true);
+        }, function () { flagsState('ההוספה נכשלה', true); });
+      }
+      keyEl.value = '';
+      noteEl.value = '';
+      loadFlags();
+    }, function () { btn.disabled = false; flagsState('ההוספה נכשלה', true); });
+  });
 
   /* ---------- אירועים ---------- */
   document.getElementById('login-form').addEventListener('submit', function (e) {
