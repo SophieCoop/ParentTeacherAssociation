@@ -574,6 +574,8 @@ Views.collection = (function () {
   function importModal() {
     var kids = Store.state.children;
     var rows = null, detected = null, plan = null, method = 'paybox';
+    /* נפתח רק כשהמשתמש ביקש לשנות את העמודות, ונשאר פתוח משם והלאה */
+    var showCols = false;
 
     /* גוף החלון, לשימוש שלבים שרצים מחוץ ל-onMount (שאלת הסיסמה) */
     var host = null, hostClose = null;
@@ -690,22 +692,43 @@ Views.collection = (function () {
       return '<label class="imp-col"><span>' + label + '</span><select class="input" data-col="' + kind + '">' + opts + '</select></label>';
     }
 
+    /* הזיהוי הסתדר לבד? הייצוא של פייבוקס נראה תמיד אותו דבר, ולכן
+       ברוב המקרים אין מה לבחור — ובוררי העמודות הם חמישה פקדים של
+       רעש מעל התוכן שבאמת מעניין. הם נשארים במקום אבל מקופלים,
+       ונפתחים מאליהם כשהזיהוי לא הצליח, כדי שקובץ שאינו מפייבוקס
+       לא יישאר בלי מוצא. */
+    function detectedWell() {
+      return detected && detected.map &&
+        detected.map.name !== undefined && detected.map.amount !== undefined && plan && plan.length > 0;
+    }
+
+    function methodName() {
+      var pm = Store.PAY_METHODS.filter(function (x) { return x.id === method; })[0];
+      return pm ? pm.icon + ' ' + pm.name : '';
+    }
+
     function stepPreviewHTML() {
       var ready = plan.filter(function (r) { return r.include; }).length;
       var dups = plan.filter(function (r) { return r.skipped === 'duplicate'; }).length;
       var unmatched = plan.filter(function (r) { return !r.childId && !r.skipped; }).length;
-      var html = '<div class="imp-cols">' +
-          columnSelect('name', 'שם המשלם') + columnSelect('amount', 'סכום') + columnSelect('date', 'תאריך') +
-          /* עמודת שם הילד/ה מוצגת תמיד, גם כשלא זוהתה: היא הדרך
-             הקצרה ביותר לשייך את כל השורות בבת אחת, ומי שיש לו
-             כזאת בקובץ צריך לראות שאפשר להצביע עליה. */
-          columnSelect('child', 'שם הילד/ה (לא חובה)') +
-        '</div>' +
-        '<div class="imp-method"><span class="small muted">אמצעי תשלום לכל השורות</span>' +
-          '<select class="input" data-method>' + Store.PAY_METHODS.map(function (pm) {
-            return '<option value="' + pm.id + '"' + (pm.id === method ? ' selected' : '') + '>' + pm.icon + ' ' + pm.name + '</option>';
-          }).join('') + '</select></div>' +
-        '<p class="small muted imp-summary">' +
+      var open = showCols || !detectedWell();
+      var html = open
+        ? '<div class="imp-cols">' +
+            columnSelect('name', 'שם המשלם') + columnSelect('amount', 'סכום') + columnSelect('date', 'תאריך') +
+            /* עמודת שם הילד/ה מוצגת תמיד, גם כשלא זוהתה: היא הדרך
+               הקצרה ביותר לשייך את כל השורות בבת אחת, ומי שיש לו
+               כזאת בקובץ צריך לראות שאפשר להצביע עליה. */
+            columnSelect('child', 'שם הילד/ה (לא חובה)') +
+          '</div>' +
+          '<div class="imp-method"><span class="small muted">אמצעי תשלום לכל השורות</span>' +
+            '<select class="input" data-method>' + Store.PAY_METHODS.map(function (pm) {
+              return '<option value="' + pm.id + '"' + (pm.id === method ? ' selected' : '') + '>' + pm.icon + ' ' + pm.name + '</option>';
+            }).join('') + '</select></div>'
+        : '<div class="imp-auto">' +
+            '<span class="small muted">' + UI.esc(methodName()) + ' · העמודות זוהו מהקובץ</span>' +
+            '<button type="button" class="btn sm soft js-cols">שינוי</button>' +
+          '</div>';
+      html += '<p class="small muted imp-summary">' +
           'נמצאו <b>' + plan.length + '</b> תשלומים בקובץ' +
           (dups ? ' · <b>' + dups + '</b> כבר רשומים' : '') +
           (unmatched ? ' · <b>' + unmatched + '</b> ייובאו ללא שיוך' : '') + '</p>';
@@ -761,6 +784,12 @@ Views.collection = (function () {
     }
 
     function mountStepPreview(root, close) {
+      var cols = root.querySelector('.js-cols');
+      if (cols) cols.addEventListener('click', function () {
+        showCols = true;
+        root.innerHTML = stepPreviewHTML();
+        mountStepPreview(root, close);
+      });
       root.querySelectorAll('[data-col]').forEach(function (sel) {
         sel.addEventListener('change', function () {
           var kind = sel.getAttribute('data-col');
@@ -772,7 +801,7 @@ Views.collection = (function () {
         });
       });
       var ms = root.querySelector('[data-method]');
-      ms.addEventListener('change', function () { method = ms.value; });
+      if (ms) ms.addEventListener('change', function () { method = ms.value; });
       root.querySelectorAll('[data-pick]').forEach(function (sel) {
         sel.addEventListener('change', function () {
           var r = plan[parseInt(sel.getAttribute('data-pick'), 10)];
