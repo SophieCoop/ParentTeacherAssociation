@@ -1583,7 +1583,14 @@ table.ye-tbl td:nth-child(2),table.ye-tbl td:nth-child(3){text-align:center}
 .imp-method{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
 .imp-method .input{width:auto;flex:0 1 180px}
 .imp-summary{margin:6px 0 10px}
-.imp-list{display:flex;flex-direction:column;gap:8px;max-height:52dvh;overflow-y:auto;overscroll-behavior:contain;padding:2px}
+/* אזור גלילה אחד בלבד. כשלרשימה היה גובה מרבי ו-overscroll:contain
+   משלה, אצבע שנחה עליה — והיא כיסתה כמעט את כל החלון — גללה אותה
+   בלבד, והגלילה לא התגלגלה לגוף. כפתור הייבוא, שיושב מתחת לרשימה,
+   פשוט לא היה ניתן להגעה בקובץ עם הרבה שורות. */
+.imp-list{display:flex;flex-direction:column;gap:8px;padding:2px}
+/* שורת הפעולה נשארת לנגד העיניים בזמן הגלילה */
+.imp-actions{position:sticky;bottom:0;background:#fff;padding:10px 0 2px;margin-top:4px}
+.imp-actions::before{content:'';position:absolute;inset:-14px 0 100% 0;background:linear-gradient(to top,#fff,rgba(255,255,255,0));pointer-events:none}
 .imp-row{background:#FAF8FD;border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
 .imp-row.off{opacity:.55}
 .imp-top{display:flex;align-items:center;justify-content:space-between;gap:10px}

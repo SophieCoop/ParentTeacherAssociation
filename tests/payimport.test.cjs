@@ -264,7 +264,7 @@ function withQuestion(header, answer, payer, phone) {
 }
 
 test('the admin question column is found however it is phrased', () => {
-  ['מה שם הילד/ה?', 'שם הילד', 'שם התלמיד/ה', 'עבור מי התשלום?', 'שאלת מנהל', 'ילד/ה', 'Child', 'Student']
+  ['מה שם הילד/ה?', 'שם הילד', 'שם התלמיד/ה', 'עבור מי התשלום?', 'ילד/ה', 'Child', 'Student']
     .forEach(header => {
       const r = withQuestion(header, 'גיל כהן');
       assert.equal(r.col, 4, header + ' — column not detected');
@@ -323,4 +323,26 @@ test('the real PayBox export has no question column and is unaffected', () => {
   const d = plain(P.detectColumns(rows));
   assert.equal(d.map.child, undefined, 'nothing here answers "which child"');
   assert.deepEqual([d.map.name, d.map.phone, d.map.amount, d.map.date, d.map.note], [0, 1, 3, 4, 5]);
+});
+
+/* "שאלת מנהל" היא כותרת גנרית: בקובץ אמיתי היא החזיקה "תשלום ב3
+   תשלומים", לא שם של ילד. לסמן אותה כעמודת שם הילד/ה פירושו להצהיר
+   על עמודה שאינה כזאת, ואז אף שורה אינה מזוהה בלי שברור למה. */
+test('a generic "admin question" header is not assumed to hold a child name', () => {
+  const rows = [['שם', 'פלאפון', 'סכום', 'תאריך', 'שאלת מנהל'],
+                ['אילנה וייסברג דורון', '972-546483000', '481.33', '2025-09-21', 'תשלום ב3 תשלומים']];
+  const d = P.detectColumns(rows);
+  assert.equal(d.map.child, undefined, 'we do not know what that question asked');
+  assert.equal(plain(P.toRecords(rows, d))[0].childName, '');
+});
+
+test('a child name inside free text still matches when the column is picked by hand', () => {
+  /* בקובץ של פייבוקס שם הילד/ה מופיע לפעמים בתוך ההערה */
+  const rows = [['שם', 'סכום', 'הערות'],
+                ['אילנה וייסברג דורון', '481.33', '💸 תשלום ב3 תשלומים 💸 ירדן דורון']];
+  const d = P.detectColumns(rows);
+  d.map.child = 2;                                    // המשתמש מצביע על עמודת ההערות
+  const rec = plain(P.toRecords(rows, d))[0];
+  const kids = [{ id: 'a', name: 'ירדן דורון', parents: [] }, { id: 'b', name: 'תום לוי', parents: [] }];
+  assert.deepEqual([plain(P.matchPayer(rec, kids)).childId, plain(P.matchPayer(rec, kids)).level], ['a', 'child']);
 });

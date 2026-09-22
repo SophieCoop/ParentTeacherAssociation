@@ -751,7 +751,7 @@ Views.collection = (function () {
       }).join('') + '</div>' +
       /* כשאין מה לייבא, כפתור מושבת הוא מבוי סתום. במקומו יציאה
          אמיתית — המשתמש סיים כאן בין אם התכוון ובין אם לא. */
-      '<div class="btn-row mt">' +
+      '<div class="btn-row mt imp-actions">' +
         '<button type="button" class="btn soft js-back">קובץ אחר</button>' +
         (ready
           ? '<button type="button" class="btn js-import">ייבוא ' + ready + ' תשלומים</button>'
