@@ -471,3 +471,46 @@ test('what gets remembered from a group is the phone and the name', () => {
   assert.equal(Store.find('children', kid.id).payerKeys.join(','),
     't:546483000,n:אילנה וייסברג דורון');
 });
+
+/* ---------- ועד שרק הוקם ---------- */
+
+test('with no budget nobody has "paid in full"', () => {
+  const { Store, Calc } = setup();
+  Store.reset();
+  Store.setHeadcount('children', 9);
+  const s = Calc.collectionSummary(Store.state);
+  assert.equal(s.due, 0, 'nothing to collect yet');
+  assert.equal(s.fullCount, 0, 'and so nobody has settled anything');
+  assert.equal(s.noneCount, 0, 'nor is anybody in arrears');
+  assert.equal(s.rows.map(r => r.status).join(','), 'nodue,nodue,nodue,nodue,nodue,nodue,nodue,nodue,nodue');
+});
+
+test('the counts come alive the moment a budget exists', () => {
+  const { Store, Calc } = setup();
+  Store.reset();
+  Store.setHeadcount('children', 4);
+  Store.add('budgetItems', { name: 'פעילויות', categoryId: Store.state.categories[0].id, mode: 'total', amount: 4000 });
+  let s = Calc.collectionSummary(Store.state);
+  assert.equal(s.noneCount, 4, 'now they owe');
+  assert.equal(s.fullCount, 0);
+  Store.state.children.forEach(c => Store.add('payments',
+    { childId: c.id, amount: 1000, method: 'cash', date: '2025-09-21', installments: 1 }));
+  s = Calc.collectionSummary(Store.state);
+  assert.equal(s.fullCount, 4, 'and now they have paid');
+  assert.equal(s.everyonePaid, true);
+});
+
+test('a child with no charge does not block "everyone paid"', () => {
+  /* ילד שהצטרף בסוף השנה והשתתפותו אפסית — אין לו חוב, והוא אינו
+     צריך לעכב את ההכרזה על השאר */
+  const { Store, Calc } = setup();
+  Store.reset();
+  Store.setHeadcount('children', 2);
+  Store.add('budgetItems', { name: 'פעילויות', categoryId: Store.state.categories[0].id, mode: 'total', amount: 2000 });
+  const kids = Store.state.children;
+  Store.update('children', kids[1].id, { sharePercentOverride: 0 });
+  Store.add('payments', { childId: kids[0].id, amount: 2000, method: 'cash', date: '2025-09-21', installments: 1 });
+  const s = Calc.collectionSummary(Store.state);
+  assert.equal(s.rows[1].status, 'nodue');
+  assert.equal(s.everyonePaid, true, 'the one who owes has paid, and the other owes nothing');
+});
