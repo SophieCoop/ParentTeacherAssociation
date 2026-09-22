@@ -187,6 +187,10 @@ var Store = (function () {
          קובע את השפה בכל האפליקציה, ראו js/lang.js */
       gan: { name: '', kind: 'gan', yearLabel: yr.label },
       settings: { yearStart: yr.start, yearEnd: yr.end, currency: '₪', roundShare: 10,
+                  /* סכום הגבייה לילד, כשהוועד קובע אותו מראש ומתכנן
+                     בתוכו. ריק = הכיוון ההפוך, שבו הגבייה נגזרת
+                     מהתכנון (ראו Calc.collectPerChild). */
+                  collectPerChild: 0,
                   /* רמת התקציב של כל דרגת צוות, כששונתה מברירת המחדל שב-STAFF_LEVELS */
                   levelWeights: {} },
       children: [],

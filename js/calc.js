@@ -78,15 +78,39 @@ var Calc = (function () {
            child.sharePercentOverride !== undefined && child.sharePercentOverride !== '';
   }
 
+  /* ---------- שני כיווני עבודה ----------
+     יש ועדים שמתכננים קודם את ההוצאות ורק אז יודעים כמה לגבות,
+     ויש כאלה שקובעים סכום גבייה מראש ומתכננים בתוכו. השדה
+     settings.collectPerChild הוא ההכרעה בין השניים: כל עוד הוא ריק
+     הכיוון הוא תכנון קודם, וברגע שהוזן בו סכום הוא הופך למקור
+     האמת של הגבייה, והתקציב נמדד מולו. */
+  function collectPerChild(state) {
+    var v = num(state && state.settings && state.settings.collectPerChild);
+    return v > 0 ? v : 0;
+  }
+  function collectFirst(state) { return collectPerChild(state) > 0; }
+
   /* כמה משלם ילד בפועל, לפי ההוצאות שהיה נוכח בהן.
      full — כמה משלם ילד שנמצא בגן מתחילת השנה.
      percent — היחס ביניהם, לתצוגה בלבד. */
   function childShare(state, child) {
+    var set = collectPerChild(state);
+    var over = hasOverride(child);
+
+    /* גבייה קודם: הסכום לילד מלא נקבע ביד. אין חלוקה סעיף-סעיף
+       שממנה אפשר לגזור יחס, ולכן היחס נקבע לפי תאריך ההצטרפות —
+       בדיוק כפי שהוא נקבע גם היום כשעדיין אין תקציב. */
+    if (set > 0) {
+      var p = over ? Math.max(0, Math.min(100, num(child.sharePercentOverride)))
+                   : autoSharePercent(child, state.settings);
+      return { due: round2(set * p / 100), full: round2(set), percent: p, manual: over };
+    }
+
     var alloc = budgetAllocation(state);
     var full = alloc.full;
     var due = alloc.per[child.id] || 0;
 
-    if (hasOverride(child)) {
+    if (over) {
       var pct = Math.max(0, Math.min(100, num(child.sharePercentOverride)));
       return { due: round2(full * pct / 100), full: full, percent: pct, manual: true };
     }
@@ -376,7 +400,40 @@ var Calc = (function () {
 
   /* עלות לילד שנמצא בגן מתחילת השנה */
   function fullChildShare(state) {
-    return budgetAllocation(state).full;
+    var set = collectPerChild(state);
+    return set > 0 ? set : budgetAllocation(state).full;
+  }
+
+  /* ---------- המסגרת התקציבית ----------
+     המספרים שבראש מסך התכנון, בשני הכיוונים. בכיוון הגבייה
+     available אינו מכפלה פשוטה של הסכום במספר הילדים אלא סכום
+     החיובים בפועל, כך שילד שהצטרף באמצע השנה משתקף בו. */
+  function budgetFrame(state) {
+    var kids = childCount(state);
+    var planned = round2(budgetTotal(state));
+    var per = collectPerChild(state);
+    var items = ((state && state.budgetItems) || []).length;
+
+    if (per <= 0) {
+      return {
+        mode: 'plan', kids: kids, perChild: 0, items: items,
+        available: 0, planned: planned, remaining: 0, pct: 0,
+        /* כמה ייצא לכל ילד מלא לפי מה שתוכנן עד עכשיו */
+        perChildPlanned: Math.round(fullChildShare(state))
+      };
+    }
+
+    var available = 0;
+    (state.children || []).forEach(function (c) { available += childShare(state, c).due; });
+    available = Math.round(available);
+
+    return {
+      mode: 'collect', kids: kids, perChild: per, items: items,
+      available: available, planned: planned,
+      remaining: round2(available - planned),
+      pct: available > 0 ? Math.round(planned / available * 100) : 0,
+      perChildPlanned: per
+    };
   }
 
   /* כמה "ילדים מלאים" שווה הגן — התקציב חלקי העלות לילד מלא.
@@ -941,6 +998,7 @@ var Calc = (function () {
     paymentsOf: paymentsOf, paidBy: paidBy, collectedTotal: collectedTotal,
     unassignedTotal: unassignedTotal, distinctPayers: distinctPayers,
     totalShareUnits: totalShareUnits, fullChildShare: fullChildShare,
+    collectPerChild: collectPerChild, collectFirst: collectFirst, budgetFrame: budgetFrame,
     childCollection: childCollection, collectionRows: collectionRows,
     collectionSummary: collectionSummary, byMethod: byMethod,
     overview: overview, refunds: refunds,

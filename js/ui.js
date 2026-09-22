@@ -243,7 +243,8 @@ var UI = (function () {
       }
     }
     body += '<div class="btn-row mt">' +
-      (opts.onDelete ? '<button type="button" class="btn danger js-del">מחיקה</button>' : '') +
+      (opts.onDelete ? '<button type="button" class="btn danger js-del">' +
+        esc(opts.deleteLabel || 'מחיקה') + '</button>' : '') +
       '<button type="submit" class="btn">' + esc(opts.submitLabel || 'שמירה') + '</button>' +
       '</div></form>';
 
