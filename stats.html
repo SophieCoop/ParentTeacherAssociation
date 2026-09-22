@@ -27,12 +27,13 @@
   .dot.live{background:var(--ok)}
   .dot.stale{background:var(--warn)}
 
-  .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:16px}
-  .tile{background:var(--card);border-radius:var(--r);padding:15px 15px 13px;box-shadow:var(--shadow)}
-  .tile .k{font-size:11.5px;color:var(--muted);letter-spacing:.03em}
-  .tile .v{font-size:29px;font-weight:800;line-height:1.2;color:var(--ink);font-variant-numeric:tabular-nums}
-  .tile .n{font-size:12px;color:var(--ink-2)}
-  .tile.flag .v{color:var(--danger)}
+  .sp-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:16px}
+  .sp-tile{display:block;background:var(--card);border-radius:var(--r);padding:15px 15px 13px;
+           box-shadow:var(--shadow);min-height:0;text-align:start}
+  .sp-tile .k{font-size:11.5px;color:var(--muted);letter-spacing:.03em}
+  .sp-tile .v{font-size:29px;font-weight:800;line-height:1.2;color:var(--ink);font-variant-numeric:tabular-nums}
+  .sp-tile .n{font-size:12px;color:var(--ink-2)}
+  .sp-tile.flag .v{color:var(--danger)}
 
   .funnel{display:flex;flex-direction:column;gap:11px}
   .stage{display:grid;grid-template-columns:126px 1fr auto;align-items:center;gap:11px}
@@ -41,7 +42,7 @@
   .fill{position:absolute;inset-block:0;inset-inline-start:0;background:var(--primary);
         border-start-end-radius:4px;border-end-end-radius:4px;transition:inline-size .45s ease}
   .stage .val{font-size:14px;font-weight:700;min-width:56px;color:var(--ink);font-variant-numeric:tabular-nums}
-  .stage .val small{color:var(--muted);font-weight:400;font-size:11.5px;margin-inline-start:4px}
+  .stage .val small{color:var(--muted);font-weight:400;font-size:11.5px;margin-inline-start:5px}
   .stage:hover .track,.stage:focus-visible .track{outline:2px solid var(--primary-soft)}
   .tip{font-size:12px;color:var(--ink-2);min-height:18px;margin-top:12px}
 
@@ -57,6 +58,7 @@
   .tag-own{font-size:10px;color:var(--primary-dark);background:var(--primary-soft);
            border-radius:999px;padding:1px 7px;margin-inline-start:5px;white-space:nowrap}
   .u-none{color:var(--muted)}
+  .js-as{font-size:11.5px;margin-top:3px;padding:0}
 
   .toggle{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-2);cursor:pointer}
   .toggle input{accent-color:var(--primary);width:15px;height:15px}
@@ -65,11 +67,35 @@
   .gate .app-icon{width:58px;height:58px;margin:0 auto 14px}
   .gate .app-icon img{width:58px;height:58px;border-radius:16px}
 
+  .as-dlg{
+    border:0;border-radius:var(--r);padding:20px;max-width:420px;width:calc(100% - 32px);
+    background:var(--card);color:var(--ink);box-shadow:var(--shadow-lg);
+  }
+  .as-dlg::backdrop{background:rgba(60,50,85,.4)}
+  .as-dlg h2{font-size:18px;margin:0 0 4px}
+  .as-link{
+    font-size:11px;direction:ltr;text-align:left;word-break:break-all;background:var(--bg-2);
+    border-radius:var(--r-xs);padding:9px 11px;max-height:92px;overflow:auto;margin-top:12px;
+  }
+
   .foot{font-size:11.5px;color:var(--muted);line-height:1.8;margin-top:22px}
   .foot b{color:var(--ink-2);font-weight:500}
 
+  /* בטלפון הטבלה נפרשת לכרטיסים: ארבע עמודות נחתכות מחוץ למסך,
+     והגלילה הצידה מסתירה בדיוק את העמודה שאומרת מה הוזן */
   @media (max-width:620px){
-    .tiles{grid-template-columns:repeat(2,1fr)}
+    table.users{min-width:0;display:block}
+    table.users thead{display:none}
+    table.users tbody,table.users tr,table.users td{display:block;width:auto}
+    table.users tr{padding:11px 0;border-bottom:1px solid var(--line)}
+    table.users tr:last-child{border-bottom:0}
+    table.users td{padding:1px 0;border:0}
+    .u-when{margin-top:2px}
+    .u-state{margin:6px 0 3px}
+    .u-what::before{content:'הוזן: ';color:var(--muted)}
+    .scroller{overflow-x:visible}
+
+    .sp-tiles{grid-template-columns:repeat(2,1fr)}
     .stage{grid-template-columns:100px 1fr auto;gap:8px}
     .stage .lbl{font-size:12px}
   }
@@ -113,7 +139,7 @@
 
     <div class="note" id="err" style="background:#FDF0F2" hidden><div class="n-ico">⚠️</div><div id="err-txt"></div></div>
 
-    <div class="tiles" id="tiles"></div>
+    <div class="sp-tiles" id="tiles"></div>
 
     <div class="card">
       <div class="card-title" style="align-items:center">
@@ -133,6 +159,22 @@
         </table>
       </div>
     </div>
+
+    <dialog class="as-dlg" id="as-dlg">
+      <h2>כניסה לחשבון של משתמש</h2>
+      <p class="small muted" id="as-who" style="margin:0"></p>
+      <div class="note" style="background:#FDF0F2;margin-top:14px"><div class="n-ico">⚠️</div><div>
+        <b>הקישור נכנס לחשבון לכל דבר</b>
+        לפי מדיניות הפרטיות של האתר, הכניסה הזו נועדה לתמיכה שהמשתמש ביקש מפורשות.
+        כדאי לפתוח בחלון פרטי — אחרת ההתחברות שלך לאפליקציה תוחלף בשלו.
+      </div></div>
+      <div id="as-body" class="small muted" style="margin-top:12px">מייצר קישור…</div>
+      <div class="btn-row mt">
+        <button class="btn ghost" id="as-close" type="button">סגירה</button>
+        <button class="btn" id="as-open" type="button" disabled>פתיחה</button>
+      </div>
+      <button class="btn soft mt" id="as-copy" type="button" disabled style="width:100%">העתקת הקישור</button>
+    </dialog>
 
     <p class="foot">
       <b>"נתון אמיתי"</b> = שם אמיתי של ילד או איש צוות (לא "ילד 1" שהאשף יוצר ממספר), תשלום, הוצאה,
@@ -233,6 +275,52 @@
     });
   }
 
+  /* קישור כניסה חד־פעמי לחשבון של משתמש, ליצירת תמונת מצב זהה לשלו */
+  function fetchLink(email, retried) {
+    return fetch(API + '/functions/v1/admin-link', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + session.access_token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email })
+    }).then(function (r) {
+      return r.json().then(function (d) {
+        if (r.status === 401 && !retried) {
+          return refresh().then(function () { return fetchLink(email, true); });
+        }
+        if (!r.ok) throw new Error(d.error || 'יצירת הקישור נכשלה');
+        return d;
+      });
+    });
+  }
+
+  var asLink = '';
+
+  function openAs(email) {
+    var dlg = document.getElementById('as-dlg');
+    var body = document.getElementById('as-body');
+    var open = document.getElementById('as-open');
+    var copy = document.getElementById('as-copy');
+
+    asLink = '';
+    open.disabled = true;
+    copy.disabled = true;
+    copy.textContent = 'העתקת הקישור';
+    document.getElementById('as-who').textContent = email;
+    body.className = 'small muted';
+    body.textContent = 'מייצר קישור…';
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+
+    fetchLink(email, false).then(function (d) {
+      asLink = d.link;
+      body.className = 'as-link';
+      body.textContent = d.link;
+      open.disabled = false;
+      copy.disabled = false;
+    }, function (err) {
+      body.className = 'small';
+      body.textContent = err.message;
+    });
+  }
+
   function signOut() {
     saveSession(null);
     rows = [];
@@ -296,7 +384,7 @@
       { k: 'הזינו נתון אמיתי', v: act, n: pct(act, list.length) },
       { k: 'חזרו ביום אחר', v: back, n: pct(back, list.length), flag: back === 0 }
     ].forEach(function (t) {
-      var d = el('div', 'tile' + (t.flag ? ' flag' : ''));
+      var d = el('div', 'sp-tile' + (t.flag ? ' flag' : ''));
       d.appendChild(el('div', 'k', t.k));
       d.appendChild(el('div', 'v', String(t.v)));
       d.appendChild(el('div', 'n', t.n));
@@ -331,7 +419,7 @@
       row.appendChild(track);
 
       var val = el('div', 'val', String(s.n));
-      val.appendChild(el('small', null, Math.round(s.n / top * 100) + '%'));
+      val.appendChild(el('small', null, '· ' + Math.round(s.n / top * 100) + '%'));
       row.appendChild(val);
 
       var msg = i === 0
@@ -375,24 +463,32 @@
       var tr = document.createElement('tr');
 
       var who = document.createElement('td');
+      who.className = 'u-who';
       var mail = el('div', 'u-mail', r.email);
       if (isOwn(r)) mail.appendChild(el('span', 'tag-own', 'בדיקה'));
       who.appendChild(mail);
       if (r.gan_name) who.appendChild(el('div', 'u-sub', r.gan_name.trim()));
+      var as = el('button', 'linkbtn js-as', 'כניסה לחשבון');
+      as.type = 'button';
+      as.setAttribute('data-email', r.email);
+      who.appendChild(as);
       tr.appendChild(who);
 
       var when = document.createElement('td');
+      when.className = 'u-when';
       when.appendChild(el('div', 'u-sub', fmt(r.signup, true)));
       if (r.last_sync) when.appendChild(el('div', 'u-sub', 'סנכרון: ' + fmt(r.last_sync, true)));
       tr.appendChild(when);
 
       var s = statusOf(r);
       var td = document.createElement('td');
+      td.className = 'u-state';
       td.appendChild(el('span', s.cls, s.txt));
       tr.appendChild(td);
 
       var w = whatOf(r);
       var wt = document.createElement('td');
+      wt.className = 'u-what';
       wt.appendChild(el('span', w.none ? 'u-none' : null, w.txt));
       tr.appendChild(wt);
 
@@ -433,6 +529,31 @@
   });
 
   document.getElementById('signout').addEventListener('click', signOut);
+
+  document.getElementById('rows').addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('.js-as') : null;
+    if (!btn) return;
+    e.stopPropagation();
+    openAs(btn.getAttribute('data-email'));
+  });
+
+  document.getElementById('as-close').addEventListener('click', function () {
+    var dlg = document.getElementById('as-dlg');
+    if (dlg.close) dlg.close(); else dlg.removeAttribute('open');
+  });
+
+  document.getElementById('as-open').addEventListener('click', function () {
+    if (asLink) window.open(asLink, '_blank', 'noopener');
+  });
+
+  document.getElementById('as-copy').addEventListener('click', function () {
+    var b = this;
+    if (!asLink || !navigator.clipboard) return;
+    navigator.clipboard.writeText(asLink).then(function () {
+      b.textContent = 'הועתק ✓';
+      setTimeout(function () { b.textContent = 'העתקת הקישור'; }, 1800);
+    });
+  });
 
   document.getElementById('incl-own').addEventListener('change', function () {
     inclOwn = this.checked;
