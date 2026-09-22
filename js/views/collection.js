@@ -66,6 +66,22 @@ Views.collection = (function () {
       return html + UI.empty({ art: 'children', title: 'אין ילדים ברשימה', text: 'הוסיפו את ' + Lang.t('childrenOf') + ' כדי להתחיל בגבייה.', action: { act: 'nav-children', label: 'לרשימת הילדים' } });
     }
 
+    /* ---------- רשימה אחת ----------
+       רשומה זמנית שאין עליה תשלום אינה אומרת דבר: "הורה · ילד 3 · —".
+       כל עוד אין לצדה רשימת משלמים היא לפחות מזכירה שיש ילד כזה, אבל
+       ברגע שנכנסו תשלומים בשם אמיתי היא מכפילה את אותו כסף פעם שנייה
+       בשם ריק — שש שורות חלולות מעל תשע שורות שיש בהן מידע. במצב
+       הזה היא יורדת מהמסך; מספר הילדים ממשיך להופיע בשורת הסיכום
+       שבתחתית, ומסך הילדים נשאר בתפריט למי שבא להזין שמות. */
+    var payers = Calc.payerGroups(st);
+    if (payers.length && !q) {
+      rows = rows.filter(function (r) { return !(r.child.placeholder && r.paid <= 0); });
+    }
+    /* כותרת נדרשת רק כששתי הרשימות על המסך יחד — אחרת היא רעש */
+    if (rows.length && payers.length && !q) {
+      html += '<div class="section-title" style="margin-top:4px"><span>לפי ילדים ברשימה</span></div>';
+    }
+
     html += rows.map(function (r) {
       var c = r.child;
       var parent = (c.parents && c.parents[0]) ? c.parents[0].name : 'הורה';
@@ -92,7 +108,7 @@ Views.collection = (function () {
 
     /* ההורים ששילמו ואין להם שורה משלהם ברשימה. בלי הקטע הזה הכסף
        שלהם נמצא בסיכום אבל שמם אינו מופיע בשום מקום במסך הגבייה. */
-    var groups = Calc.payerGroups(st);
+    var groups = payers;
     if (groups.length && !q) {
       html += '<div class="section-title" style="margin-top:18px"><span>שילמו — טרם שויכו להורה</span>' +
         '<span class="small muted">' + groups.length +
