@@ -42,6 +42,9 @@
 
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
+/* מחלקות שמגדירות display (‎.note, ‎.row, ‎.btn-row) גוברות על ברירת
+   המחדל של [hidden], ואלמנט מוסתר היה נשאר על המסך כפס ריק */
+[hidden]{display:none!important}
 html{-webkit-text-size-adjust:100%}
 body{
   font-family:'Heebo','Segoe UI',Arial,sans-serif;
