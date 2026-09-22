@@ -1594,6 +1594,34 @@ table.ye-tbl td:nth-child(2),table.ye-tbl td:nth-child(3){text-align:center}
 /* שורת הפעולה נשארת לנגד העיניים בזמן הגלילה */
 .imp-on{display:flex;align-items:center;gap:9px;cursor:pointer;min-width:0;flex:1}
 .imp-on input{width:20px;height:20px;flex:none;accent-color:var(--primary-dark);margin:0}
+/* ---------- מסך שיוך התשלומים מהקובץ ---------- */
+.imp-lead{font-size:13px;color:var(--muted);text-align:center;margin:2px 0 10px}
+/* שלוש המשבצות עונות על "כמה מזה אני צריך לעבור עליו" לפני שמתחילים */
+.imp-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.imp-tile{border-radius:16px;padding:10px 6px;text-align:center}
+.imp-tile b{display:block;font-size:20px;line-height:1.1}
+.imp-tile span{display:block;font-size:10.5px;margin-top:2px;opacity:.85}
+.imp-tile.ok{background:#E8F6EE;color:#1E7A48}
+.imp-tile.warn{background:#FDF3DF;color:#8A6412}
+.imp-tile.no{background:#FDEBEC;color:#A33741}
+.imp-hint{display:flex;gap:8px;background:#EEF2FB;color:#3B4A6B;border-radius:14px;
+  padding:10px 12px;font-size:12px;line-height:1.45;margin-bottom:10px}
+.imp-hint span:first-child{flex:none}
+.imp-chips{display:flex;gap:6px;overflow-x:auto;margin-bottom:10px;padding-bottom:2px;
+  -webkit-overflow-scrolling:touch}
+.imp-chip{flex:none;border:1px solid var(--line);background:#fff;color:var(--muted);
+  border-radius:999px;padding:6px 12px;font-size:12px;font-weight:700}
+.imp-chip.on{background:var(--primary);border-color:var(--primary);color:#fff}
+/* סימן הסטטוס בקצה השורה — עיגול קטן שאומר על מה השיוך נשען */
+.imp-st{flex:none;width:20px;height:20px;border-radius:50%;display:inline-grid;place-items:center;
+  font-size:11px;font-weight:800;line-height:1}
+.imp-st.ok{background:#CFEBDC;color:#1E7A48}
+.imp-st.warn{background:#FBE7BE;color:#8A6412}
+.imp-st.no{background:#F8D4D7;color:#A33741}
+.imp-st.dup{background:#EDE8F5;color:var(--muted)}
+/* פס צבע בקצה השורה, כדי שסריקה מהירה תמצא את מה שדורש מבט */
+.imp-row.guess{box-shadow:inset 3px 0 0 #E7B94B}
+.imp-row.none{box-shadow:inset 3px 0 0 #DE8790}
 .imp-cover{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:-4px 0 10px}
 .imp-cover .btn{flex:none}
 .imp-missing{display:flex;flex-wrap:wrap;gap:6px;margin:-4px 0 12px}

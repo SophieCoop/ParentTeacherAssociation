@@ -721,6 +721,8 @@ Views.collection = (function () {
     /* נפתח רק כשהמשתמש ביקש לשנות את העמודות, ונשאר פתוח משם והלאה */
     var showCols = false;
     var showMissing = false;
+    /* איזו קבוצת שורות מוצגת: הכל / ממתינים / ללא שיוך / שויכו */
+    var filter = 'all';
 
     /* גוף החלון, לשימוש שלבים שרצים מחוץ ל-onMount (שאלת הסיסמה) */
     var host = null, hostClose = null;
@@ -814,11 +816,40 @@ Views.collection = (function () {
     function rebuildPlan() {
       var recs = PayImport.toRecords(rows, detected);
       plan = PayImport.importPlan(recs, kids, Store.state.payments);
+      /* ועד שהוזן בו רק מספר ילדים אינו יכול להתאים כלום לפי שם,
+         אבל המקומות הפנויים ברשימה הם בדיוק מה שהמשלמים צריכים.
+         ההצבה נעשית כאן ולא בזיהוי, כי היא מוצעת ולא נקבעת. */
+      PayImport.allocatePlaceholders(plan, kids, Store.state.payments);
       /* שורה שלא זוהה לה הורה נכנסת בכל זאת, בלי שיוך: הכסף אמיתי
          והוא שייך לקופה. שם המשלם נשמר איתה, והשיוך אפשרי בכל רגע
          מאוחר יותר. רק שורה שסוננה (כפילות, בוטלה, שורת סיכום)
          נשארת בחוץ. */
       plan.forEach(function (r) { r.include = !r.skipped; });
+    }
+
+    /* ---------- שלוש דרגות ודאות ----------
+       ✓ זוהה  — יש ראיה: טלפון, שיוך שנלמד, או שם הילד/ה שבקובץ.
+       ✨ מוצע — יש דמיון או מקום פנוי, אבל לא ראיה. ממתין לאישור.
+       ❗ לא זוהה — אין למה לשייך, והשורה תיכנס ללא שיוך. */
+    function grade(r) {
+      if (!r.childId) return 'none';
+      if (r.approved) return 'sure';
+      return (r.level === 'allocated' || r.level === 'reversed' || r.level === 'partial')
+        ? 'guess' : 'sure';
+    }
+
+    /* תווית שאומרת על מה השיוך נשען. "מוצע" איננו סוג של זיהוי אלא
+       היעדרו: יש מקום פנוי או דמיון בשם, ואין ראיה. */
+    var LEVEL_TEXT = {
+      phone: 'זוהה לפי טלפון', remembered: 'זוהה מייבוא קודם', child: 'לפי שם הילד/ה בקובץ',
+      exact: 'זוהה לפי שם', reversed: 'שם בסדר הפוך', partial: 'דמיון בשם',
+      allocated: 'הוצב במקום פנוי'
+    };
+
+    function counts() {
+      var c = { sure: 0, guess: 0, none: 0 };
+      plan.forEach(function (r) { if (!r.skipped) c[grade(r)]++; });
+      return c;
     }
 
     function childLabel(c) {
@@ -889,7 +920,7 @@ Views.collection = (function () {
     function stepPreviewHTML() {
       var ready = plan.filter(function (r) { return r.include; }).length;
       var dups = plan.filter(function (r) { return r.skipped === 'duplicate'; }).length;
-      var unmatched = plan.filter(function (r) { return !r.childId && !r.skipped; }).length;
+      var c = counts();
       var open = showCols || !detectedWell();
       var html = open
         ? '<div class="imp-cols">' +
@@ -907,70 +938,111 @@ Views.collection = (function () {
             '<span class="small muted">' + UI.esc(methodName()) + ' · העמודות זוהו מהקובץ</span>' +
             '<button type="button" class="btn sm soft js-cols">שינוי</button>' +
           '</div>';
-      html += '<p class="small muted imp-summary">' +
-          'נמצאו <b>' + plan.length + '</b> תשלומים בקובץ' +
-          (dups ? ' · <b>' + dups + '</b> כבר רשומים' : '') +
-          (unmatched ? ' · <b>' + unmatched + '</b> ייובאו ללא שיוך' : '') + '</p>' +
-        '<div class="imp-cover-box">' + coverageHTML() + '</div>';
 
       if (!plan.length) {
-        html += '<p class="small muted center" style="margin:14px 0">לא נמצאו שורות עם סכום. אפשר לבחור עמודות אחרות למעלה.</p>';
-      } else if (!ready) {
-        /* בלי המשפט הזה המסך נראה תקוע: רשימה מלאה, כפתור אפור,
-           ואין רמז למה. הסיבה הנפוצה היא ייבוא שני של אותו קובץ —
-           הנתונים כבר בפנים, ואין מה לעשות כאן. */
-        html += '<p class="small center" style="margin:14px 0">' +
-          (dups === plan.length
-            ? '✅ כל התשלומים שבקובץ כבר רשומים באפליקציה — אין מה לייבא.'
-            : 'אף שורה אינה מסומנת. סמנו שורה כדי להכניס אותה.') +
-          '</p>';
+        return html + '<p class="small muted center" style="margin:14px 0">לא נמצאו שורות עם סכום. אפשר לבחור עמודות אחרות למעלה.</p>' +
+          '<div class="btn-row mt imp-actions">' +
+            '<button type="button" class="btn soft js-back">קובץ אחר</button>' +
+            '<button type="button" class="btn js-done">סגירה</button></div>';
       }
-      html += '<div class="imp-list">' + plan.map(function (r, i) {
-        var badge = r.skipped === 'duplicate' ? '<span class="badge warn">כבר קיים</span>'
-          : r.level === 'child' ? '<span class="badge ok">זוהה — לפי שם הילד/ה</span>'
-          : r.skipped === 'status' ? '<span class="badge no">' + UI.esc(r.status || 'בוטל') + '</span>'
-          : r.skipped === 'total' ? '<span class="badge">שורת סיכום</span>'
-          : r.level === 'phone' ? '<span class="badge ok">זוהה לפי טלפון</span>'
-          : r.level === 'remembered' ? '<span class="badge ok">זוהה מייבוא קודם</span>'
-          : r.level === 'exact' ? '<span class="badge ok">זוהה</span>'
-          : r.level === 'reversed' ? '<span class="badge info">זוהה — סדר הפוך</span>'
-          : r.level === 'partial' ? '<span class="badge info">זוהה חלקית</span>'
-          : '<span class="badge">ללא שיוך</span>';
-        /* תיבת הסימון היא שקובעת אם השורה נכנסת, והתפריט רק למי.
-           הפרדה כזאת אומרת שאפשר לראות בבת אחת אילו שורות ייכנסו,
-           בלי לפתוח תפריט אחרי תפריט. */
+
+      /* שלוש המשבצות עונות על השאלה הראשונה שמשתמש שואל מול רשימה
+         ארוכה: כמה מזה אני בכלל צריך לעבור עליו. */
+      html += '<p class="imp-lead">נקראו <b>' + plan.length + '</b> תשלומים מקובץ הגבייה</p>' +
+        '<div class="imp-tiles">' +
+          '<div class="imp-tile ok"><b>' + c.sure + '</b><span>שויכו אוטומטית</span></div>' +
+          '<div class="imp-tile warn"><b>' + c.guess + '</b><span>ממתינים לאישור</span></div>' +
+          '<div class="imp-tile no"><b>' + c.none + '</b><span>ללא שיוך</span></div>' +
+        '</div>';
+
+      if (c.guess || c.none) {
+        html += '<div class="imp-hint"><span aria-hidden="true">💡</span><span>' +
+          'השיוך נעשה לפי טלפון, שם, ושיוכים שנלמדו בייבוא קודם. ' +
+          'אפשר לעבור רק על השורות המסומנות ולהשאיר את השאר.</span></div>';
+      }
+
+      var TABS = [['all', 'הכל', plan.length], ['guess', 'ממתינים', c.guess],
+                  ['none', 'ללא שיוך', c.none], ['sure', 'שויכו', c.sure]];
+      html += '<div class="imp-chips">' + TABS.filter(function (t) {
+        return t[0] === 'all' || t[2];
+      }).map(function (t) {
+        return '<button type="button" class="imp-chip' + (filter === t[0] ? ' on' : '') +
+          '" data-filter="' + t[0] + '">' + t[1] + ' (' + t[2] + ')</button>';
+      }).join('') + '</div>';
+
+      if (dups === plan.length) {
+        html += '<p class="small center" style="margin:14px 0">✅ כל התשלומים שבקובץ כבר רשומים באפליקציה — אין מה לייבא.</p>';
+      }
+
+      var shown = plan.map(function (r, i) { return { r: r, i: i }; }).filter(function (x) {
+        return filter === 'all' || grade(x.r) === filter;
+      });
+      html += '<div class="imp-list">' + (shown.length ? shown.map(function (x) {
+        var r = x.r, i = x.i, g = grade(r);
+        var ico = r.skipped === 'duplicate' ? '<span class="imp-st dup" title="כבר קיים">⟳</span>'
+          : r.skipped ? '<span class="imp-st no" title="' + UI.esc(r.status || 'סוננה') + '">!</span>'
+          : g === 'sure' ? '<span class="imp-st ok" title="שויך">✓</span>'
+          : g === 'guess' ? '<span class="imp-st warn" title="ממתין לאישור">✨</span>'
+          : '<span class="imp-st no" title="ללא שיוך">!</span>';
+        var note = r.skipped === 'duplicate' ? 'כבר רשום באפליקציה'
+          : r.skipped === 'status' ? (r.status || 'בוטל')
+          : r.skipped === 'total' ? 'שורת סיכום'
+          : LEVEL_TEXT[r.level] || 'לא זוהה';
         var opts = '<option value=""' + (r.childId ? '' : ' selected') + '>— ללא שיוך —</option>' +
-          kids.map(function (c) {
-            return '<option value="' + c.id + '"' + (r.childId === c.id ? ' selected' : '') + '>' + UI.esc(childLabel(c)) + '</option>';
+          kids.map(function (k) {
+            return '<option value="' + k.id + '"' + (r.childId === k.id ? ' selected' : '') + '>' + UI.esc(childLabel(k)) + '</option>';
           }).join('');
-        return '<div class="imp-row' + (r.include ? '' : ' off') + '" data-i="' + i + '">' +
+        return '<div class="imp-row ' + g + (r.include ? '' : ' off') + '" data-i="' + i + '">' +
           '<div class="imp-top">' +
             '<label class="imp-on"><input type="checkbox" data-on="' + i + '"' + (r.include ? ' checked' : '') +
               ' aria-label="לייבא את התשלום של ' + UI.esc(r.name || 'ללא שם') + '">' +
               '<span class="imp-name">' + UI.esc(r.name || 'ללא שם') + '</span></label>' +
             '<span class="imp-amt">' + UI.money(r.amount) + '</span></div>' +
           '<div class="imp-sub"><span class="small muted">' + (r.date ? UI.dateShort(r.date) : 'ללא תאריך') +
-            (r.note ? ' · ' + UI.esc(r.note) : '') + '</span>' + badge + '</div>' +
+            ' · ' + UI.esc(note) + '</span>' + ico + '</div>' +
           '<select class="input imp-pick" data-pick="' + i + '" aria-label="שיוך להורה">' + opts + '</select>' +
           '</div>';
-      }).join('') + '</div>' +
-      /* כשאין מה לייבא, כפתור מושבת הוא מבוי סתום. במקומו יציאה
-         אמיתית — המשתמש סיים כאן בין אם התכוון ובין אם לא. */
-      '<div class="btn-row mt imp-actions">' +
-        '<button type="button" class="btn soft js-back">קובץ אחר</button>' +
+      }).join('') : '<p class="small muted center" style="margin:14px 0">אין שורות בקטגוריה הזאת.</p>') + '</div>';
+
+      html += '<div class="imp-cover-box">' + coverageHTML() + '</div>';
+
+      html += '<div class="btn-row mt imp-actions">' + footHTML() + '</div>';
+      return html;
+    }
+
+    /* כשיש הצעות ממתינות, הפעולה הראשית היא לאשר את כולן בבת אחת —
+       זו השורה התחתונה של המסך הזה, והייבוא יורד למקום השני עד
+       שהשאלה נסגרת. מופרד מהמסך כולו כדי שאפשר יהיה לצייר מחדש רק
+       אותו כשמסמנים שורה, בלי להקפיץ את הגלילה. */
+    function footHTML() {
+      var ready = plan.filter(function (r) { return r.include; }).length;
+      var guess = counts().guess;
+      if (guess) {
+        return '<button type="button" class="btn soft js-import">ייבוא ' + ready + ' תשלומים</button>' +
+          '<button type="button" class="btn js-approve">אישור כל ההתאמות (' + guess + ')</button>';
+      }
+      return '<button type="button" class="btn soft js-back">קובץ אחר</button>' +
         (ready
           ? '<button type="button" class="btn js-import">ייבוא ' + ready + ' תשלומים</button>'
-          : '<button type="button" class="btn js-done">סגירה</button>') +
-      '</div>';
-      return html;
+          : '<button type="button" class="btn js-done">סגירה</button>');
+    }
+
+    function redraw(root, close) {
+      root.innerHTML = stepPreviewHTML();
+      mountStepPreview(root, close);
     }
 
     function mountStepPreview(root, close) {
       var cols = root.querySelector('.js-cols');
       if (cols) cols.addEventListener('click', function () {
         showCols = true;
-        root.innerHTML = stepPreviewHTML();
-        mountStepPreview(root, close);
+        redraw(root, close);
+      });
+      root.querySelectorAll('[data-filter]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          filter = b.getAttribute('data-filter');
+          redraw(root, close);
+        });
       });
       root.querySelectorAll('[data-col]').forEach(function (sel) {
         sel.addEventListener('change', function () {
@@ -978,8 +1050,7 @@ Views.collection = (function () {
           if (sel.value === '') delete detected.map[kind]; else detected.map[kind] = parseInt(sel.value, 10);
           if (detected.map.amount === undefined) { UI.toast('צריך לבחור עמודת סכום'); return; }
           rebuildPlan();
-          root.innerHTML = stepPreviewHTML();
-          mountStepPreview(root, close);
+          redraw(root, close);
         });
       });
       var ms = root.querySelector('[data-method]');
@@ -996,22 +1067,17 @@ Views.collection = (function () {
           refreshFoot();
         });
       });
-      /* התפריט קובע רק למי השורה שייכת. ערך ריק = ללא שיוך. */
+      /* התפריט קובע רק למי השורה שייכת. בחירה ידנית היא ראיה
+         לכל דבר, ולכן היא מסלקת את סימן השאלה מהשורה. */
       root.querySelectorAll('[data-pick]').forEach(function (sel) {
         sel.addEventListener('change', function () {
-          plan[parseInt(sel.getAttribute('data-pick'), 10)].childId = sel.value;
-          refreshFoot();
+          var r = plan[parseInt(sel.getAttribute('data-pick'), 10)];
+          r.childId = sel.value;
+          r.approved = !!sel.value;
+          if (sel.value) r.level = r.level === 'allocated' ? 'allocated' : 'manual';
+          redraw(root, close);
         });
       });
-      root.querySelector('.js-back').addEventListener('click', function () {
-        rows = null; plan = null;
-        root.innerHTML = stepFileHTML();
-        mountStepFile(root, close);
-      });
-      /* כפתור אחד שמשנה תפקיד: כל עוד יש מה לייבא הוא מייבא, וכשאין
-         הוא יציאה. הקישור נעשה פעם אחת, וההחלטה מתקבלת בלחיצה, כך
-         שבחירה בשורה אחת לא מחייבת לחבר מאזין מחדש. */
-      var foot = root.querySelector('.js-import, .js-done');
       function bindMissing() {
         var mb = root.querySelector('.js-missing');
         if (mb) mb.addEventListener('click', function () { showMissing = !showMissing; refreshCover(); });
@@ -1023,13 +1089,35 @@ Views.collection = (function () {
         bindMissing();
       }
       bindMissing();
+      /* מאזין אחד על שורת הפעולה, שמחליט לפי הכפתור שנלחץ: הכפתורים
+         מתחלפים בתפקיד לפי מצב התוכנית, וקישור מחדש בכל שינוי היה
+         מזמין מאזין יתום. */
+      var actions = root.querySelector('.imp-actions');
       function refreshFoot() {
-        var n = plan.filter(function (x) { return x.include; }).length;
-        foot.className = 'btn' + (n ? ' js-import' : ' js-done');
-        foot.textContent = n ? 'ייבוא ' + n + ' תשלומים' : 'סגירה';
+        actions.innerHTML = footHTML();
         refreshCover();
       }
-      foot.addEventListener('click', function () {
+      actions.addEventListener('click', function (ev) {
+        var btn = ev.target.closest('button');
+        if (!btn) return;
+        if (btn.classList.contains('js-back')) {
+          rows = null; plan = null;
+          root.innerHTML = stepFileHTML();
+          mountStepFile(root, close);
+          return;
+        }
+        if (btn.classList.contains('js-done')) { close(); return; }
+        if (btn.classList.contains('js-approve')) {
+          plan.forEach(function (r) { if (grade(r) === 'guess') { r.approved = true; r.include = true; } });
+          if (filter === 'guess') filter = 'all';
+          redraw(root, close);
+          return;
+        }
+        doImport(close);
+      });
+    }
+
+    function doImport(close) {
         var picked = plan.filter(function (r) {
           if (!r.include) return false;
           return !r.childId || !!Store.find('children', r.childId);
@@ -1039,10 +1127,11 @@ Views.collection = (function () {
            משלם לבד. מה שזוהה מראש לפי טלפון כבר ידוע ואין מה לזכור. */
         var learned = 0, adopted = 0;
         picked.forEach(function (r) {
-          /* השיוך נעשה לפי עמודת שם הילד/ה — כלומר ההורה עצמו כתב
-             עבור מי הוא משלם. זו הצהרה מפורשת, ולכן היא נרשמת
-             ברשומת הילד ולא נשארת רק על התשלום. */
-          if (r.level === 'child' && r.childId) {
+          /* כל שיוך שיצא מהמסך הזה — בין שזוהה, בין שאושר ובין
+             שנבחר ביד — הוא אמירה על מי משלם עבור מי, ולכן הוא
+             נרשם ברשומת הילד. זה מה שגורם לייבוא הבא לזהות את אותו
+             הורה לבד, במקום לשאול שוב את אותה שאלה. */
+          if (r.childId) {
             var kid = Store.find('children', r.childId);
             var parents = kid && PayImport.mergeParent(kid, r);
             if (parents) { Store.update('children', r.childId, { parents: parents }); adopted++; }
@@ -1065,7 +1154,6 @@ Views.collection = (function () {
         UI.toast('יובאו ' + picked.length + ' תשלומים ✓' +
           (adopted ? ' · ' + adopted + (adopted === 1 ? ' הורה נוסף' : ' הורים נוספו') + ' לרשימה' : '') +
           (learned ? ' · ' + learned + ' משלמים ייזכרו לפעם הבאה' : ''));
-      });
     }
     return m;
   }
