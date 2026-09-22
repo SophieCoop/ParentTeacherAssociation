@@ -346,3 +346,74 @@ test('a child name inside free text still matches when the column is picked by h
   const kids = [{ id: 'a', name: 'ירדן דורון', parents: [] }, { id: 'b', name: 'תום לוי', parents: [] }];
   assert.deepEqual([plain(P.matchPayer(rec, kids)).childId, plain(P.matchPayer(rec, kids)).level], ['a', 'child']);
 });
+
+/* ---------- שאלה בעמודה אחת, תשובה בעמודה אחרת ----------
+   כך פייבוקס באמת בונה את זה: "שאלת מנהל" מחזיקה את נוסח השאלה
+   ("מה שם הילד/ה"), ו"תשובת חבר" את מה שההורה כתב ("אביבה"). */
+
+const QA_HEAD = ['שם', 'פלאפון', 'סוג', 'סכום', 'תאריך', 'הערות', 'שורות התשלום',
+                 'מנהל שורות התשלום', 'שאלת מנהל', 'תשובת חבר'];
+function qaRows(question, answer) {
+  return [QA_HEAD,
+    ['לודמילה אחמדזנוב', '972-526461000', 'העברה לקבוצה', '1444', '2025-09-21', '', '', '', '', ''],
+    ['Sophie Cooper', '972-542117000', 'תשלום מהקבוצה', '-1100', '2025-09-25', '', '', '', '', ''],
+    ['Sophie Cooper', '972-542117000', 'העברה לקבוצה', '5', '2026-09-22', 'בדיקה', '', '', question, answer]];
+}
+
+test('the question and the answer are two different columns, and both are found', () => {
+  const d = plain(P.detectColumns(qaRows('מה שם הילד/ה', 'אביבה')));
+  assert.equal(d.map.question, 8, 'the admin question');
+  assert.equal(d.map.answer, 9, 'and what the parent wrote');
+});
+
+test('when the question asks for the child, the answer column becomes the child column', () => {
+  const rows = qaRows('מה שם הילד/ה', 'אביבה');
+  const d = P.detectColumns(rows);
+  assert.equal(d.map.child, 9, 'decided from the question text, not from a header');
+  const recs = plain(P.toRecords(rows, d));
+  assert.deepEqual(recs.map(r => r.childName), ['', 'אביבה'], 'only the row that answered carries a name');
+});
+
+test('the answer matches the child, even as a first name only', () => {
+  const rows = qaRows('מה שם הילד/ה', 'אביבה');
+  const rec = plain(P.toRecords(rows, P.detectColumns(rows)))[1];
+  const kids = [{ id: 'a', name: 'אביבה כהן', parents: [{ name: 'סופי קופרמן', phone: '' }] },
+                { id: 'b', name: 'ירדן דורון', parents: [] }];
+  assert.deepEqual([plain(P.matchPayer(rec, kids)).childId, plain(P.matchPayer(rec, kids)).level], ['a', 'child'],
+    'a payer with no matching name and no known phone is placed by what they wrote');
+});
+
+test('a question about something else does not turn the answer into a child name', () => {
+  const rows = qaRows('באיזה חוג הילד/ה משתתף?', 'חוג חיות');
+  const d = P.detectColumns(rows);
+  assert.equal(d.map.child, undefined, 'that question does not ask for a name');
+  assert.deepEqual(plain(P.toRecords(rows, d)).map(r => r.childName), ['', '']);
+});
+
+test('an empty question column leaves the answer alone', () => {
+  const rows = qaRows('', '');
+  assert.equal(P.detectColumns(rows).map.child, undefined);
+});
+
+test('an explicit child column still wins over the question and answer pair', () => {
+  const head = QA_HEAD.concat(['שם הילד/ה']);
+  const rows = [head,
+    ['סבתא שרה', '972-500000001', 'העברה לקבוצה', '300', '2026-09-22', '', '', '', 'מה שם הילד/ה', 'אביבה', 'ירדן דורון']];
+  const d = P.detectColumns(rows);
+  assert.equal(d.map.child, 10, 'the column that says what it is');
+  assert.equal(plain(P.toRecords(rows, d))[0].childName, 'ירדן דורון');
+});
+
+test('outgoing lines are still dropped, question column or not', () => {
+  const rows = qaRows('מה שם הילד/ה', 'אביבה');
+  assert.equal(plain(P.toRecords(rows, P.detectColumns(rows))).length, 2, 'the -1100 row is not a parent payment');
+});
+
+test('which questions are read as asking for the child\'s name', () => {
+  ['מה שם הילד/ה?', 'שם הילד', 'שם הילד/ה שלכם', 'מה שם התלמיד/ה?', 'עבור מי התשלום?',
+   'בשביל מי אתם משלמים?', 'Child name', 'Student name'].forEach(q =>
+    assert.equal(P.asksChildName(q), true, q));
+  ['באיזה חוג הילד/ה משתתף?', 'כמה תשלומים?', 'האם יש אלרגיות?', 'הילד/ה נשאר/ת לצהרון?',
+   'מה מספר הטלפון שלך?', ''].forEach(q =>
+    assert.equal(P.asksChildName(q), false, q));
+});

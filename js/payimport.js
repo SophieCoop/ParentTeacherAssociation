@@ -130,7 +130,14 @@ var PayImport = (function () {
     child:  ['שם הילד', 'שם הילדה', 'שם הילד/ה', 'מה שם הילד', 'מה שם הילדה', 'מה שם הילד/ה',
              'שם הילד/ה שלך', 'עבור איזה ילד', 'עבור מי', 'בשביל מי', 'שם התלמיד', 'שם התלמידה',
              'הילד/ה', 'ילד', 'ילדה', 'תלמיד', 'תלמידה',
-             'child', 'kid', 'student']
+             'child', 'kid', 'student'],
+    /* פייבוקס מפרידה בין נוסח השאלה שהמנהל שאל לבין התשובה שההורה
+       כתב: עמודה אחת מחזיקה "מה שם הילד/ה", והשנייה את "אביבה".
+       לכן שתיהן מזוהות, והשם נלקח מהתשובה — אבל רק כשהשאלה עצמה
+       היא ששואלת אותו. כך "שאלת מנהל" שמאחוריה שאלה אחרת לגמרי
+       אינה נקראת בטעות כשם של ילד. */
+    question: ['שאלת מנהל', 'שאלת המנהל', 'שאלה', 'admin question', 'question'],
+    answer:   ['תשובת חבר', 'תשובת המשלם', 'תשובה', 'answer', 'member answer', 'reply', 'response']
   };
 
   function headerScore(cell, keys) {
@@ -155,7 +162,7 @@ var PayImport = (function () {
          סוג אחד חוטפת כותרת מדויקת של סוג אחר — "עבור איזה ילד"
          מכיל את "עבור", ו-"child name" מכיל את "name". */
       [3, 1].forEach(function (want) {
-        ['amount', 'date', 'child', 'name', 'phone', 'status', 'note'].forEach(function (kind) {
+        ['amount', 'date', 'child', 'name', 'phone', 'status', 'note', 'question', 'answer'].forEach(function (kind) {
           if (map[kind] !== undefined) return;
           var bi = -1;
           row.forEach(function (cell, i) {
@@ -169,7 +176,10 @@ var PayImport = (function () {
         best = { headerRow: r, map: map, score: total };
       }
     }
-    if (best.headerRow > -1) return { headerRow: best.headerRow, map: best.map };
+    if (best.headerRow > -1) {
+      childFromAnswer(rows, best.map);
+      return { headerRow: best.headerRow, map: best.map };
+    }
 
     // ניחוש לפי תוכן
     var width = rows.reduce(function (w, r) { return Math.max(w, r.length); }, 0);
@@ -194,6 +204,30 @@ var PayImport = (function () {
     var textCol = byText.filter(function (s) { return s.c !== map2.amount && s.c !== map2.date && s.texts; })[0];
     if (textCol) map2.name = textCol.c;
     return { headerRow: -1, map: map2 };
+  }
+
+  /* נוסח שאלה ששואל את שם הילד/ה. רשימה נפרדת ומחמירה מזו של
+     הכותרות, ובהכלה בלבד: "באיזה חוג הילד/ה משתתף?" מזכיר ילד/ה
+     אבל אינו שואל שם, ותשובתו ("חוג חיות") אינה שם של אף אחד. לכן
+     נדרש צירוף שלם כמו "שם הילד", ולא אזכור של המילה "ילד". */
+  var ASKS_CHILD_NAME = ['שם הילד', 'שם הילדה', 'שם הילד/ה', 'שם התלמיד', 'שם התלמידה',
+    'שם הבן', 'שם הבת', 'שמות הילדים', 'עבור איזה ילד', 'עבור מי', 'בשביל מי',
+    'child name', 'name of the child', 'student name', 'which child'];
+
+  function asksChildName(v) {
+    var q = normName(v);
+    if (!q) return false;
+    return ASKS_CHILD_NAME.some(function (k) { return q.indexOf(normName(k)) > -1; });
+  }
+
+  /* אם נוסח השאלה שבקובץ הוא "מה שם הילד/ה" — אז עמודת התשובה היא
+     עמודת שם הילד/ה, וזה נקבע מהתוכן ולא מהכותרת. די בשורה אחת
+     שנשאלה בה השאלה הזאת: בקובץ אמיתי רוב השורות ריקות שם, כי
+     השאלה נוספה לגבייה באמצע השנה. */
+  function childFromAnswer(rows, map) {
+    if (map.child !== undefined || map.question === undefined || map.answer === undefined) return;
+    var asks = (rows || []).some(function (row) { return row && asksChildName(row[map.question]); });
+    if (asks) map.child = map.answer;
   }
 
   var BAD_STATUS = ['בוטל', 'מבוטל', 'נכשל', 'נדחה', 'סורב', 'ממתין', 'לא שולם', 'cancel', 'fail', 'declin', 'reject', 'refund', 'pending', 'unpaid'];
@@ -384,7 +418,7 @@ var PayImport = (function () {
     parseCSV: parseCSV, normName: normName, parseAmount: parseAmount, parseDate: parseDate,
     detectColumns: detectColumns, toRecords: toRecords, matchChild: matchChild, importPlan: importPlan,
     matchPayer: matchPayer, phoneKey: phoneKey, keysForRecord: keysForRecord,
-    dupKeys: dupKeys,
+    dupKeys: dupKeys, asksChildName: asksChildName,
     KINDS: ['name', 'amount', 'date', 'note', 'status', 'phone']
   };
 })();
