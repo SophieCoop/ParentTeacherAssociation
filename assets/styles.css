@@ -518,23 +518,44 @@ textarea.input{min-height:78px;resize:vertical}
 }
 
 /* שלב 2: החגים */
-.bw-note{background:var(--primary-soft);box-shadow:none}
-.bw-hol{
-  display:flex;align-items:center;gap:12px;width:100%;margin-bottom:9px;padding:11px 14px;
-  background:#fff;border-radius:var(--r-sm);box-shadow:var(--shadow);text-align:start;color:var(--ink);
+/* כרטיס חג: מתג הכללה, ו"למי המתנה?" עם ילדים וצוות */
+.hc-list{display:flex;flex-direction:column;gap:10px}
+.hc{
+  display:flex;align-items:center;gap:9px;
+  background:#fff;border-radius:var(--r-sm);border:1px solid var(--line);
+  box-shadow:var(--shadow);padding:10px 12px;
 }
-.bw-hol-ico{
-  width:44px;height:44px;border-radius:14px;flex:none;display:grid;place-items:center;
-  font-size:24px;background:#FFF6E6;
+.hc-aud{flex:none;display:flex;flex-direction:column;gap:3px}
+.hc-aud > span{font-size:11px;color:var(--ink-2);padding-inline-start:2px}
+.hc-seg{
+  display:flex;gap:3px;padding:2px;border-radius:11px;border:1px solid #E4DEEE;background:#fff;
 }
-.bw-hol-body{flex:1;min-width:0;display:flex;flex-direction:column}
-.bw-hol-body b{font-size:15px}
-.bw-hol-body small{font-size:12px;color:var(--muted)}
-.bw-box{
-  width:26px;height:26px;border-radius:8px;flex:none;display:grid;place-items:center;
-  border:1.5px solid #D6CFE6;color:#fff;font-weight:800;font-size:14px;
+.hc-seg button{
+  min-width:46px;padding:5px 8px;border-radius:9px;font-size:12.5px;font-weight:600;color:var(--ink);
 }
-.bw-hol.on .bw-box{background:var(--primary);border-color:var(--primary)}
+.hc-seg button.on{background:var(--primary);color:#fff}
+.hc-body{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;text-align:center}
+.hc-body b{font-size:14.5px;font-weight:700;line-height:1.3}
+.hc-body small{font-size:11.5px;color:var(--muted);line-height:1.35}
+.hc-switch{
+  position:relative;flex:none;width:36px;height:22px;border-radius:22px;
+  background:#E3DEEC;transition:background .15s ease;
+}
+.hc-switch i{
+  position:absolute;top:3px;inset-inline-end:3px;width:16px;height:16px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.18);transition:inset-inline-end .15s ease;
+}
+.hc.on .hc-switch{background:var(--primary)}
+.hc.on .hc-switch i{inset-inline-end:17px}
+.hc-ico{font-size:30px;line-height:1;flex:none;width:48px;height:48px;text-align:center}
+.hc:not(.on) .hc-aud{opacity:.4}
+.hc:not(.on) .hc-body b{color:var(--ink-2)}
+.hc-seg button:disabled{cursor:default}
+@media (max-width:370px){
+  .hc{gap:7px;padding:9px 10px}
+  .hc-seg button{min-width:40px;padding:5px 6px;font-size:12px}
+  .hc-ico{font-size:26px;width:40px;height:40px}
+}
 
 /* שלב 3: התקציב הזמין */
 .bw-avail{
@@ -710,6 +731,11 @@ textarea.input{min-height:78px;resize:vertical}
 .bs-tip > span{font-size:20px;flex:none}
 .bs-tip b{display:block;color:var(--ink);font-size:13.5px}
 .bs-save{margin-top:16px}
+.bs-note{display:block;font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5}
+.bs-cards{margin-top:12px}
+.bs-cards .hc{box-shadow:none}
+.bs-btns{margin-top:16px}
+.bs-btns .bs-save{margin-top:0}
 @media (max-width:370px){
   .bs-step{width:34px;height:34px}
   .bs-pct{width:70px}

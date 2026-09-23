@@ -204,3 +204,39 @@ test('the edit sheet offers the proposed amount first, then a quarter less and a
   assert.ok(BudgetPlan.CHOICES.every((c) => BudgetPlan.about(c.id).desc && BudgetPlan.about(c.id).tip),
     'every choice has a description and a tip for its sheet');
 });
+
+test('a holiday for both children and staff becomes two items, each for its own audience', () => {
+  const ctx = setup();
+  const { Store, BudgetPlan } = ctx;
+  Store.setHeadcount('children', 10);
+
+  const plan = BudgetPlan.propose(Store.state, amountOf(ctx), {
+    picks: ['holidays'], holidays: ['rosh', 'hanukkah'],
+    holAud: { rosh: ['staff'], hanukkah: ['children', 'staff'] }, mode: 'keep', available: 900
+  });
+  assert.equal(plan.rows[0].pairs.length, 3);
+  const ch = apply(ctx, plan);
+  eq(ch.add.map((d) => [d.title, d.audience, d.rate]), [
+    ['מתנה לראש השנה לצוות', 'staff_edu', 300],
+    ['מתנה לחנוכה', 'children', 300],
+    ['מתנה לחנוכה לצוות', 'staff_edu', 300]
+  ]);
+
+  // בפתיחה הבאה של העזר, הבחירה חוזרת כפי שנשמרה
+  const init = BudgetPlan.initialPicks(Store.state);
+  eq(init.holidays, ['rosh', 'hanukkah']);
+  eq(init.holAud, { rosh: ['staff'], hanukkah: ['children', 'staff'] });
+
+  // ו"שמירה על הקיים" אינה מציעה אותם שוב — רק צירוף חדש
+  const again = BudgetPlan.propose(Store.state, amountOf(ctx), {
+    picks: ['holidays'], holidays: ['rosh', 'hanukkah'],
+    holAud: { rosh: ['children', 'staff'], hanukkah: ['children', 'staff'] }, mode: 'keep', available: 1200
+  });
+  eq(again.rows[0].pairs.map((p) => p.key), ['rosh|children']);
+});
+
+test('a holiday with no audience recorded is for the children only', () => {
+  const { BudgetPlan } = setup();
+  eq(BudgetPlan.audsOf({}, 'purim'), ['children']);
+  eq(BudgetPlan.audsOf({ purim: [] }, 'purim'), ['children']);
+});
