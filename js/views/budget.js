@@ -631,27 +631,32 @@ Views.budget = (function () {
   }
 
   /* ---------- כמה יש לחלוקה ----------
-     המספר הגדול הוא מה שההצעה באמת מחלקת: התקציב פחות מה שכבר מתוכנן
-     ונשאר כמו שהוא. בכיוון התכנון זה גם השדה שמקלידים בו, ולכן ההקלדה
-     מתורגמת חזרה לתקציב כולו (w.total) בתוספת מה שכבר מתוכנן — כך
-     המעבר בין "לשמור על הקיים" ל"חלוקה מחדש" לא משנה את התקציב עצמו. */
+     "לשמור על הקיים": המספר הגדול הוא מה שנותר — התקציב פחות מה שכבר
+     מתוכנן. "חלוקה מחדש": כל התקציב, כאילו לא תוכנן דבר, כי ההצעה
+     בונה את החלוקה מההתחלה. בכיוון התכנון זה גם השדה שמקלידים בו,
+     וההקלדה מתורגמת חזרה לתקציב כולו (w.total), כך שהמעבר בין שני
+     המצבים משנה רק את מה שמוצג ולא את התקציב עצמו. */
   function wizAvailCard(st, w, plan) {
     var f = Calc.budgetFrame(st);
     var avail = plan.available;
     var fixed = plan.fixed;
-    var left = plan.toSplit;
+    var reset = plan.mode === 'reset';
+    var shownFixed = reset ? 0 : fixed;
+    var left = reset ? avail : plan.toSplit;
     var kids = Calc.childCount(st);
     var head = '<div class="bw-avail-art">' + UI.art('piggy') + '</div>';
-    var fixedLine = fixed > 0
-      ? 'מתוך ' + UI.money(avail) + ', אחרי ' + UI.money(fixed) + ' שכבר מתוכננים'
-      : '';
+    /* בחלוקה מחדש, סעיף קיים שלא סומן נשאר בתקציב. זה נדיר (הבחירה
+       נפתחת עם כל מה שכבר קיים), אבל כשזה קורה שווה לומר */
+    var fixedLine = shownFixed > 0
+      ? 'מתוך ' + UI.money(avail) + ', אחרי ' + UI.money(shownFixed) + ' שכבר מתוכננים'
+      : (reset && fixed > 0 ? UI.money(fixed) + ' מזה נשארים בסעיפים קיימים שלא נבחרו' : '');
 
     if (f.mode === 'collect') {
       var sub = [];
       if (fixedLine) sub.push(fixedLine);
       sub.push('גבייה של ' + UI.money(f.perChild) + ' × ' + f.kids + ' ילדים');
       return '<div class="bw-avail">' + head +
-        '<div class="bw-avail-body"><div class="bf-lab">' + (fixed > 0 ? 'נותר לחלוקה' : 'התקציב הזמין') + '</div>' +
+        '<div class="bw-avail-body"><div class="bf-lab">' + (shownFixed > 0 ? 'נותר לחלוקה' : 'התקציב הזמין') + '</div>' +
           '<div class="bf-val">' + UI.money(left) + '</div>' +
           '<div class="bf-sub">' + sub.join('<br>') + '</div></div>' +
         '<button class="btn sm soft" data-action="bud-collect">✏️ עריכה</button>' +
@@ -672,7 +677,7 @@ Views.budget = (function () {
       '<div class="bw-avail-body"><label class="bf-lab" for="bw-total">כמה יש לחלוקה?</label>' +
         '<div class="bw-total-wrap"><span>₪</span><input class="input bw-total" id="bw-total" type="number" ' +
           'inputmode="numeric" min="0" step="1" placeholder="15000" data-change="bud-wiz-total" ' +
-          'data-fixed="' + fixed + '" value="' + (w.total ? left : '') + '"></div>' +
+          'data-fixed="' + shownFixed + '" value="' + (w.total ? left : '') + '"></div>' +
         (lines.length ? '<div class="bf-sub">' + lines.join('<br>') + '</div>' : '') +
         '<button class="bw-inline" data-action="bud-collect">או שתקבעו סכום גבייה קבוע לכל ילד</button>' +
       '</div></div>';
