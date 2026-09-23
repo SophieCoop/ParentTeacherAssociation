@@ -392,15 +392,25 @@ Views.budget = (function () {
 
   /* ---------- טופס סעיף תקציב ---------- */
 
+  /* הסדר הוא סדר השכיחות: כמעט כל סעיף הוא לילדים, ו"כללי" — סעיף
+     שאינו מתחלק לפי אנשים — הוא היוצא מן הכלל, ולכן הוא אחרון. */
   var AUDIENCES = [
-    { value: '',          label: 'כללי',        icon: '💰' },
     { value: 'children',  label: 'ילדים',       icon: '🧒' },
-    { value: 'staff_edu', label: 'צוות חינוכי', icon: '👩‍🏫' }
+    { value: 'staff_edu', label: 'צוות חינוכי', icon: '👩‍🏫' },
+    { value: '',          label: 'כללי',        icon: '💰' }
   ];
+  /* וגם כאן: רוב הסעיפים נחשבים לאדם ומוכפלים במספר, ולכן זו
+     האפשרות הראשונה וברירת המחדל. */
   var BASES = [
-    { value: 'total',      label: 'לכולם' },
-    { value: 'per_person', label: 'לאדם' }
+    { value: 'per_person', label: 'לאדם' },
+    { value: 'total',      label: 'לכולם' }
   ];
+
+  /* מועדים חד־פעמיים. "לחודש" חסר בהם משמעות — אין מתנת יום הולדת
+     שחוזרת כל חודש — ולכן שורת התדירות יורדת מהטופס. */
+  var ONE_TIME_CATS = ['cat-bday', 'cat-holiday', 'cat-yearend'];
+
+  function isOneTime(categoryId) { return ONE_TIME_CATS.indexOf(categoryId) > -1; }
   var PERIODS = [
     { value: 'year',  label: 'לשנה' },
     { value: 'month', label: 'לחודש' }
@@ -475,7 +485,7 @@ Views.budget = (function () {
       ? presetCategory
       : Store.state.categories[0].id;
     item = item || { categoryId: startCategory, title: '', date: '', note: '',
-                     audience: '', basis: 'total', period: 'year', rate: '',
+                     audience: 'children', basis: 'per_person', period: 'year', rate: '',
                      startDate: '', endDate: '' };
 
     /* תקופות הפעילות נערכות כרשימה, כדי לתמוך בחוג עם הפסקות באמצע */
@@ -548,8 +558,26 @@ Views.budget = (function () {
       });
     }
 
+    /* מסתיר או מחזיר את שורת התדירות לפי הקטגוריה. סעיף ישן שנשמר
+       כחודשי באחת מהקטגוריות החד־פעמיות ממשיך להציג אותה, כדי שלא
+       נשנה לו את הסכום מאחורי הגב — רק מעבר מכוון לקטגוריה כזו
+       מאפס אותה לשנתי. */
+    function syncPeriod(root, force) {
+      var cat = (root.querySelector('#f-categoryId') || {}).value || '';
+      var el = root.querySelector('#f-period');
+      var field = root.querySelector('#field-period');
+      if (!el || !field) return;
+
+      var oneTime = isOneTime(cat);
+      if (oneTime && force && el.value !== 'year') {
+        el.value = 'year';
+        syncChips(root, 'period', 'year');
+      }
+      field.hidden = oneTime && el.value !== 'month';
+    }
+
     var bd = Calc.itemBreakdown(Store.state, item);
-    var startAudience = item.audience || '';
+    var startAudience = item.audience === undefined ? 'children' : item.audience;
     var startBasis  = item.basis  || (bd.perPerson ? 'per_person' : 'total');
     var startPeriod = item.period || 'year';
     /* בסעיף חדש השדה נשאר ריק. אפס מוקדם היה מחייב למחוק אותו לפני
@@ -583,9 +611,13 @@ Views.budget = (function () {
 
       onMount: function (root) {
         drawPeriods(root);
+        syncPeriod(root, false);
       },
 
       onFieldChange: function (name, value, root) {
+        // בחירה מכוונת של קטגוריה חד־פעמית מאפסת את התדירות לשנתי
+        syncPeriod(root, name === 'categoryId');
+
         var audience = root.querySelector('#f-audience').value;
         var basisEl  = root.querySelector('#f-basis');
         var basis    = basisEl.value;
