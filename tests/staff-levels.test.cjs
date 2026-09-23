@@ -68,3 +68,22 @@ test('custom levels survive a reload and bad entries are dropped', () => {
   Store.replaceState({});
   assert.deepEqual(JSON.parse(JSON.stringify(Store.state.staffLevels)), []);
 });
+
+/* מה שמסך הצוות עושה כשבוחרים דרגה: שומר את המשקל ב-levelWeights,
+   באותו מקום שבו חלון הרעיון שומר אותו */
+test('a rank chosen on the staff screen is the one the budget uses, and survives a reload', () => {
+  const { Store, Calc } = setup();
+  assert.equal(Calc.levelRank(Store.state, 'assistant'), 3);
+
+  Store.state.settings.levelWeights = { assistant: Calc.rankToWeight(1) };
+  assert.equal(Calc.levelRank(Store.state, 'assistant'), 1);
+  assert.equal(Calc.levelWeight(Store.state, 'assistant'), Calc.levelWeight(Store.state, 'lead'),
+    'rank 1 weighs as much as the teacher');
+
+  Store.importJSON(JSON.stringify(Store.state));
+  assert.equal(Calc.levelRank(Store.state, 'assistant'), 1);
+
+  // הדרגה הנמוכה בסולם אינה מקבלת חלק בתקציב
+  Store.state.settings.levelWeights.assistant = Calc.rankToWeight(Calc.lowestRank());
+  assert.equal(Calc.levelWeight(Store.state, 'assistant'), 0);
+});
