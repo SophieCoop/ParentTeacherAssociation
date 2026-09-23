@@ -17,12 +17,15 @@
    ============================================================ */
 var BudgetPlan = (function () {
 
+  /* art — שם האיור שב-assets/icons. שלושת סעיפי סוף השנה חולקים
+     קטגוריה אחת, ולכן יש להם איורים משלהם כדי שאפשר יהיה להבדיל
+     ביניהם במבט. */
   /* המשקלות לקוחים מהתפלגות מקובלת בוועדי גנים, והם רק נקודת פתיחה:
      כל סכום בהצעה ניתן לעריכה לפני שהוא נשמר. */
   var CHOICES = [
-    { id: 'yearend_kids',  name: 'מתנות סוף שנה לילדים',        cat: 'cat-yearend', audience: 'children',  weight: 20, art: 'cat-holiday' },
-    { id: 'yearend_staff', name: 'מתנות סוף שנה לצוות החינוכי', cat: 'cat-yearend', audience: 'staff_edu', weight: 17, art: 'cat-yearend' },
-    { id: 'party',         name: 'מסיבת סוף שנה',               cat: 'cat-events',  audience: 'children',  weight: 13, art: 'cat-events' },
+    { id: 'yearend_kids',  name: 'מתנות סוף שנה לילדים',        cat: 'cat-yearend', audience: 'children',  weight: 20, art: 'plan-yearend-kids' },
+    { id: 'yearend_staff', name: 'מתנות סוף שנה לצוות החינוכי', cat: 'cat-yearend', audience: 'staff_edu', weight: 17, art: 'plan-yearend-staff' },
+    { id: 'party',         name: 'מסיבת סוף שנה',               cat: 'cat-events',  audience: 'children',  weight: 13, art: 'plan-party' },
     { id: 'holidays',      name: 'מתנות לחג',                   cat: 'cat-holiday', audience: 'children',  weight: 0,  art: 'cat-holiday' },
     { id: 'birthdays',     name: 'ימי הולדת לילדים',            cat: 'cat-bday',    audience: 'children',  weight: 10, art: 'cat-bday' },
     { id: 'clubs',         name: 'חוגים ומימון אישי',           cat: 'cat-clubs',   audience: 'children',  weight: 12, art: 'cat-clubs' },
