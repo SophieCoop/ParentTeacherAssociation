@@ -408,9 +408,9 @@ Views.budget = (function () {
   function wizPlan(st, w) {
     var available = wizAvailable(st, w);
     var plan = BudgetPlan.propose(st, function (b) { return Calc.itemAmount(st, b); }, {
-      picks: w.picks, holidays: w.holidays, mode: w.mode, available: available
+      picks: w.picks, holidays: w.holidays, holAud: w.holAud, mode: w.mode, available: available
     });
-    var sig = [w.picks.join(','), w.holidays.join(','), w.mode, available].join('|');
+    var sig = [w.picks.join(','), w.holidays.join(','), JSON.stringify(w.holAud || {}), w.mode, available].join('|');
     if (w.sig !== sig) { w.sig = sig; w.amounts = {}; }
     return plan;
   }
@@ -473,19 +473,58 @@ Views.budget = (function () {
     return html;
   }
 
+  /* ---------- כרטיסי החגים ----------
+     לכל חג מתג הכללה, ומתחתיו "למי המתנה?" — ילדים, צוות או שניהם.
+     אותם כרטיסים משמשים גם את מסך בחירת החגים וגם את חלון העריכה
+     שבהצעה. במסך הם עובדים דרך data-action, ובחלון דרך מאזינים
+     מקומיים על טיוטה, כדי ש"ביטול" באמת לא ישנה דבר. */
+  function holToggle(d, id) {
+    var i = d.holidays.indexOf(id);
+    if (i > -1) { d.holidays.splice(i, 1); return; }
+    d.holidays = BudgetPlan.HOLIDAYS.map(function (h) { return h.id; })
+      .filter(function (x) { return x === id || d.holidays.indexOf(x) > -1; });
+  }
+
+  /* לפחות קהל אחד נשאר מסומן: חג בלי אף מקבל הוא חג כבוי, ולזה יש מתג */
+  function holAudToggle(d, id, aud) {
+    var cur = BudgetPlan.audsOf(d.holAud, id).slice();
+    var i = cur.indexOf(aud);
+    if (i > -1) { if (cur.length > 1) cur.splice(i, 1); }
+    else cur.push(aud);
+    d.holAud = Object.assign({}, d.holAud);
+    d.holAud[id] = cur;
+  }
+
+  function holCards(d, page) {
+    return '<div class="hc-list">' + BudgetPlan.HOLIDAYS.map(function (h) {
+      var on = d.holidays.indexOf(h.id) > -1;
+      var auds = BudgetPlan.audsOf(d.holAud, h.id);
+      return '<div class="hc' + (on ? ' on' : '') + '">' +
+        '<div class="hc-top">' +
+          '<span class="hc-ico" aria-hidden="true">' + h.icon + '</span>' +
+          '<span class="hc-body"><b>' + UI.esc(h.name) + '</b><small>' + UI.esc(h.when) + '</small></span>' +
+          '<button type="button" class="hc-switch" role="switch" aria-checked="' + on + '" ' +
+            'aria-label="' + UI.esc(h.name) + '" data-hol="' + h.id + '"' +
+            (page ? ' data-action="bud-wiz-hol" data-id="' + h.id + '"' : '') + '><i></i></button>' +
+        '</div>' +
+        '<div class="hc-aud-row"><span>למי המתנה?</span><div class="hc-seg">' +
+          BudgetPlan.HOLIDAY_AUDS.map(function (a) {
+            var sel = auds.indexOf(a.id) > -1;
+            return '<button type="button" class="' + (sel ? 'on' : '') + '" aria-pressed="' + sel + '"' +
+              (on ? '' : ' disabled') + ' data-hol-aud="' + a.id + '" data-hol-of="' + h.id + '"' +
+              (page ? ' data-action="bud-wiz-hol-aud"' : '') + '>' + a.label + '</button>';
+          }).join('') +
+        '</div></div>' +
+        '</div>';
+    }).join('') + '</div>';
+  }
+
   function wizStep2(w) {
     var html = '<div class="bw-intro"><h2>בחרו אילו חגים לכלול</h2>' +
-      '<p>לכל חג נוצר סעיף משלו, בתאריך החג של השנה — כך ילד שמצטרף באמצע משתתף רק בחגים שאחריו.</p></div>' +
-      '<div class="note bw-note"><div class="n-ico">🗓️</div><div>אפשר לשנות את הרשימה בהמשך, ולהוסיף או להסיר חגים.</div></div>';
-    html += BudgetPlan.HOLIDAYS.map(function (h) {
-      var on = w.holidays.indexOf(h.id) > -1;
-      return '<button class="bw-hol' + (on ? ' on' : '') + '" data-action="bud-wiz-hol" data-id="' + h.id + '" ' +
-        'role="checkbox" aria-checked="' + on + '">' +
-        '<span class="bw-hol-ico" aria-hidden="true">' + h.icon + '</span>' +
-        '<span class="bw-hol-body"><b>' + UI.esc(h.name) + '</b><small>' + UI.esc(h.when) + '</small></span>' +
-        '<span class="bw-box" aria-hidden="true">' + (on ? '✓' : '') + '</span>' +
-        '</button>';
-    }).join('');
+      '<p>בחרו עבור כל חג למי תרצו להעניק: ילדים, צוות או שניהם. לכל מתנה נוצר סעיף משלו, בתאריך החג של השנה.</p></div>';
+    html += holCards(w, true);
+    html += '<div class="bs-tip"><span aria-hidden="true">💡</span><div><b>טיפ מאיתנו</b>' +
+      'אפשר לבחור שילוב שונה לכל חג. ילד שמצטרף באמצע השנה משתתף רק בחגים שאחרי ההצטרפות שלו.</div></div>';
     html += '<div class="bw-actions">' +
       '<button class="btn" data-action="bud-wiz-hol-done">→ שמירה וחזרה לסעיפים</button>' +
       '</div>';
@@ -534,7 +573,10 @@ Views.budget = (function () {
     var amt = Calc.num(raw);
     var p = wizPct(amt, plan.available);
     var note = r.holidays
-      ? '<small>' + r.holidays.map(function (h) { return h.name; }).join(', ') + '</small>'
+      ? '<small>' + r.holidays.map(function (h) {
+          var a = BudgetPlan.audsOf(w.holAud, h.id);
+          return h.name + (a.length > 1 ? ' (ילדים וצוות)' : a[0] === 'staff' ? ' (צוות)' : '');
+        }).join(', ') + '</small>'
       : (r.targets && r.targets.length ? '<small>מעדכן את הסעיף הקיים</small>' : '');
     return '<button class="bw-row" data-action="bud-wiz-edit" data-id="' + r.id + '" ' +
         'aria-label="עריכת הסכום של ' + UI.esc(r.choice.name) + '">' +
@@ -654,10 +696,9 @@ Views.budget = (function () {
   function wizPerUnit(st, r, v) {
     if (v <= 0) return '';
     var kids = Calc.childCount(st), staff = Calc.staffCount(st);
-    if (r.holidays && r.holidays.length) {
-      var per = v / r.holidays.length;
-      return 'כ-' + UI.money(Math.round(per)) + ' לכל חג' +
-        (kids ? ', כ-' + UI.money(Math.round(per / kids)) + ' לילד בכל חג' : '');
+    if (r.pairs && r.pairs.length) {
+      return 'כ-' + UI.money(Math.round(v / r.pairs.length)) + ' לכל מתנה' +
+        (r.pairs.length > 1 ? ' (' + r.pairs.length + ' מתנות)' : '');
     }
     if (r.choice.audience === 'staff_edu') return staff ? 'כ-' + UI.money(Math.round(v / staff)) + ' לכל איש צוות' : '';
     return kids ? 'כ-' + UI.money(Math.round(v / kids)) + ' לילד' : '';
@@ -741,6 +782,123 @@ Views.budget = (function () {
           close();
           App.render();
         });
+        paint();
+      }
+    });
+  }
+
+  /* ---------- חלון החגים בהצעה ----------
+     סכום כולל לכל המתנות, ומתחתיו כרטיסי החגים. הדלקה או כיבוי של
+     חג, או הוספת צוות, משנים את מספר המתנות, והסכום זז איתם כך
+     שכל מתנה נשארת באותו גובה בערך. */
+  function wizHolidaySheet(w) {
+    var st = Store.state;
+    var plan = wizPlan(st, w);
+    var row = plan.rows.filter(function (x) { return x.id === 'holidays'; })[0];
+    if (!row) return;
+    var draft = { picks: w.picks.slice(), holidays: w.holidays.slice(), holAud: Object.assign({}, w.holAud) };
+    var step = BudgetPlan.step(plan.available || row.amount);
+    var value = Math.round(Calc.num(wizAmount(w, row)));
+    var info = BudgetPlan.about('holidays');
+
+    function pairsOf(d) {
+      var p = BudgetPlan.propose(st, function (b) { return Calc.itemAmount(st, b); }, {
+        picks: ['holidays'], holidays: d.holidays, holAud: d.holAud, mode: w.mode, available: 0
+      });
+      return p.rows.length ? p.rows[0].pairs.length : 0;
+    }
+    var pairs = pairsOf(draft);
+
+    var body =
+      '<div class="bs-head">' +
+        '<div><h3>' + UI.esc(row.choice.name) + '</h3>' +
+          '<p>בחרו עבור כל חג למי תרצו להעניק.</p>' +
+          '<small class="bs-note">ניתן לבחור ילדים, צוות או שניהם. הסכום הכולל מתעדכן לפי הבחירה.</small></div>' +
+        '<span class="bs-art">' + wizArt(row.choice.art) + '</span>' +
+      '</div>' +
+      '<div class="bs-box">' +
+        '<div class="bs-amt"><label for="bs-input">סכום כולל למתנות לחגים</label>' +
+          '<div class="bs-stepper">' +
+            '<button type="button" class="bs-step" data-d="1" aria-label="הוספה">+</button>' +
+            '<span class="bs-field"><span>₪</span><input id="bs-input" type="number" inputmode="numeric" ' +
+              'min="0" step="1" value="' + value + '"></span>' +
+            '<button type="button" class="bs-step" data-d="-1" aria-label="הפחתה">−</button>' +
+          '</div></div>' +
+        '<div class="bs-pct"><label>אחוז מהתקציב</label><b></b></div>' +
+      '</div>' +
+      '<div class="bs-unit"></div>' +
+      '<div class="bs-cards"></div>' +
+      '<div class="bs-tip"><span aria-hidden="true">💡</span><div><b>טיפ מאיתנו</b>' +
+        'אפשר לבחור שילוב שונה לכל חג. התקציב מחושב לפי מספר החגים ולמי שבחרתם.</div></div>' +
+      '<div class="btn-row bs-btns">' +
+        '<button type="button" class="btn bs-save">שמירה</button>' +
+        '<button type="button" class="btn ghost bs-cancel">ביטול</button>' +
+      '</div>';
+
+    UI.modal({
+      body: body,
+      onMount: function (root, close) {
+        root.closest('.modal').classList.add('bw-sheet');
+        var input = root.querySelector('#bs-input');
+
+        function paint() {
+          root.querySelector('.bs-pct b').textContent = wizPct(value, plan.available) + '%';
+          root.querySelector('.bs-unit').textContent = pairs
+            ? 'כ-' + UI.money(Math.round(value / pairs)) + ' לכל מתנה (' + pairs + (pairs === 1 ? ' מתנה)' : ' מתנות)')
+            : 'לא נבחר אף חג';
+        }
+        function set(v, fromInput) {
+          value = Math.max(0, Math.round(Calc.num(v)));
+          if (!fromInput) input.value = value;
+          paint();
+        }
+        function drawCards() {
+          root.querySelector('.bs-cards').innerHTML = holCards(draft, false);
+        }
+        /* שינוי במספר המתנות מזיז את הסכום באותו יחס */
+        function changed() {
+          var before = pairs;
+          pairs = pairsOf(draft);
+          if (before > 0 && pairs !== before) {
+            set(Math.round(value / before * pairs / step) * step);
+          } else if (!before && pairs) {
+            set(Math.round((row.amount / Math.max(1, row.pairs.length)) * pairs / step) * step);
+          } else paint();
+          drawCards();
+        }
+
+        input.addEventListener('input', function () { set(input.value, true); });
+        Array.prototype.forEach.call(root.querySelectorAll('.bs-step'), function (b) {
+          b.addEventListener('click', function () {
+            var d = +b.getAttribute('data-d');
+            set(d > 0 ? Math.floor(value / step) * step + step : Math.ceil(value / step) * step - step);
+          });
+        });
+        root.querySelector('.bs-cards').addEventListener('click', function (e) {
+          var sw = e.target.closest('[data-hol]');
+          var au = e.target.closest('[data-hol-aud]');
+          if (sw) { holToggle(draft, sw.getAttribute('data-hol')); changed(); }
+          else if (au && !au.disabled) {
+            holAudToggle(draft, au.getAttribute('data-hol-of'), au.getAttribute('data-hol-aud'));
+            changed();
+          }
+        });
+        root.querySelector('.bs-cancel').addEventListener('click', close);
+        root.querySelector('.bs-save').addEventListener('click', function () {
+          /* שאר הסכומים נשארים כפי שהם מוצגים עכשיו. בלי זה, שינוי
+             ברשימת החגים היה מחשב את כל ההצעה מחדש ומוחק עריכות */
+          var keep = {};
+          plan.rows.forEach(function (x) { keep[x.id] = wizAmount(w, x); });
+          w.holidays = draft.holidays;
+          w.holAud = draft.holAud;
+          if (!w.holidays.length) w.picks = w.picks.filter(function (x) { return x !== 'holidays'; });
+          wizPlan(st, w);
+          w.amounts = keep;
+          w.amounts.holidays = value;
+          close();
+          App.render();
+        });
+        drawCards();
         paint();
       }
     });
@@ -1187,7 +1345,7 @@ Views.budget = (function () {
         var st = Store.state;
         var init = BudgetPlan.initialPicks(st);
         App.setVs('budWiz', {
-          step: 1, picks: init.picks, holidays: init.holidays,
+          step: 1, picks: init.picks, holidays: init.holidays, holAud: init.holAud || {},
           mode: 'keep', total: wizDefaultTotal(st), amounts: {}, sig: ''
         });
         window.scrollTo(0, 0);
@@ -1249,6 +1407,12 @@ Views.budget = (function () {
           .filter(function (x) { return x === id || w.holidays.indexOf(x) > -1; });
         App.render();
       },
+      'bud-wiz-hol-aud': function (el) {
+        var w = wiz();
+        if (!w) return;
+        holAudToggle(w, el.getAttribute('data-hol-of'), el.getAttribute('data-hol-aud'));
+        App.render();
+      },
       'bud-wiz-mode': function (el) {
         var w = wiz();
         if (!w) return;
@@ -1269,7 +1433,10 @@ Views.budget = (function () {
       },
       'bud-wiz-edit': function (el) {
         var w = wiz();
-        if (w) wizSheet(w, el.getAttribute('data-id'));
+        if (!w) return;
+        var id = el.getAttribute('data-id');
+        if (id === 'holidays') wizHolidaySheet(w);
+        else wizSheet(w, id);
       },
       'bud-wiz-reset': function () {
         var w = wiz();

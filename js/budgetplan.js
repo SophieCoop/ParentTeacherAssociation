@@ -68,14 +68,22 @@ var BudgetPlan = (function () {
      approx — [הפרש שנים משנת הפתיחה, חודש, יום] למקרה שהדפדפן אינו
      מכיר את הלוח העברי: תאריך קרוב מספיק כדי לקבוע מי השתתף. */
   var HOLIDAYS = [
-    { id: 'rosh',     name: 'ראש השנה',    gift: 'מתנה לראש השנה',   when: 'ספטמבר–אוקטובר', icon: '🍯', heb: [1, 'tish'],    approx: [0, 9, 20] },
-    { id: 'hanukkah', name: 'חנוכה',       gift: 'מתנה לחנוכה',      when: 'דצמבר',          icon: '🕎', heb: [25, 'kislev'], approx: [0, 12, 20] },
-    { id: 'family',   name: 'יום המשפחה',  gift: 'מתנה ליום המשפחה', when: 'פברואר',         icon: '👨‍👩‍👧', heb: [30, 'sh'],     approx: [1, 2, 15] },
-    { id: 'purim',    name: 'פורים',       gift: 'מתנה לפורים',      when: 'מרץ',            icon: '🎭', heb: [14, 'adar'],   approx: [1, 3, 10] },
-    { id: 'pesach',   name: 'פסח',         gift: 'מתנה לפסח',        when: 'אפריל',          icon: '🫓', heb: [15, 'nisan'],  approx: [1, 4, 10] },
-    { id: 'shavuot',  name: 'שבועות',      gift: 'מתנה לשבועות',     when: 'מאי–יוני',       icon: '🌾', heb: [6, 'sivan'],   approx: [1, 5, 25] }
+    { id: 'rosh',     name: 'ראש השנה',    gift: 'מתנה לראש השנה',   when: 'תשרי (ספט׳–אוק׳)', icon: '🍎', heb: [1, 'tish'],    approx: [0, 9, 20] },
+    { id: 'hanukkah', name: 'חנוכה',       gift: 'מתנה לחנוכה',      when: 'כסלו (דצמ׳)',      icon: '🕎', heb: [25, 'kislev'], approx: [0, 12, 20] },
+    { id: 'family',   name: 'יום המשפחה',  gift: 'מתנה ליום המשפחה', when: 'שבט (פבר׳)',       icon: '💝', heb: [30, 'sh'],     approx: [1, 2, 15] },
+    { id: 'purim',    name: 'פורים',       gift: 'מתנה לפורים',      when: 'אדר (מרץ)',        icon: '🎭', heb: [14, 'adar'],   approx: [1, 3, 10] },
+    { id: 'pesach',   name: 'פסח',         gift: 'מתנה לפסח',        when: 'ניסן (אפר׳)',      icon: '🫓', heb: [15, 'nisan'],  approx: [1, 4, 10] },
+    { id: 'shavuot',  name: 'שבועות',      gift: 'מתנה לשבועות',     when: 'סיוון (מאי–יוני)', icon: '🌾', heb: [6, 'sivan'],   approx: [1, 5, 25] }
   ];
   var DEFAULT_HOLIDAYS = ['rosh', 'hanukkah', 'family', 'purim'];
+
+  /* למי המתנה בכל חג: ילדים, צוות, או שניהם. כל צירוף של חג וקהל
+     הוא סעיף משלו, כי הם נקנים בנפרד ונמדדים מול הוצאות נפרדות. */
+  var HOLIDAY_AUDS = [
+    { id: 'children', label: 'ילדים', audience: 'children',  suffix: '' },
+    { id: 'staff',    label: 'צוות',  audience: 'staff_edu', suffix: ' לצוות' }
+  ];
+  var DEFAULT_AUD = ['children'];
 
   function num(v) { var n = parseFloat(v); return isFinite(n) ? n : 0; }
   function choice(id) { return CHOICES.filter(function (c) { return c.id === id; })[0] || null; }
@@ -144,11 +152,13 @@ var BudgetPlan = (function () {
     if (!item) return null;
     if (item.plan) {
       var parts = String(item.plan).split(':');
-      if (choice(parts[0])) return { choice: parts[0], holiday: parts[1] || '' };
+      if (choice(parts[0])) return { choice: parts[0], holiday: parts[1] || '', aud: parts[2] || 'children' };
     }
     var title = String(item.title || '');
     switch (item.categoryId) {
-      case 'cat-holiday': return { choice: 'holidays', holiday: holidayOfTitle(title) };
+      case 'cat-holiday':
+        return { choice: 'holidays', holiday: holidayOfTitle(title),
+                 aud: item.audience === 'staff_edu' ? 'staff' : 'children' };
       case 'cat-yearend':
         if (title.indexOf('מסיב') > -1) return { choice: 'party', holiday: '' };
         return { choice: item.audience === 'staff_edu' ? 'yearend_staff' : 'yearend_kids', holiday: '' };
@@ -166,18 +176,23 @@ var BudgetPlan = (function () {
      מה שכבר נמצא בו */
   function initialPicks(state) {
     var items = (state && state.budgetItems) || [];
-    if (!items.length) return { picks: DEFAULT_PICKS.slice(), holidays: DEFAULT_HOLIDAYS.slice() };
-    var picks = [], hols = [];
+    if (!items.length) return { picks: DEFAULT_PICKS.slice(), holidays: DEFAULT_HOLIDAYS.slice(), holAud: {} };
+    var picks = [], hols = [], holAud = {};
     items.forEach(function (b) {
       var k = keyOf(b);
       if (!k) return;
       if (picks.indexOf(k.choice) < 0) picks.push(k.choice);
       if (k.holiday && hols.indexOf(k.holiday) < 0) hols.push(k.holiday);
+      if (k.holiday) {
+        var a = holAud[k.holiday] = holAud[k.holiday] || [];
+        if (a.indexOf(k.aud) < 0) a.push(k.aud);
+      }
     });
     if (picks.indexOf('holidays') > -1 && !hols.length) hols = DEFAULT_HOLIDAYS.slice();
     return {
       picks: CHOICES.map(function (c) { return c.id; }).filter(function (id) { return picks.indexOf(id) > -1; }),
-      holidays: HOLIDAYS.map(function (h) { return h.id; }).filter(function (id) { return hols.indexOf(id) > -1; })
+      holidays: HOLIDAYS.map(function (h) { return h.id; }).filter(function (id) { return hols.indexOf(id) > -1; }),
+      holAud: holAud
     };
   }
 
@@ -224,7 +239,9 @@ var BudgetPlan = (function () {
   }
 
   /* ---------- ההצעה ----------
-     opts: { picks, holidays, mode: 'keep' | 'reset', available }
+     opts: { picks, holidays, holAud, mode: 'keep' | 'reset', available }
+     holAud — למי המתנה בכל חג, { rosh: ['children', 'staff'] }.
+     חג שאין לו רשומה כאן הוא לילדים בלבד.
 
      keep  — הסעיפים הקיימים נשארים בסכומם, וההצעה מחלקת רק את
              היתרה, בין הבחירות שעוד אין להן סעיף.
@@ -232,6 +249,22 @@ var BudgetPlan = (function () {
              קיימים שלא נבחרו נשארים כמות שהם ונספרים כ"קבוע".
 
      מחזיר את השורות להצגה, יחד עם הסעיפים שכל שורה תעדכן. */
+  function audsOf(holAud, id) {
+    var a = (holAud && holAud[id]) || DEFAULT_AUD;
+    var out = HOLIDAY_AUDS.map(function (x) { return x.id; }).filter(function (x) { return a.indexOf(x) > -1; });
+    return out.length ? out : DEFAULT_AUD.slice();
+  }
+
+  function holidayPairs(hols, holAud) {
+    var out = [];
+    hols.forEach(function (h) {
+      audsOf(holAud, h.id).forEach(function (a) {
+        out.push({ holiday: h, aud: a, key: h.id + '|' + a });
+      });
+    });
+    return out;
+  }
+
   function propose(state, amountOf, opts) {
     var items = (state && state.budgetItems) || [];
     var mode = opts.mode === 'reset' ? 'reset' : 'keep';
@@ -243,7 +276,10 @@ var BudgetPlan = (function () {
       var k = keyOf(b);
       if (!k) return;
       (byChoice[k.choice] = byChoice[k.choice] || []).push(b);
-      if (k.choice === 'holidays' && k.holiday) (byHoliday[k.holiday] = byHoliday[k.holiday] || []).push(b);
+      if (k.choice === 'holidays' && k.holiday) {
+        var key = k.holiday + '|' + k.aud;
+        (byHoliday[key] = byHoliday[key] || []).push(b);
+      }
     });
 
     var planned = items.reduce(function (s, b) { return s + amountOf(b); }, 0);
@@ -252,12 +288,16 @@ var BudgetPlan = (function () {
 
     picks.forEach(function (c) {
       if (c.id === 'holidays') {
-        var chosen = hols.filter(function (h) { return mode === 'reset' || !byHoliday[h.id]; });
-        if (!chosen.length) return;
-        chosen.forEach(function (h) {
-          (byHoliday[h.id] || []).forEach(function (b) { replaced[b.id] = true; });
+        var pairs = holidayPairs(hols, opts.holAud).filter(function (p) {
+          return mode === 'reset' || !byHoliday[p.key];
         });
-        rows.push({ id: c.id, choice: c, holidays: chosen, weight: HOLIDAY_WEIGHT * chosen.length });
+        if (!pairs.length) return;
+        pairs.forEach(function (p) {
+          (byHoliday[p.key] || []).forEach(function (b) { replaced[b.id] = true; });
+        });
+        var shown = hols.filter(function (h) { return pairs.some(function (p) { return p.holiday === h; }); });
+        rows.push({ id: c.id, choice: c, holidays: shown, pairs: pairs,
+                    weight: HOLIDAY_WEIGHT * pairs.length });
         return;
       }
       var existing = byChoice[c.id] || [];
@@ -313,18 +353,23 @@ var BudgetPlan = (function () {
       var total = Math.max(0, Math.round(num(amounts && amounts[r.id] !== undefined ? amounts[r.id] : r.amount)));
       var c = r.choice;
 
-      if (r.holidays) {
-        var parts = spread(total, r.holidays.map(function () { return 1; }));
-        r.holidays.forEach(function (h, i) {
+      if (r.pairs) {
+        var parts = spread(total, r.pairs.map(function () { return 1; }));
+        r.pairs.forEach(function (p, i) {
+          var h = p.holiday;
           var existing = items.filter(function (b) {
             var k = keyOf(b);
-            return k && k.choice === 'holidays' && k.holiday === h.id;
+            return k && k.choice === 'holidays' && k.holiday === h.id && k.aud === p.aud;
           });
           if (existing.length) {
             var sub = spread(parts[i], existing.map(function (b) { return amountOf(b); }));
             existing.forEach(function (b, j) { update.push({ id: b.id, data: amountPatch(sub[j]) }); });
           } else {
-            add.push(newItem(c, h.gift, parts[i], holidayDate(settings, h.id), 'holidays:' + h.id));
+            var aud = HOLIDAY_AUDS.filter(function (x) { return x.id === p.aud; })[0];
+            var item = newItem(c, h.gift + aud.suffix, parts[i], holidayDate(settings, h.id),
+                               'holidays:' + h.id + (p.aud === 'children' ? '' : ':' + p.aud));
+            item.audience = aud.audience;
+            add.push(item);
           }
         });
         return;
@@ -342,7 +387,7 @@ var BudgetPlan = (function () {
   }
 
   return {
-    CHOICES: CHOICES, HOLIDAYS: HOLIDAYS,
+    CHOICES: CHOICES, HOLIDAYS: HOLIDAYS, HOLIDAY_AUDS: HOLIDAY_AUDS, audsOf: audsOf,
     DEFAULT_PICKS: DEFAULT_PICKS, DEFAULT_HOLIDAYS: DEFAULT_HOLIDAYS,
     choice: choice, holiday: holiday, keyOf: keyOf,
     initialPicks: initialPicks, holidayDate: holidayDate,
