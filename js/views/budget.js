@@ -499,15 +499,10 @@ Views.budget = (function () {
     return '<div class="hc-list">' + BudgetPlan.HOLIDAYS.map(function (h) {
       var on = d.holidays.indexOf(h.id) > -1;
       var auds = BudgetPlan.audsOf(d.holAud, h.id);
+      /* סדר השורה לפי העיצוב: מימין "למי המתנה?", אחריו שם החג,
+         המתג, והאיור בקצה */
       return '<div class="hc' + (on ? ' on' : '') + '">' +
-        '<div class="hc-top">' +
-          '<span class="hc-ico" aria-hidden="true">' + h.icon + '</span>' +
-          '<span class="hc-body"><b>' + UI.esc(h.name) + '</b><small>' + UI.esc(h.when) + '</small></span>' +
-          '<button type="button" class="hc-switch" role="switch" aria-checked="' + on + '" ' +
-            'aria-label="' + UI.esc(h.name) + '" data-hol="' + h.id + '"' +
-            (page ? ' data-action="bud-wiz-hol" data-id="' + h.id + '"' : '') + '><i></i></button>' +
-        '</div>' +
-        '<div class="hc-aud-row"><span>למי המתנה?</span><div class="hc-seg">' +
+        '<div class="hc-aud"><span>למי המתנה?</span><div class="hc-seg">' +
           BudgetPlan.HOLIDAY_AUDS.map(function (a) {
             var sel = auds.indexOf(a.id) > -1;
             return '<button type="button" class="' + (sel ? 'on' : '') + '" aria-pressed="' + sel + '"' +
@@ -515,6 +510,11 @@ Views.budget = (function () {
               (page ? ' data-action="bud-wiz-hol-aud"' : '') + '>' + a.label + '</button>';
           }).join('') +
         '</div></div>' +
+        '<span class="hc-body"><b>' + UI.esc(h.name) + '</b><small>' + UI.esc(h.when) + '</small></span>' +
+        '<button type="button" class="hc-switch" role="switch" aria-checked="' + on + '" ' +
+          'aria-label="' + UI.esc(h.name) + '" data-hol="' + h.id + '"' +
+          (page ? ' data-action="bud-wiz-hol" data-id="' + h.id + '"' : '') + '><i></i></button>' +
+        '<span class="hc-ico" aria-hidden="true">' + h.icon + '</span>' +
         '</div>';
     }).join('') + '</div>';
   }
