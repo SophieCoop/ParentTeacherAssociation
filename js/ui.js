@@ -129,6 +129,11 @@ var UI = (function () {
     document.body.style.overflow = 'hidden';
 
     function close() {
+      /* המקלדת נסגרת לפני שהחלון נעלם. שדה שנמחק בעודו בפוקוס סוגר
+         אותה בבת אחת, ו-iOS משאיר אז את מה שמוצמד לתחתית — התפריט —
+         בגובה שבו הייתה המקלדת */
+      var active = document.activeElement;
+      if (active && back.contains(active) && active.blur) active.blur();
       back.remove();
       openModals = Math.max(0, openModals - 1);
       if (!openModals) document.body.style.overflow = '';
