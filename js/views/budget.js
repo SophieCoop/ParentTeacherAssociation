@@ -1062,6 +1062,7 @@ Views.budget = (function () {
     { value: 'staff_edu', label: 'צוות חינוכי', icon: '👩‍🏫' },
     { value: '',          label: 'כללי',        icon: '💰' }
   ];
+  var STAFF_AUD = AUDIENCES[1];
   /* וגם כאן: רוב הסעיפים נחשבים לאדם ומוכפלים במספר, ולכן זו
      האפשרות הראשונה וברירת המחדל. */
   var BASES = [
@@ -1091,7 +1092,8 @@ Views.budget = (function () {
     var synth = {
       audience: draft.audience, basis: draft.basis, period: draft.period, rate: draft.rate,
       periods: draft.periods, startDate: draft.startDate, endDate: draft.endDate,
-      date: draft.date || ''
+      date: draft.date || '',
+      staffIds: draft.staffIds, staffNames: draft.staffNames
     };
     var bd = Calc.itemBreakdown(st, synth);
 
@@ -1105,7 +1107,9 @@ Views.budget = (function () {
       return '<div class="note" style="background:#FDF0F2;margin:0"><div class="n-ico">⚠️</div><div>' +
         (draft.audience === 'children'
           ? 'אין ילדים ברשימה — הוסיפו ילדים כדי שהסכום יחושב'
-          : 'אין אנשי צוות ברשימה — הוסיפו צוות כדי שהסכום יחושב') +
+          : Calc.staffCount(st)
+            ? 'לא נבחרו אנשי צוות — לחצו על "צוות חינוכי" כדי לבחור למי הסעיף'
+            : 'אין אנשי צוות ברשימה — הוסיפו צוות כדי שהסכום יחושב') +
         '</div></div>';
     }
 
@@ -1158,17 +1162,86 @@ Views.budget = (function () {
           ? [{ id: Store.uid('per'), start: item.startDate, end: item.endDate }]
           : []);
 
+    /* למי מבין אנשי הצוות הסעיף מיועד. null — לכל הצוות, כמו בסעיף
+       ישן או כזה שנוצר בעזר; מערך — רק מי שנבחר. סעיף חדש מתחיל
+       בבחירה ריקה, כי "לכל הצוות" הוא לא תמיד מה שהתכוונו. */
+    var pick = {
+      staffIds: Array.isArray(item.staffIds) ? item.staffIds.slice() : (isNew ? [] : null),
+      names: (item.staffNames || []).slice()
+    };
+    function pickCount() {
+      return Calc.itemStaffCount(Store.state, { staffIds: pick.staffIds || [], staffNames: pick.names }) +
+        (pick.staffIds ? 0 : Calc.staffCount(Store.state));
+    }
+    function audienceOptions() {
+      return AUDIENCES.map(function (a) {
+        return a.value === 'staff_edu' ? Object.assign({}, a, { label: a.label + ' (' + pickCount() + ')' }) : a;
+      });
+    }
+    function syncStaffChip(root) {
+      var chip = root.querySelector('[data-chips="audience"] [data-chip="staff_edu"]');
+      if (chip) chip.textContent = STAFF_AUD.icon + ' ' + STAFF_AUD.label + ' (' + pickCount() + ')';
+    }
+
+    function openStaffPicker(root) {
+      if (!Views.ideas || !Views.ideas.staffPicker) return;
+      var all = (Store.state.staff || []).map(function (t) { return t.id; });
+      Views.ideas.staffPicker({
+        staffIds: pick.staffIds || all,
+        names: pick.names,
+        shared: root.querySelector('#f-basis').value === 'total'
+      }, function (r) {
+        pick.staffIds = r.staffIds;
+        pick.names = r.names;
+        /* "פריט אחד משותף" בחלון הוא בדיוק "לכולם" בטופס: סכום אחד
+           לכל הנבחרים, בלי הכפלה במספרם */
+        var basis = r.shared ? 'total' : 'per_person';
+        root.querySelector('#f-basis').value = basis;
+        syncChips(root, 'basis', basis);
+        syncStaffChip(root);
+        root.querySelector('label[for="f-amount"]').textContent =
+          amountLabel(basis, root.querySelector('#f-period').value);
+        refreshCalc(root);
+      });
+    }
+
+    /* מתנת סוף שנה ניתנת בסוף השנה, ולכן תאריך היעד מתמלא מעצמו
+       ב-30 ביוני של שנת הסיום. מה שהוקלד ביד אינו נדרס, ותאריך
+       שמולא כך יורד אם עוברים לקטגוריה אחרת. */
+    var autoDate = '';
+    function yearEndDate() {
+      var end = String(Store.state.settings.yearEnd || '');
+      var y = /^\d{4}/.test(end) ? end.slice(0, 4)
+            : String((parseInt(String(Store.state.settings.yearStart || '').slice(0, 4), 10) || new Date().getFullYear()) + 1);
+      return y + '-06-30';
+    }
+    function syncDate(root) {
+      var cat = (root.querySelector('#f-categoryId') || {}).value;
+      var el = root.querySelector('#f-date');
+      if (!el) return;
+      if (cat === 'cat-yearend' && (!el.value || el.value === autoDate)) {
+        autoDate = yearEndDate();
+        el.value = autoDate;
+      } else if (cat !== 'cat-yearend' && autoDate && el.value === autoDate) {
+        el.value = '';
+        autoDate = '';
+      }
+    }
+
     /* ציור מחדש של שורת החישוב לפי מצב הטופס והתקופות שהוזנו */
     function refreshCalc(root) {
       var el = root.querySelector('#f-calc');
       if (!el) return;
+      var audience = root.querySelector('#f-audience').value;
       el.innerHTML = calcLine({
-        audience: root.querySelector('#f-audience').value,
+        audience: audience,
         basis: root.querySelector('#f-basis').value,
         period: root.querySelector('#f-period').value,
         rate: root.querySelector('#f-amount').value,
         periods: periods,
-        date: (root.querySelector('#f-date') || {}).value || ''
+        date: (root.querySelector('#f-date') || {}).value || '',
+        staffIds: audience === 'staff_edu' ? pick.staffIds : undefined,
+        staffNames: pick.names
       });
     }
 
@@ -1256,7 +1329,8 @@ Views.budget = (function () {
         { name: 'categoryId', label: 'קטגוריה', type: 'select', value: item.categoryId,
           options: catOptions(), required: true },
         { name: 'title', label: 'שם הסעיף', value: item.title, placeholder: 'למשל: מתנה לחג' },
-        { name: 'audience', label: 'קהל יעד', type: 'chips', value: startAudience, options: AUDIENCES },
+        { name: 'audience', label: 'קהל יעד', type: 'chips', value: startAudience, options: audienceOptions(),
+          hint: 'לחיצה על "צוות חינוכי" פותחת בחירה של אנשי הצוות' },
         { name: 'basis', label: 'הסכום הוא', type: 'chips', value: startBasis, options: BASES,
           hint: '"לאדם" מוכפל במספר הילדים או אנשי הצוות · "לכולם" הוא סכום אחד לכל הקבוצה' },
         { name: 'period', label: 'תדירות', type: 'chips', value: startPeriod, options: PERIODS,
@@ -1266,7 +1340,9 @@ Views.budget = (function () {
           value: startRate, placeholder: '0', step: '1', min: 0 },
         { name: 'calc', type: 'html',
           html: calcLine({ audience: startAudience, basis: startBasis, period: startPeriod, rate: startRate,
-                           periods: periods, date: item.date }) },
+                           periods: periods, date: item.date,
+                           staffIds: startAudience === 'staff_edu' ? pick.staffIds : undefined,
+                           staffNames: pick.names }) },
         { name: 'date', label: 'תאריך יעד', type: 'date', value: item.date,
           hint: 'לפי התאריך הזה נקבע מי משתתף בסעיף: ילד שהצטרף אחריו אינו משלם עליו' },
         { name: 'note', label: 'הערות', type: 'textarea', value: item.note, placeholder: 'אופציונלי' }
@@ -1275,11 +1351,15 @@ Views.budget = (function () {
       onMount: function (root) {
         drawPeriods(root);
         syncPeriod(root, false);
+        if (isNew) { syncDate(root); refreshCalc(root); }
       },
 
       onFieldChange: function (name, value, root) {
         // בחירה מכוונת של קטגוריה חד־פעמית מאפסת את התדירות לשנתי
         syncPeriod(root, name === 'categoryId');
+        if (name === 'categoryId') syncDate(root);
+        // לחיצה על "צוות חינוכי" — גם כשהוא כבר מסומן — פותחת את הבחירה
+        if (name === 'audience' && value === 'staff_edu') openStaffPicker(root);
 
         var audience = root.querySelector('#f-audience').value;
         var basisEl  = root.querySelector('#f-basis');
@@ -1313,14 +1393,17 @@ Views.budget = (function () {
         var clean = monthly ? periods.filter(function (p) {
           return p.start && p.end && p.end > p.start;
         }) : [];
-        var draft = { audience: audience, basis: basis, period: period, rate: rate, periods: clean };
         var data = {
           categoryId: v.categoryId, title: v.title, date: v.date, note: v.note,
           audience: audience, basis: basis, period: period, rate: rate,
           periods: clean, startDate: '', endDate: '',
+          // הבחירה נשמרת רק בסעיף של הצוות; בכל קהל אחר היא חסרת משמעות
+          staffIds: audience === 'staff_edu' ? pick.staffIds : null,
+          staffNames: audience === 'staff_edu' ? pick.names.slice() : [],
           // הסכום השנתי נשמר גם הוא, ומחושב מחדש בתצוגה לפי הנתונים העדכניים
-          amount: Calc.itemAmount(Store.state, draft)
+          amount: 0
         };
+        data.amount = Calc.itemAmount(Store.state, data);
         if (isNew) Store.add('budgetItems', data);
         else Store.update('budgetItems', item.id, data);
         App.render();

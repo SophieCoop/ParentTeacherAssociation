@@ -164,6 +164,25 @@ var Calc = (function () {
     return fn ? fn(state) : 0;
   }
 
+  /* סעיף של הצוות החינוכי יכול להיות מיועד לאנשים מסוימים (staffIds,
+     ושמות חופשיים ב-staffNames). בלי בחירה כזו — סעיף ישן, או כזה
+     שנוצר בעזר התקציב — הוא לכל הצוות, כמו שהיה תמיד. מי שנמחק
+     מרשימת הצוות יורד גם מהספירה. */
+  function itemStaffCount(state, item) {
+    if (!item || !Array.isArray(item.staffIds)) return null;
+    var ids = ((state && state.staff) || []).map(function (t) { return t.id; });
+    var kept = item.staffIds.filter(function (id) { return ids.indexOf(id) > -1; }).length;
+    return kept + ((item.staffNames || []).length);
+  }
+
+  function itemAudienceCount(state, item) {
+    if (item.audience === 'staff_edu') {
+      var picked = itemStaffCount(state, item);
+      if (picked !== null) return picked;
+    }
+    return audienceCount(state, item.audience);
+  }
+
   function audienceLabel(audience, count) {
     if (audience === 'children')  return count + (count === 1 ? ' ילד/ה' : ' ילדים');
     if (audience === 'staff_edu') return count + (count === 1 ? ' איש/ת צוות' : ' אנשי צוות');
@@ -222,7 +241,7 @@ var Calc = (function () {
       rate = num(item.rate);
     }
 
-    var count = perPerson ? audienceCount(state, item.audience) : 1;
+    var count = perPerson ? itemAudienceCount(state, item) : 1;
     var months = monthly ? itemMonths(state, item) : 1;
 
     return {
@@ -1051,6 +1070,7 @@ var Calc = (function () {
     paymentsOf: paymentsOf, paidBy: paidBy, collectedTotal: collectedTotal,
     unassignedTotal: unassignedTotal, distinctPayers: distinctPayers, payerGroups: payerGroups,
     totalShareUnits: totalShareUnits, fullChildShare: fullChildShare,
+    itemStaffCount: itemStaffCount,
     collectPerChild: collectPerChild, collectFirst: collectFirst, budgetFrame: budgetFrame,
     budgetDirectionsOn: directionsOn,
     childCollection: childCollection, collectionRows: collectionRows,
