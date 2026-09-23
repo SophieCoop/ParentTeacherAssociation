@@ -630,16 +630,35 @@ Views.budget = (function () {
     return html;
   }
 
-  function wizAvailCard(st, w) {
+  /* ---------- כמה יש לחלוקה ----------
+     "לשמור על הקיים": המספר הגדול הוא מה שנותר — התקציב פחות מה שכבר
+     מתוכנן. "חלוקה מחדש": כל התקציב, כאילו לא תוכנן דבר, כי ההצעה
+     בונה את החלוקה מההתחלה. בכיוון התכנון זה גם השדה שמקלידים בו,
+     וההקלדה מתורגמת חזרה לתקציב כולו (w.total), כך שהמעבר בין שני
+     המצבים משנה רק את מה שמוצג ולא את התקציב עצמו. */
+  function wizAvailCard(st, w, plan) {
     var f = Calc.budgetFrame(st);
-    var avail = wizAvailable(st, w);
+    var avail = plan.available;
+    var fixed = plan.fixed;
+    var reset = plan.mode === 'reset';
+    var shownFixed = reset ? 0 : fixed;
+    var left = reset ? avail : plan.toSplit;
+    var kids = Calc.childCount(st);
     var head = '<div class="bw-avail-art">' + UI.art('piggy') + '</div>';
+    /* בחלוקה מחדש, סעיף קיים שלא סומן נשאר בתקציב. זה נדיר (הבחירה
+       נפתחת עם כל מה שכבר קיים), אבל כשזה קורה שווה לומר */
+    var fixedLine = shownFixed > 0
+      ? 'מתוך ' + UI.money(avail) + ', אחרי ' + UI.money(shownFixed) + ' שכבר מתוכננים'
+      : (reset && fixed > 0 ? UI.money(fixed) + ' מזה נשארים בסעיפים קיימים שלא נבחרו' : '');
 
     if (f.mode === 'collect') {
+      var sub = [];
+      if (fixedLine) sub.push(fixedLine);
+      sub.push('גבייה של ' + UI.money(f.perChild) + ' × ' + f.kids + ' ילדים');
       return '<div class="bw-avail">' + head +
-        '<div class="bw-avail-body"><div class="bf-lab">התקציב הזמין</div>' +
-          '<div class="bf-val">' + UI.money(avail) + '</div>' +
-          '<div class="bf-sub">מתוך גבייה של ' + UI.money(f.perChild) + ' × ' + f.kids + ' ילדים</div></div>' +
+        '<div class="bw-avail-body"><div class="bf-lab">' + (shownFixed > 0 ? 'נותר לחלוקה' : 'התקציב הזמין') + '</div>' +
+          '<div class="bf-val">' + UI.money(left) + '</div>' +
+          '<div class="bf-sub">' + sub.join('<br>') + '</div></div>' +
         '<button class="btn sm soft" data-action="bud-collect">✏️ עריכה</button>' +
         '</div>';
     }
@@ -647,19 +666,19 @@ Views.budget = (function () {
     /* בכיוון התכנון הסכום מוקלד כאן. הוא אינו נשמר כסכום גבייה —
        הסעיפים שייווצרו ממנו הם שיקבעו כמה כל הורה משלם */
     var collected = Math.round(Calc.collectedTotal(st));
-    var kids = Calc.childCount(st);
-    var sub = [];
+    var lines = [];
+    if (fixedLine && avail > 0) lines.push(fixedLine);
     if (collected > 0) {
-      sub.push('נגבו עד כה ' + UI.money(collected) +
-        (collected !== avail ? ' · <button class="bw-inline" data-action="bud-wiz-use-collected">לחלק את הסכום הזה</button>' : ''));
+      lines.push('נגבו עד כה ' + UI.money(collected) +
+        (collected !== avail ? ' · <button class="bw-inline" data-action="bud-wiz-use-collected">לחלק את מה שנגבה</button>' : ''));
     }
-    if (kids && avail > 0) sub.push('כ-' + UI.money(Math.round(avail / kids)) + ' לילד');
+    if (kids && left > 0) lines.push('כ-' + UI.money(Math.round(left / kids)) + ' לילד');
     return '<div class="bw-avail">' + head +
       '<div class="bw-avail-body"><label class="bf-lab" for="bw-total">כמה יש לחלוקה?</label>' +
         '<div class="bw-total-wrap"><span>₪</span><input class="input bw-total" id="bw-total" type="number" ' +
           'inputmode="numeric" min="0" step="1" placeholder="15000" data-change="bud-wiz-total" ' +
-          'value="' + (w.total ? Math.round(w.total) : '') + '"></div>' +
-        (sub.length ? '<div class="bf-sub">' + sub.join('<br>') + '</div>' : '') +
+          'data-fixed="' + shownFixed + '" value="' + (w.total ? left : '') + '"></div>' +
+        (lines.length ? '<div class="bf-sub">' + lines.join('<br>') + '</div>' : '') +
         '<button class="bw-inline" data-action="bud-collect">או שתקבעו סכום גבייה קבוע לכל ילד</button>' +
       '</div></div>';
   }
@@ -715,7 +734,7 @@ Views.budget = (function () {
 
     var html = '<div class="bw-intro"><h2>הצעת חלוקת התקציב ✨</h2>' +
       '<p>בהתבסס על הסעיפים שבחרתם ועל התקציב הזמין, זו ההצעה שלנו. אפשר לערוך כל סכום.</p></div>';
-    html += wizAvailCard(st, w);
+    html += wizAvailCard(st, w, plan);
 
     /* מי שחוזר לעזר באמצע השנה מחליט קודם מה קורה למה שכבר תכנן */
     if (plan.hasExisting) {
@@ -1640,7 +1659,10 @@ Views.budget = (function () {
       'bud-wiz-total': function (el) {
         var w = wiz();
         if (!w) return;
-        w.total = Math.max(0, Math.round(Calc.num(el.value)));
+        /* השדה מציג רק את מה שנותר לחלוקה; התקציב כולו כולל גם את
+           מה שכבר מתוכנן ונשאר כמו שהוא */
+        var entered = Math.max(0, Math.round(Calc.num(el.value)));
+        w.total = entered ? entered + Math.max(0, Calc.num(el.getAttribute('data-fixed'))) : 0;
         App.render();
       },
       'bud-wiz-use-collected': function () {
