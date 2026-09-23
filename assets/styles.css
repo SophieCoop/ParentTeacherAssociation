@@ -608,6 +608,8 @@ textarea.input{min-height:78px;resize:vertical}
 .bw-total-row .bw-pct{color:var(--ink);font-weight:700}
 .bw-status{text-align:center;font-size:12.5px;color:var(--ink-2);margin-top:8px}
 .bw-reset{flex:0 0 auto!important;width:auto;padding-inline:18px}
+.bw-back{margin-top:14px}
+.bw-sec{margin-top:16px}
 @media (max-width:370px){
   .bw-amt{width:84px}
   .bw-row-art{width:32px;height:32px}

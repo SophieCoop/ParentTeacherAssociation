@@ -488,6 +488,7 @@ Views.budget = (function () {
     html += '<div class="bw-actions">' +
       '<button class="btn" data-action="bud-wiz-step" data-step="3">המשך ←</button>' +
       '<button class="linkbtn" data-action="bud-wiz-step" data-step="3">דלג על שלב זה</button>' +
+      '<button class="btn ghost bw-back" data-action="bud-wiz-step" data-step="1">→ חזרה לבחירת הסעיפים</button>' +
       '</div>';
     return html;
   }
@@ -576,6 +577,11 @@ Views.budget = (function () {
         '</div>';
     }
 
+    /* מי שהמשיך בטעות מהשלב הקודם צריך דרך חזרה גם כשגלל למטה —
+       החץ שבראש המסך כבר מחוץ לתצוגה */
+    html += '<div class="section-title bw-sec"><span>הסעיפים שבחרתם</span>' +
+      '<button class="btn sm soft" data-action="bud-wiz-step" data-step="1">✏️ שינוי הסעיפים</button></div>';
+
     if (!plan.rows.length) {
       html += '<div class="note"><div class="n-ico">💡</div><div>' +
         (plan.hasExisting && w.mode === 'keep'
@@ -605,6 +611,7 @@ Views.budget = (function () {
           'אישור והוספה לתקציב ←</button>' +
       '</div>' +
       (plan.rows.length ? '<button class="linkbtn" data-action="bud-wiz-self">אחלק בעצמי</button>' : '') +
+      '<button class="btn ghost bw-back" data-action="bud-wiz-step" data-step="1">→ חזרה לבחירת הסעיפים</button>' +
       '</div>';
     return html;
   }
