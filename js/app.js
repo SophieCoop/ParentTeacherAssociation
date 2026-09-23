@@ -133,7 +133,30 @@ var App = (function () {
     fn(el, ev);
   }
 
+  /* ---------- המקלדת והתפריט התחתון ב-iOS ----------
+     באפליקציה שנפתחת ממסך הבית, אחרי שהמקלדת נסגרת iOS לא תמיד מחזיר
+     את מה שמוצמד לתחתית למקומו, והתפריט נשאר תלוי באמצע המסך — בדיוק
+     בגובה המקלדת. שני דברים כאן: בזמן שהמקלדת פתוחה התפריט יורד (הוא
+     ממילא מכוסה בה), וכשהיא נסגרת גלילה של אפס פיקסלים מכריחה את
+     הדפדפן לחשב מחדש את המיקום. */
+  function watchKeyboard() {
+    var vv = window.visualViewport;
+    if (!vv) return;
+    var open = false;
+    function sync() {
+      // הגדלה בצביטה גם מקטינה את השטח הנראה, אבל אינה מקלדת
+      var now = vv.scale < 1.05 && window.innerHeight - vv.height > 120;
+      if (now === open) return;
+      open = now;
+      document.documentElement.classList.toggle('kb-open', open);
+      if (!open) setTimeout(function () { window.scrollTo(window.scrollX, window.scrollY); }, 60);
+    }
+    vv.addEventListener('resize', sync);
+    document.addEventListener('focusout', function () { setTimeout(sync, 120); });
+  }
+
   function bind() {
+    watchKeyboard();
     document.addEventListener('click', function (e) { handle(e, 'data-action'); });
     document.addEventListener('change', function (e) { handle(e, 'data-change'); });
     document.addEventListener('input', function (e) { handle(e, 'data-input'); });
