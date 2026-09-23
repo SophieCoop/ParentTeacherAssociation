@@ -345,6 +345,22 @@ var BudgetPlan = (function () {
     return split(total, weights, 0);
   }
 
+  /* ---------- חלוקה בין החגים ----------
+     שורת "מתנות לחג" היא סכום אחד, אבל מאחוריה חג-חג. בלי עריכה ידנית
+     כל מתנה (צירוף של חג וקהל) מקבלת חלק שווה, ולכן חג עם מתנה לילדים
+     וגם לצוות מקבל פי שניים. אחרי עריכה, amounts.holParts קובע את הסכום
+     של כל חג, ובתוך החג הוא מתחלק שווה בין המתנות שלו. */
+  function holidayParts(total, row) {
+    var hols = (row && row.holidays) || [];
+    var weights = hols.map(function (h) {
+      return (row.pairs || []).filter(function (p) { return p.holiday === h; }).length || 1;
+    });
+    var parts = split(total, weights, -1);
+    var out = {};
+    hols.forEach(function (h, i) { out[h.id] = parts[i]; });
+    return out;
+  }
+
   function changes(state, plan, amounts, amountOf) {
     var add = [], update = [];
     var settings = (state && state.settings) || {};
@@ -355,7 +371,13 @@ var BudgetPlan = (function () {
       var c = r.choice;
 
       if (r.pairs) {
-        var parts = spread(total, r.pairs.map(function () { return 1; }));
+        var byHol = (amounts && amounts.holParts) || holidayParts(total, r);
+        var parts = [];
+        r.holidays.forEach(function (h) {
+          var mine = r.pairs.filter(function (p) { return p.holiday === h; });
+          var sub = spread(Math.max(0, Math.round(num(byHol[h.id]))), mine.map(function () { return 1; }));
+          mine.forEach(function (p, j) { parts[r.pairs.indexOf(p)] = sub[j]; });
+        });
         r.pairs.forEach(function (p, i) {
           var h = p.holiday;
           var existing = items.filter(function (b) {
@@ -393,6 +415,6 @@ var BudgetPlan = (function () {
     choice: choice, holiday: holiday, keyOf: keyOf,
     initialPicks: initialPicks, holidayDate: holidayDate,
     about: about, options: options, step: function (total) { return roundStep(total, 1); },
-    split: split, propose: propose, changes: changes
+    split: split, holidayParts: holidayParts, propose: propose, changes: changes
   };
 })();

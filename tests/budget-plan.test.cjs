@@ -240,3 +240,23 @@ test('a holiday with no audience recorded is for the children only', () => {
   eq(BudgetPlan.audsOf({}, 'purim'), ['children']);
   eq(BudgetPlan.audsOf({ purim: [] }, 'purim'), ['children']);
 });
+
+test('each holiday can get its own amount, split between its gifts', () => {
+  const ctx = setup();
+  const { Store, BudgetPlan } = ctx;
+  Store.setHeadcount('children', 10);
+
+  const plan = BudgetPlan.propose(Store.state, amountOf(ctx), {
+    picks: ['holidays'], holidays: ['hanukkah', 'purim'],
+    holAud: { purim: ['children', 'staff'] }, mode: 'keep', available: 900
+  });
+  // בלי עריכה: חלק שווה לכל מתנה, ולכן לפורים (שתי מתנות) פי שניים
+  eq(BudgetPlan.holidayParts(900, plan.rows[0]), { hanukkah: 300, purim: 600 });
+
+  const ch = apply(ctx, plan, { holParts: { hanukkah: 500, purim: 200 } });
+  eq(ch.add.map((d) => [d.title, d.rate]), [
+    ['מתנה לחנוכה', 500],
+    ['מתנה לפורים', 100],
+    ['מתנה לפורים לצוות', 100]
+  ]);
+});
