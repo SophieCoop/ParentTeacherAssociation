@@ -64,16 +64,17 @@ var BudgetPlan = (function () {
   /* משקל החגים תלוי במספר החגים: ארבעה חגים שווים יחד כרבע מהתקציב */
   var HOLIDAY_WEIGHT = 23 / 4;
 
-  /* heb — היום והחודש העבריים, שמהם נגזר התאריך המדויק בשנה הנוכחית.
+  /* art — האיור שב-assets/icons. icon נשאר כגיבוי למקום שבו אין איור.
+     heb — היום והחודש העבריים, שמהם נגזר התאריך המדויק בשנה הנוכחית.
      approx — [הפרש שנים משנת הפתיחה, חודש, יום] למקרה שהדפדפן אינו
      מכיר את הלוח העברי: תאריך קרוב מספיק כדי לקבוע מי השתתף. */
   var HOLIDAYS = [
-    { id: 'rosh',     name: 'ראש השנה',    gift: 'מתנה לראש השנה',   when: 'תשרי (ספט׳–אוק׳)', icon: '🍎', heb: [1, 'tish'],    approx: [0, 9, 20] },
-    { id: 'hanukkah', name: 'חנוכה',       gift: 'מתנה לחנוכה',      when: 'כסלו (דצמ׳)',      icon: '🕎', heb: [25, 'kislev'], approx: [0, 12, 20] },
-    { id: 'family',   name: 'יום המשפחה',  gift: 'מתנה ליום המשפחה', when: 'שבט (פבר׳)',       icon: '💝', heb: [30, 'sh'],     approx: [1, 2, 15] },
-    { id: 'purim',    name: 'פורים',       gift: 'מתנה לפורים',      when: 'אדר (מרץ)',        icon: '🎭', heb: [14, 'adar'],   approx: [1, 3, 10] },
-    { id: 'pesach',   name: 'פסח',         gift: 'מתנה לפסח',        when: 'ניסן (אפר׳)',      icon: '🫓', heb: [15, 'nisan'],  approx: [1, 4, 10] },
-    { id: 'shavuot',  name: 'שבועות',      gift: 'מתנה לשבועות',     when: 'סיוון (מאי–יוני)', icon: '🌾', heb: [6, 'sivan'],   approx: [1, 5, 25] }
+    { id: 'rosh',     name: 'ראש השנה',    gift: 'מתנה לראש השנה',   when: 'תשרי (ספט׳–אוק׳)', icon: '🍎', art: 'hol-rosh', heb: [1, 'tish'],    approx: [0, 9, 20] },
+    { id: 'hanukkah', name: 'חנוכה',       gift: 'מתנה לחנוכה',      when: 'כסלו (דצמ׳)',      icon: '🕎', art: 'hol-hanukkah', heb: [25, 'kislev'], approx: [0, 12, 20] },
+    { id: 'family',   name: 'יום המשפחה',  gift: 'מתנה ליום המשפחה', when: 'שבט (פבר׳)',       icon: '💝', art: 'hol-family', heb: [30, 'sh'],     approx: [1, 2, 15] },
+    { id: 'purim',    name: 'פורים',       gift: 'מתנה לפורים',      when: 'אדר (מרץ)',        icon: '🎭', art: 'hol-purim', heb: [14, 'adar'],   approx: [1, 3, 10] },
+    { id: 'pesach',   name: 'פסח',         gift: 'מתנה לפסח',        when: 'ניסן (אפר׳)',      icon: '🫓', art: 'hol-pesach', heb: [15, 'nisan'],  approx: [1, 4, 10] },
+    { id: 'shavuot',  name: 'שבועות',      gift: 'מתנה לשבועות',     when: 'סיוון (מאי–יוני)', icon: '🌾', art: 'hol-shavuot', heb: [6, 'sivan'],   approx: [1, 5, 25] }
   ];
   var DEFAULT_HOLIDAYS = ['rosh', 'hanukkah', 'family', 'purim'];
 

@@ -547,14 +547,14 @@ textarea.input{min-height:78px;resize:vertical}
 }
 .hc.on .hc-switch{background:var(--primary)}
 .hc.on .hc-switch i{inset-inline-end:17px}
-.hc-ico{font-size:30px;line-height:1;flex:none;width:36px;text-align:center}
+.hc-ico{font-size:30px;line-height:1;flex:none;width:48px;height:48px;text-align:center}
 .hc:not(.on) .hc-aud{opacity:.4}
 .hc:not(.on) .hc-body b{color:var(--ink-2)}
 .hc-seg button:disabled{cursor:default}
 @media (max-width:370px){
   .hc{gap:7px;padding:9px 10px}
   .hc-seg button{min-width:40px;padding:5px 6px;font-size:12px}
-  .hc-ico{font-size:26px;width:30px}
+  .hc-ico{font-size:26px;width:40px;height:40px}
 }
 
 /* שלב 3: התקציב הזמין */

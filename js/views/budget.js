@@ -514,7 +514,7 @@ Views.budget = (function () {
         '<button type="button" class="hc-switch" role="switch" aria-checked="' + on + '" ' +
           'aria-label="' + UI.esc(h.name) + '" data-hol="' + h.id + '"' +
           (page ? ' data-action="bud-wiz-hol" data-id="' + h.id + '"' : '') + '><i></i></button>' +
-        '<span class="hc-ico" aria-hidden="true">' + h.icon + '</span>' +
+        '<span class="hc-ico" aria-hidden="true">' + (h.art ? wizArt(h.art) : h.icon) + '</span>' +
         '</div>';
     }).join('') + '</div>';
   }
