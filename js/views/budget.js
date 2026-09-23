@@ -866,6 +866,35 @@ Views.budget = (function () {
     return kids ? 'כ-' + UI.money(Math.round(v / kids)) + ' לילד' : '';
   }
 
+  /* ---------- אחוז מהתקציב, כשדה עריכה ----------
+     הסכום והאחוז הם שני פנים של אותו מספר, ואפשר להקליד בכל אחד מהם:
+     אחוז מתורגם לשקלים מהתקציב הזמין, ושקלים מעדכנים את האחוז. השדה
+     שמקלידים בו אינו נדרס בזמן ההקלדה — אחרת 1 שהופך ל-12 היה קופץ
+     בדרך למספר מעוגל אחר. */
+  function pctFieldHTML() {
+    return '<div class="bs-pct"><label for="bs-pct-in">אחוז מהתקציב</label>' +
+      '<span class="bs-pfield"><input id="bs-pct-in" type="number" inputmode="decimal" min="0" max="100" step="1" ' +
+        'aria-label="אחוז מהתקציב"><span>%</span></span></div>';
+  }
+
+  function showPct(root, value, available) {
+    var el = root.querySelector('#bs-pct-in');
+    if (!el) return;
+    el.disabled = !(available > 0);
+    if (document.activeElement !== el) el.value = available > 0 ? wizPct(value, available) : '';
+  }
+
+  function bindPct(root, available, set) {
+    var el = root.querySelector('#bs-pct-in');
+    if (!el) return;
+    el.addEventListener('input', function () {
+      if (!(available > 0) || el.value === '') return;
+      set(Math.round(available * Math.max(0, Calc.num(el.value)) / 100));
+    });
+    // ביציאה מהשדה האחוז מתיישר לסכום שנקבע בפועל
+    el.addEventListener('blur', function () { el.value = wizPct(Calc.num(root.querySelector('#bs-input').value), available); });
+  }
+
   /* חלון סכום אחד: משמש גם שורה רגילה בהצעה וגם חג בודד מתוך
      רשימת החגים. cfg: { title, desc, art, value, recommended, available,
      perUnit(v), tip, onSave(v) } */
@@ -898,7 +927,7 @@ Views.budget = (function () {
               'min="0" step="1" value="' + value + '"></span>' +
             '<button type="button" class="bs-step" data-d="-1" aria-label="הפחתה">−</button>' +
           '</div></div>' +
-        '<div class="bs-pct"><label>אחוז מהתקציב</label><b></b></div>' +
+        pctFieldHTML() +
       '</div>' +
       '<div class="bs-unit"></div>' +
       '<div class="bs-opts-wrap">' + optionsHTML() + '</div>' +
@@ -912,7 +941,7 @@ Views.budget = (function () {
         var input = root.querySelector('#bs-input');
 
         function paint() {
-          root.querySelector('.bs-pct b').textContent = wizPct(value, cfg.available) + '%';
+          showPct(root, value, cfg.available);
           root.querySelector('.bs-unit').textContent = cfg.perUnit ? cfg.perUnit(value) : '';
           Array.prototype.forEach.call(root.querySelectorAll('.bs-opt'), function (b) {
             b.classList.toggle('on', +b.getAttribute('data-v') === value);
@@ -925,6 +954,7 @@ Views.budget = (function () {
         }
 
         input.addEventListener('input', function () { set(input.value, true); });
+        bindPct(root, cfg.available, set);
         Array.prototype.forEach.call(root.querySelectorAll('.bs-step'), function (b) {
           b.addEventListener('click', function () {
             var d = +b.getAttribute('data-d');
@@ -1031,7 +1061,7 @@ Views.budget = (function () {
               'min="0" step="1" value="' + value + '"></span>' +
             '<button type="button" class="bs-step" data-d="-1" aria-label="הפחתה">−</button>' +
           '</div></div>' +
-        '<div class="bs-pct"><label>אחוז מהתקציב</label><b></b></div>' +
+        pctFieldHTML() +
       '</div>' +
       '<div class="bs-unit"></div>' +
       '<div class="bs-cards"></div>' +
@@ -1049,7 +1079,7 @@ Views.budget = (function () {
         var input = root.querySelector('#bs-input');
 
         function paint() {
-          root.querySelector('.bs-pct b').textContent = wizPct(value, plan.available) + '%';
+          showPct(root, value, plan.available);
           root.querySelector('.bs-unit').textContent = pairs
             ? 'כ-' + UI.money(Math.round(value / pairs)) + ' לכל מתנה (' + pairs + (pairs === 1 ? ' מתנה)' : ' מתנות)')
             : 'לא נבחר אף חג';
@@ -1075,6 +1105,7 @@ Views.budget = (function () {
         }
 
         input.addEventListener('input', function () { set(input.value, true); });
+        bindPct(root, plan.available, set);
         Array.prototype.forEach.call(root.querySelectorAll('.bs-step'), function (b) {
           b.addEventListener('click', function () {
             var d = +b.getAttribute('data-d');

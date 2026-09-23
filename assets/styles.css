@@ -811,10 +811,20 @@ textarea.input{min-height:78px;resize:vertical}
 .bs-field input:focus{outline:none}
 .bs-field:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
 .bs-pct{flex:none;width:84px}
-.bs-pct b{
-  display:block;padding:9px 0;text-align:center;background:#fff;border-radius:12px;
-  font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;
+.bs-pfield{
+  display:flex;align-items:center;gap:2px;padding:0 8px;background:#fff;border-radius:12px;
+  border:1px solid #DDD6EC;
 }
+.bs-pfield span{font-weight:800;color:var(--ink-2)}
+.bs-pfield input{
+  width:100%;min-width:0;border:none;background:none;padding:9px 0;text-align:center;
+  font:inherit;font-size:18px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums;
+  -moz-appearance:textfield;appearance:textfield;
+}
+.bs-pfield input::-webkit-outer-spin-button,.bs-pfield input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.bs-pfield input:focus{outline:none}
+.bs-pfield:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+.bs-pfield input:disabled{color:var(--muted)}
 .bs-unit{min-height:18px;margin:7px 2px 0;font-size:12px;color:var(--muted)}
 .bs-sec{margin:12px 2px 12px;font-size:14px;font-weight:700}
 .bs-opts{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
