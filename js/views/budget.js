@@ -115,6 +115,94 @@ Views.budget = (function () {
       '</div>';
   }
 
+  /* ---------- סימון כמה סעיפים ומחיקה בבת אחת ----------
+     שתי דרכים להתחיל: החלקה של שורה שמאלה מסמנת אותה, והכפתור
+     "בחירה" שמעל הרשימה — כי החלקה היא מחווה שלא כולם מגלים לבד.
+     מרגע שמשהו מסומן, לחיצה על שורה מסמנת או מבטלת במקום לפתוח
+     אותה לעריכה, ופס קבוע בתחתית מציע מחיקה של כל המסומנים. */
+  function selState() { return App.vs('budSel', null); }
+
+  function selCount(sel) {
+    return sel ? Object.keys(sel).filter(function (k) { return sel[k]; }).length : 0;
+  }
+
+  function selToggle(id) {
+    var sel = Object.assign({}, selState() || {});
+    if (sel[id]) delete sel[id]; else sel[id] = true;
+    App.setVs('budSel', sel);
+    App.render();
+  }
+
+  function selHead(sel, count) {
+    if (!sel) {
+      return '<div class="sel-head"><span class="small muted">אפשר להחליק סעיף שמאלה כדי לסמן אותו</span>' +
+        '<button class="linkbtn sel-link" data-action="bud-sel-start">בחירה</button></div>';
+    }
+    var n = selCount(sel);
+    return '<div class="sel-head"><b>' + (n === 1 ? 'נבחר סעיף אחד' : n ? 'נבחרו ' + n + ' סעיפים' : 'בחרו סעיפים') + '</b>' +
+      '<button class="linkbtn sel-link" data-action="bud-sel-all">' +
+        (n === count ? 'ניקוי הבחירה' : 'בחירת הכל') + '</button></div>';
+  }
+
+  function selBar(sel) {
+    var n = selCount(sel);
+    return '<div class="sel-bar">' +
+      '<button class="btn ghost" data-action="bud-sel-cancel">ביטול</button>' +
+      '<button class="btn sel-del" data-action="bud-sel-delete"' + (n ? '' : ' disabled') + '>' +
+        (n ? 'מחיקת ' + (n === 1 ? 'סעיף אחד' : n + ' סעיפים') : 'מחיקה') + '</button>' +
+      '</div>';
+  }
+
+  /* ההחלקה: השורה נגררת עם האצבע, ומתחתיה נחשף פס אדום. מעבר של
+     70 פיקסלים הוא סימון; פחות מזה השורה חוזרת למקומה. תנועה אנכית
+     היא גלילה ואינה נוגעת בשורה. */
+  function bindSwipe(row) {
+    var main = row.querySelector('.bi-main');
+    var x0 = 0, y0 = 0, dx = 0, mode = '', swiped = 0;
+
+    row.addEventListener('touchstart', function (e) {
+      var t = e.touches[0];
+      x0 = t.clientX; y0 = t.clientY; dx = 0; mode = '';
+      main.style.transition = 'none';
+    }, { passive: true });
+
+    row.addEventListener('touchmove', function (e) {
+      var t = e.touches[0];
+      var mx = t.clientX - x0, my = t.clientY - y0;
+      if (!mode) {
+        if (Math.abs(mx) < 8 && Math.abs(my) < 8) return;
+        mode = (mx < 0 && Math.abs(mx) > Math.abs(my) * 1.3) ? 'swipe' : 'scroll';
+      }
+      if (mode !== 'swipe') return;
+      e.preventDefault();
+      dx = Math.max(-120, Math.min(0, mx));
+      main.style.transform = 'translateX(' + dx + 'px)';
+      row.classList.toggle('armed', dx < -70);
+    }, { passive: false });
+
+    function end() {
+      main.style.transition = '';
+      main.style.transform = '';
+      row.classList.remove('armed');
+      if (mode === 'swipe') {
+        swiped = Date.now();
+        if (dx < -70) selToggle(row.getAttribute('data-item'));
+      }
+      mode = '';
+    }
+    row.addEventListener('touchend', end);
+    row.addEventListener('touchcancel', end);
+
+    /* הלחיצה שהדפדפן מוסיף בסוף החלקה אינה פתיחה של הסעיף */
+    row.addEventListener('click', function (e) {
+      if (Date.now() - swiped < 400) { e.preventDefault(); e.stopPropagation(); }
+    }, true);
+  }
+
+  function mount() {
+    Array.prototype.forEach.call(document.querySelectorAll('.bitem[data-item]'), bindSwipe);
+  }
+
   function itemRow(st, b) {
     var cat = Store.category(b.categoryId);
     var amount = Calc.itemAmount(st, b);
@@ -133,8 +221,13 @@ Views.budget = (function () {
       }
       per = bits.join(' ');
     }
-    return '<div class="bitem">' +
-      '<button class="bi-main" data-action="budget-edit" data-id="' + b.id + '">' +
+    var sel = selState();
+    var on = !!(sel && sel[b.id]);
+    return '<div class="bitem' + (sel ? ' selecting' : '') + (on ? ' picked' : '') + '" data-item="' + b.id + '">' +
+      '<span class="bi-swipe" aria-hidden="true">' + (on ? 'ביטול הסימון' : 'סימון למחיקה') + '</span>' +
+      '<button class="bi-main" data-action="' + (sel ? 'bud-sel-toggle' : 'budget-edit') + '" data-id="' + b.id + '"' +
+        (sel ? ' role="checkbox" aria-checked="' + on + '"' : '') + '>' +
+        (sel ? '<span class="bi-check" aria-hidden="true">' + (on ? '✓' : '') + '</span>' : '') +
         '<span class="bi-ico" style="background:' + UI.toneVar(cat.tone) + '">' + UI.catIcon(cat) + '</span>' +
         '<span class="bi-body">' +
           '<span class="bi-name">' + UI.esc(b.title || cat.name) + '</span>' +
@@ -142,7 +235,7 @@ Views.budget = (function () {
           '<span class="bi-sub">' + (per ? per + ' · ' : '') + UI.esc(cat.name) + '</span>' +
         '</span>' +
         '<span class="bi-end"><b class="bi-amount">' + UI.money(amount) + '</b>' +
-          '<span class="bi-chev">' + UI.svgIcon('chevron', 16) + '</span></span>' +
+          (sel ? '' : '<span class="bi-chev">' + UI.svgIcon('chevron', 16) + '</span>') + '</span>' +
       '</button>' +
       '</div>';
   }
@@ -262,6 +355,9 @@ Views.budget = (function () {
       }) + categoryManager(st);
     }
 
+    var sel = selState();
+    html += selHead(sel, items.length);
+
     groups().forEach(function (g) {
       var group = items.filter(function (b) { return (b.audience || '') === g.id; });
       if (!group.length) return;
@@ -276,7 +372,10 @@ Views.budget = (function () {
       '<div class="r-sub">' + items.length + ' סעיפים</div></div>' +
       '<div class="r-end"><div class="r-amount">' + UI.money(total) + '</div></div></div>';
 
-    html += categoryManager(st);
+    /* בזמן בחירה ניהול הקטגוריות יורד, כדי שהפס שבתחתית לא יסתיר
+       כפתורים שאינם קשורים לבחירה */
+    if (sel) html += selBar(sel);
+    else html += categoryManager(st);
     return html;
   }
 
@@ -1269,10 +1368,46 @@ Views.budget = (function () {
 
   return {
     render: render,
+    mount: mount,
     itemForm: itemForm,
     catOptions: catOptions,
     actions: {
-      'budget-tab': function (el) { App.setVs('budgetTab', el.getAttribute('data-tab')); App.render(); },
+      'budget-tab': function (el) {
+        App.setVs('budSel', null);
+        App.setVs('budgetTab', el.getAttribute('data-tab'));
+        App.render();
+      },
+      'bud-sel-start': function () { App.setVs('budSel', {}); App.render(); },
+      'bud-sel-cancel': function () { App.setVs('budSel', null); App.render(); },
+      'bud-sel-toggle': function (el) { selToggle(el.getAttribute('data-id')); },
+      'bud-sel-all': function () {
+        var items = Store.state.budgetItems;
+        var sel = selState() || {};
+        var all = selCount(sel) === items.length;
+        var next = {};
+        if (!all) items.forEach(function (b) { next[b.id] = true; });
+        App.setVs('budSel', next);
+        App.render();
+      },
+      'bud-sel-delete': function () {
+        var sel = selState() || {};
+        var ids = Object.keys(sel).filter(function (k) { return sel[k] && Store.find('budgetItems', k); });
+        if (!ids.length) return;
+        /* הוצאה שנרשמה על סעיף נשארת במקומה, רק בלי השיוך לסעיף —
+           כמו במחיקה של סעיף בודד. שווה לומר את זה לפני שמוחקים */
+        var linked = Store.state.expenses.filter(function (e) { return ids.indexOf(e.budgetItemId) > -1; }).length;
+        var n = ids.length;
+        UI.confirmBox(n === 1 ? 'למחוק סעיף אחד?' : 'למחוק ' + n + ' סעיפים?',
+          'הסעיפים יימחקו מהתכנון לצמיתות.' +
+            (linked ? ' ' + (linked === 1 ? 'הוצאה אחת שנרשמה עליהם תישאר' : linked + ' הוצאות שנרשמו עליהם יישארו') +
+              ' ברשימת ההוצאות, בלי שיוך לסעיף.' : ''),
+          function () {
+            ids.forEach(function (id) { Store.remove('budgetItems', id); });
+            App.setVs('budSel', null);
+            App.render();
+            UI.toast(n === 1 ? 'הסעיף נמחק' : n + ' סעיפים נמחקו');
+          });
+      },
       'budget-add': function (el) {
         itemForm(null, el && el.getAttribute ? el.getAttribute('data-category') : null);
       },
