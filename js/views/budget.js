@@ -24,7 +24,7 @@ Views.budget = (function () {
 
     /* הכיוון שבו הוועד עובד — הדבר הראשון בהגדרות, כי הוא משנה את
        משמעות כל המספרים שמתחתיו */
-    html += '<div class="card">' +
+    if (Calc.budgetDirectionsOn()) html += '<div class="card">' +
       '<div class="card-title"><h2>כיוון העבודה</h2>' +
       '<button class="btn sm soft" data-action="bud-collect">' +
         (f.mode === 'collect' ? 'שינוי הסכום' : 'קביעת סכום') + '</button></div>' +
@@ -179,6 +179,7 @@ Views.budget = (function () {
   }
 
   function frameCard(st) {
+    if (!Calc.budgetDirectionsOn()) return '';
     var f = Calc.budgetFrame(st);
 
     /* ---- גבייה קודם: הסכום ידוע, והתקציב נמדד מולו ---- */

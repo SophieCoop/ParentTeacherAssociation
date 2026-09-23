@@ -11,9 +11,12 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 
-function setup() {
+/* הכיוון השני יושב מאחורי דגל תכונה, ולכן הבדיקות מדליקות אותו
+   במפורש — חוץ מזו שבודקת מה קורה כשהוא כבוי */
+function setup(flagOn) {
   const context = vm.createContext({
     window: {}, console, setTimeout: () => 1, clearTimeout() {},
+    Features: { budgetDirections: flagOn !== false },
     localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} }
   });
   for (const file of ['js/lang.js', 'js/store.js', 'js/calc.js']) {
@@ -132,4 +135,20 @@ test('the saved state carries the field, and old saves get it on load', () => {
   Store.importJSON(JSON.stringify({ children: [{ id: 'c1', name: 'ותיק', parents: [] }] }));
   assert.equal(Store.state.settings.collectPerChild, 0, 'missing field defaults to plan first');
   assert.equal(Calc.collectFirst(Store.state), false);
+});
+
+test('with the feature flag off, a saved amount is ignored and nothing changes', () => {
+  const { Store, Calc } = setup(false);
+  Store.setHeadcount('children', 10);
+  addItem(Store, 'מתנות', 3000);
+  Store.state.settings.collectPerChild = 500;   // נשמר, אך אינו נקרא
+
+  assert.equal(Calc.budgetDirectionsOn(), false);
+  assert.equal(Calc.collectFirst(Store.state), false);
+  assert.equal(Calc.fullChildShare(Store.state), 300, 'back to the budget-derived charge');
+  assert.equal(Calc.collectionSummary(Store.state).due, 3000);
+  assert.equal(Calc.budgetFrame(Store.state).mode, 'plan');
+
+  // והסכום עצמו נשאר על מקומו, כך שהדלקה מחדש מחזירה את המצב
+  assert.equal(Store.state.settings.collectPerChild, 500);
 });

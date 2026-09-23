@@ -84,7 +84,14 @@ var Calc = (function () {
      settings.collectPerChild הוא ההכרעה בין השניים: כל עוד הוא ריק
      הכיוון הוא תכנון קודם, וברגע שהוזן בו סכום הוא הופך למקור
      האמת של הגבייה, והתקציב נמדד מולו. */
+  /* הכיוון השני נמצא מאחורי דגל תכונה. כשהוא כבוי הסכום השמור
+     פשוט אינו נקרא, והחישוב כולו חוזר להתנהגות שקדמה לו. */
+  function directionsOn() {
+    return typeof Features !== 'undefined' && !!Features && Features.budgetDirections === true;
+  }
+
   function collectPerChild(state) {
+    if (!directionsOn()) return 0;
     var v = num(state && state.settings && state.settings.collectPerChild);
     return v > 0 ? v : 0;
   }
@@ -999,6 +1006,7 @@ var Calc = (function () {
     unassignedTotal: unassignedTotal, distinctPayers: distinctPayers,
     totalShareUnits: totalShareUnits, fullChildShare: fullChildShare,
     collectPerChild: collectPerChild, collectFirst: collectFirst, budgetFrame: budgetFrame,
+    budgetDirectionsOn: directionsOn,
     childCollection: childCollection, collectionRows: collectionRows,
     collectionSummary: collectionSummary, byMethod: byMethod,
     overview: overview, refunds: refunds,
