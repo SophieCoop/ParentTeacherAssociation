@@ -466,6 +466,154 @@ textarea.input{min-height:78px;resize:vertical}
 }
 .bf-hint > span{flex:none}
 
+/* ===================== עזר התקציב ===================== */
+/* כרטיסי הכניסה בלשונית התכנון */
+.bw-start{
+  text-align:center;padding:24px 18px 16px;margin-bottom:14px;border-radius:var(--r);
+  background:linear-gradient(180deg,#F6F2FF,#FBF9FF);border:1.5px dashed #CFC5F3;
+}
+.bw-start-art{width:84px;height:84px;margin:0 auto 8px}
+.bw-start b{display:block;font-size:17px;margin-bottom:4px}
+.bw-start p{margin:0 0 16px;font-size:13px;color:var(--ink-2)}
+.bw-start .linkbtn{margin-top:10px;text-decoration:none;font-weight:600;font-size:13.5px}
+.bw-help{
+  display:block;width:100%;text-align:center;margin-bottom:12px;padding:12px 14px;
+  border-radius:var(--r-sm);background:linear-gradient(180deg,#F3EFFF,#FAF8FF);
+  border:1px solid #E1DAF8;color:var(--primary-dark);
+}
+.bw-help b{display:block;font-size:14.5px}
+.bw-help small{display:block;font-size:12px;color:var(--ink-2);margin-top:2px}
+
+/* כותרת שלב */
+.bw-intro{text-align:center;margin:0 6px 16px}
+.bw-intro h2{font-size:20px;font-weight:800;margin:0 0 6px}
+.bw-intro p{margin:0;font-size:13px;color:var(--ink-2);line-height:1.6}
+.bw-actions{margin-top:18px}
+.bw-actions .linkbtn{margin-top:10px;font-size:13.5px}
+
+/* שלב 1: רשת הבחירות. אי־זוגי אחרון מתפרס על שתי העמודות */
+.bw-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bw-grid > .bw-pick:last-child:nth-child(odd){grid-column:1 / -1}
+.bw-pick{
+  position:relative;display:flex;flex-direction:column;background:#fff;
+  border-radius:var(--r-sm);box-shadow:var(--shadow);border:1.5px solid transparent;
+  transition:border-color .15s ease,background .15s ease;
+}
+.bw-pick.on{background:#F7F4FF;border-color:#C9BEF2;box-shadow:none}
+.bw-pick-main{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  padding:16px 10px 12px;min-height:118px;text-align:center;color:var(--ink);
+}
+.bw-pick-art{width:50px;height:50px;flex:none}
+.bw-pick-name{font-size:13.5px;font-weight:600;line-height:1.35}
+.bw-check{
+  position:absolute;top:8px;inset-inline-end:8px;width:24px;height:24px;border-radius:50%;
+  display:grid;place-items:center;font-size:13px;font-weight:800;color:#fff;
+  border:1.5px solid #DAD3EA;background:#fff;
+}
+.bw-pick.on .bw-check{background:var(--primary);border-color:var(--primary)}
+.bw-more{
+  display:block;width:100%;padding:0 10px 11px;margin-top:-4px;
+  font-size:12.5px;font-weight:600;color:var(--primary-dark);text-align:center;
+}
+
+/* שלב 2: החגים */
+.bw-note{background:var(--primary-soft);box-shadow:none}
+.bw-hol{
+  display:flex;align-items:center;gap:12px;width:100%;margin-bottom:9px;padding:11px 14px;
+  background:#fff;border-radius:var(--r-sm);box-shadow:var(--shadow);text-align:start;color:var(--ink);
+}
+.bw-hol-ico{
+  width:44px;height:44px;border-radius:14px;flex:none;display:grid;place-items:center;
+  font-size:24px;background:#FFF6E6;
+}
+.bw-hol-body{flex:1;min-width:0;display:flex;flex-direction:column}
+.bw-hol-body b{font-size:15px}
+.bw-hol-body small{font-size:12px;color:var(--muted)}
+.bw-box{
+  width:26px;height:26px;border-radius:8px;flex:none;display:grid;place-items:center;
+  border:1.5px solid #D6CFE6;color:#fff;font-weight:800;font-size:14px;
+}
+.bw-hol.on .bw-box{background:var(--primary);border-color:var(--primary)}
+
+/* שלב 3: התקציב הזמין */
+.bw-avail{
+  display:flex;align-items:center;gap:12px;padding:14px 15px;margin-bottom:12px;
+  background:#fff;border-radius:var(--r);box-shadow:var(--shadow);
+}
+.bw-avail-art{width:56px;height:56px;flex:none}
+.bw-avail-body{flex:1;min-width:0}
+.bw-avail .btn.sm{flex:none;align-self:flex-start}
+.bw-total-wrap{display:flex;align-items:center;gap:6px;margin:4px 0 5px}
+.bw-total-wrap span{font-weight:800;font-size:18px;color:var(--ink-2)}
+.bw-total{font-size:20px;font-weight:800;padding:8px 10px;font-variant-numeric:tabular-nums}
+.bw-inline{
+  display:inline;padding:0;font:inherit;font-size:12px;font-weight:600;
+  color:var(--primary-dark);text-decoration:underline;
+}
+.bw-avail-body > .bw-inline{display:block;margin-top:6px}
+
+.bw-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.bw-stats > div{background:#fff;border-radius:var(--r-sm);box-shadow:var(--shadow);padding:10px 13px}
+.bw-stats small{display:block;font-size:12px;color:var(--muted)}
+.bw-stats b{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums}
+.bw-modes{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.bw-mode{
+  display:flex;align-items:flex-start;gap:10px;width:100%;padding:11px 13px;text-align:start;
+  background:#fff;border-radius:var(--r-sm);border:1.5px solid var(--line);color:var(--ink);
+}
+.bw-mode.on{border-color:#C9BEF2;background:#F7F4FF}
+.bw-mode b{display:block;font-size:13.5px}
+.bw-mode small{display:block;font-size:12px;color:var(--muted);margin-top:1px}
+.bw-radio{
+  width:20px;height:20px;border-radius:50%;flex:none;margin-top:1px;
+  border:1.5px solid #CFC7E2;background:#fff;
+}
+.bw-mode.on .bw-radio{border:6px solid var(--primary)}
+
+/* שורות ההצעה: איור, שם ומד, סכום לעריכה ואחוז */
+.bw-list{background:#fff;border-radius:var(--r);box-shadow:var(--shadow);padding:4px 12px}
+.bw-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.bw-list > .bw-row:last-child{border-bottom:none}
+.bw-row-art{width:38px;height:38px;flex:none}
+.bw-row-body{flex:1;min-width:0}
+.bw-row-name{font-size:13.5px;font-weight:600;line-height:1.3}
+.bw-row-name small{display:block;font-size:11.5px;font-weight:400;color:var(--muted)}
+.bw-row .bar{margin-top:6px}
+.bw-row .bar > i{opacity:.85}
+.bw-amt{
+  display:flex;align-items:center;gap:3px;flex:none;width:96px;padding:0 9px;
+  border:1px solid #E4DEEE;border-radius:12px;background:#fff;
+}
+.bw-amt span{font-size:13px;color:var(--ink-2);font-weight:700}
+.bw-amt input{
+  width:100%;min-width:0;border:none;background:none;padding:9px 0;font:inherit;
+  font-size:15px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;
+  -moz-appearance:textfield;appearance:textfield;
+}
+.bw-amt input::-webkit-outer-spin-button,.bw-amt input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.bw-amt input:focus{outline:none}
+.bw-amt:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+.bw-pct{flex:none;width:36px;text-align:end;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.bw-fixed{
+  display:flex;justify-content:space-between;gap:10px;padding:10px 0;
+  font-size:12.5px;color:var(--ink-2);
+}
+.bw-total-row{
+  display:flex;align-items:center;gap:10px;margin-top:12px;padding:13px 15px;
+  background:var(--primary-soft);border-radius:var(--r-sm);
+}
+.bw-total-row > span:first-child{flex:1;font-weight:700}
+.bw-total-row b{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+.bw-total-row .bw-pct{color:var(--ink);font-weight:700}
+.bw-status{text-align:center;font-size:12.5px;color:var(--ink-2);margin-top:8px}
+.bw-reset{flex:0 0 auto!important;width:auto;padding-inline:18px}
+@media (max-width:370px){
+  .bw-amt{width:84px}
+  .bw-row-art{width:32px;height:32px}
+  .bw-pct{width:30px}
+}
+
 .legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
 .legend span{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-2)}
 .legend i{width:10px;height:10px;border-radius:4px}
