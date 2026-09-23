@@ -34,6 +34,30 @@ var BudgetPlan = (function () {
     { id: 'reserve',       name: 'רזרבה / הוצאות בלתי צפויות',  cat: 'cat-other',   audience: '',          weight: 10, art: 'cat-other' }
   ];
 
+  /* מה מופיע בחלון העריכה של כל סעיף: במה מדובר, וטיפ שעוזר להחליט
+     על הסכום. יושב כאן ולא במסך כי זה חלק מהקטלוג, כמו השם והמשקל. */
+  var ABOUT = {
+    yearend_kids:  { desc: 'מתנה לכל ילד לכבוד סיום השנה בגן, כמו ספר, משחק או מזכרת.',
+                     tip: 'מקובל להקדיש למתנה 30–60 ₪ לילד, בהתאם לגודל הגן ולתקציב.' },
+    yearend_staff: { desc: 'מתנת תודה לגננת ולצוות החינוכי בסוף השנה.',
+                     tip: 'נהוג שהמתנה לגננת גדולה מזו של הסייעות. את החלוקה לפי תפקידים אפשר לראות במסך הצוות.' },
+    party:         { desc: 'מסיבת סיום השנה: הפעלה, קישוטים וכיבוד.',
+                     tip: 'ההפעלה או המופע הם בדרך כלל ההוצאה הגדולה במסיבה. כדאי לבדוק מחיר לפני שקובעים סכום.' },
+    holidays:      { desc: 'מתנה קטנה לילדים בכל אחד מהחגים שבחרתם.',
+                     tip: 'הסכום מתחלק שווה בשווה בין החגים, וכל חג נשמר כסעיף נפרד בתאריך שלו.' },
+    birthdays:     { desc: 'מתנה לכל ילד ביום ההולדת שלו בגן.',
+                     tip: 'כדאי לקבוע סכום אחיד לכל ילד, כדי שאף אחד לא ירגיש שקיבל פחות.' },
+    clubs:         { desc: 'חוגים ופעילויות שההורים מממנים במהלך השנה.',
+                     tip: 'חוג שבועי הוא הוצאה חודשית. אחרי השמירה אפשר לערוך את הסעיף ולהגדיר אותו לפי חודשים.' },
+    gear:          { desc: 'ציוד לגן, משחקים ותיקונים קטנים.',
+                     tip: 'כדאי לבדוק עם הגננת מה באמת חסר לפני שקונים.' },
+    food:          { desc: 'כיבוד לאירועים ולמסיבות במהלך השנה.',
+                     tip: 'אפשר לחסוך כאן אם ההורים מביאים כיבוד בתורות.' },
+    reserve:       { desc: 'כסף בצד להוצאות שלא תוכננו מראש.',
+                     tip: 'מומלץ להשאיר כ-10% מהתקציב לרזרבה. מה שלא ינוצל חוזר להורים בסוף השנה.' }
+  };
+  function about(id) { return ABOUT[id] || { desc: '', tip: '' }; }
+
   /* מה שמסומן כשפותחים את העזר בתקציב ריק — הסעיפים שכמעט כל ועד מתכנן */
   var DEFAULT_PICKS = ['yearend_kids', 'yearend_staff', 'party', 'holidays'];
 
@@ -166,6 +190,17 @@ var BudgetPlan = (function () {
     if (total >= 2000) return 50;
     if (total >= rows * 20) return 10;
     return 1;
+  }
+
+  /* שלוש הצעות לסכום של סעיף: מה שהוצע לו, ורבע פחות ורבע יותר,
+     מעוגלים באותה מדרגה של ההצעה עצמה */
+  function options(amount, total) {
+    amount = Math.max(0, Math.round(num(amount)));
+    if (amount <= 0) return [];
+    var step = roundStep(total, 1);
+    var r = function (v) { return Math.max(step, Math.round(v / step) * step); };
+    var out = [amount, r(amount * 0.75), r(amount * 1.25)];
+    return out.filter(function (v, i) { return out.indexOf(v) === i; });
   }
 
   function split(total, weights, sinkIndex) {
@@ -311,6 +346,7 @@ var BudgetPlan = (function () {
     DEFAULT_PICKS: DEFAULT_PICKS, DEFAULT_HOLIDAYS: DEFAULT_HOLIDAYS,
     choice: choice, holiday: holiday, keyOf: keyOf,
     initialPicks: initialPicks, holidayDate: holidayDate,
+    about: about, options: options, step: function (total) { return roundStep(total, 1); },
     split: split, propose: propose, changes: changes
   };
 })();

@@ -573,47 +573,147 @@ textarea.input{min-height:78px;resize:vertical}
 
 /* שורות ההצעה: איור, שם ומד, סכום לעריכה ואחוז */
 .bw-list{background:#fff;border-radius:var(--r);box-shadow:var(--shadow);padding:4px 12px}
-.bw-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.bw-row{
+  display:flex;align-items:center;gap:9px;width:100%;padding:11px 0;text-align:start;
+  color:var(--ink);border-bottom:1px solid var(--line);background:none;
+}
 .bw-list > .bw-row:last-child{border-bottom:none}
-.bw-row-art{width:38px;height:38px;flex:none}
-.bw-row-body{flex:1;min-width:0}
-.bw-row-name{font-size:13.5px;font-weight:600;line-height:1.3}
+.bw-row:active{background:#FAF8FE}
+.bw-chev{flex:none;width:10px;font-size:20px;line-height:1;color:#B9B1CC;transform:scaleX(-1)}
+.bw-row-art{width:40px;height:40px;flex:none}
+.bw-row-body{flex:1;min-width:0;display:block}
+.bw-row-name{display:block;font-size:13.5px;font-weight:600;line-height:1.3}
 .bw-row-name small{display:block;font-size:11.5px;font-weight:400;color:var(--muted)}
-.bw-row .bar{margin-top:6px}
+.bw-row .bar{display:block;margin-top:7px}
 .bw-row .bar > i{opacity:.85}
 .bw-amt{
-  display:flex;align-items:center;gap:3px;flex:none;width:96px;padding:0 9px;
+  flex:none;min-width:88px;padding:8px 10px;text-align:center;
   border:1px solid #E4DEEE;border-radius:12px;background:#fff;
+  font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;
 }
-.bw-amt span{font-size:13px;color:var(--ink-2);font-weight:700}
-.bw-amt input{
-  width:100%;min-width:0;border:none;background:none;padding:9px 0;font:inherit;
-  font-size:15px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;
-  -moz-appearance:textfield;appearance:textfield;
-}
-.bw-amt input::-webkit-outer-spin-button,.bw-amt input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-.bw-amt input:focus{outline:none}
-.bw-amt:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+.bw-amt.empty{font-size:12px;font-weight:600;color:var(--primary-dark);border-style:dashed}
 .bw-pct{flex:none;width:36px;text-align:end;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
 .bw-fixed{
   display:flex;justify-content:space-between;gap:10px;padding:10px 0;
   font-size:12.5px;color:var(--ink-2);
 }
+.bw-sec{margin-top:16px}
+.bw-sec > span small{display:block;font-size:12px;font-weight:400;color:var(--muted)}
+
+/* כרטיס המצב: מאוזן, נותר לחלק, או חריגה */
+.bw-balance{
+  display:flex;align-items:center;gap:12px;margin-top:12px;padding:12px 14px;
+  border-radius:var(--r-sm);background:#fff;border:1px solid var(--line);
+}
+.bw-balance b{display:block;font-size:14.5px}
+.bw-balance small{display:block;font-size:12px;color:var(--ink-2)}
+.bw-bal-ico{
+  width:32px;height:32px;border-radius:50%;flex:none;display:grid;place-items:center;
+  font-weight:800;font-size:15px;background:var(--primary-soft);color:var(--primary-dark);
+}
+.bw-balance.ok{background:#EEF8F1;border-color:#D3EBDB}
+.bw-balance.ok b{color:var(--ok)}
+.bw-balance.ok .bw-bal-ico{background:var(--ok);color:#fff}
+.bw-balance.warn{background:#FFF8E9;border-color:#F4E3BA}
+.bw-balance.warn b{color:#B8862B}
+.bw-balance.warn .bw-bal-ico{background:var(--warn);color:#fff}
+.bw-balance.over{background:#FDF0F2;border-color:#F3D8DD}
+.bw-balance.over b{color:var(--danger)}
+.bw-balance.over .bw-bal-ico{background:var(--danger);color:#fff}
+
 .bw-total-row{
-  display:flex;align-items:center;gap:10px;margin-top:12px;padding:13px 15px;
+  display:flex;align-items:center;gap:10px;margin-top:10px;padding:13px 15px;
   background:var(--primary-soft);border-radius:var(--r-sm);
 }
 .bw-total-row > span:first-child{flex:1;font-weight:700}
 .bw-total-row b{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
 .bw-total-row .bw-pct{color:var(--ink);font-weight:700}
-.bw-status{text-align:center;font-size:12.5px;color:var(--ink-2);margin-top:8px}
-.bw-reset{flex:0 0 auto!important;width:auto;padding-inline:18px}
 .bw-back{margin-top:14px}
-.bw-sec{margin-top:16px}
+
+/* הפעולות הראשיות צמודות לתחתית. בטלפון התפריט התחתון יורד בזמן
+   העזר — הוא תופס את המקום שלהן, ויציאה יש גם בחץ שבראש המסך */
+.bw-bar{
+  position:sticky;bottom:0;z-index:30;display:flex;gap:10px;
+  margin:18px -16px 0;padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+  background:rgba(251,248,243,.94);backdrop-filter:blur(10px);border-top:1px solid var(--line);
+}
+.bw-bar .btn{flex:1;padding-inline:10px}
+.bw-bar .bw-reset{font-size:13px;white-space:nowrap;padding-inline:8px}
+@media (max-width:899px){
+  .shell:has(.bwiz){padding-bottom:0}
+  .shell:has(.bwiz) > .tabbar{display:none}
+}
+@media (min-width:900px){
+  .bw-bar{margin-inline:0;border-radius:var(--r) var(--r) 0 0}
+}
 @media (max-width:370px){
-  .bw-amt{width:84px}
+  .bw-amt{min-width:76px;font-size:14px;padding-inline:7px}
   .bw-row-art{width:32px;height:32px}
   .bw-pct{width:30px}
+  .bw-bar .bw-reset{font-size:12px;padding-inline:6px}
+}
+
+/* חלון העריכה של סעיף */
+.bw-sheet .bs-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px;padding-inline-end:30px}
+.bw-sheet .bs-head > div{flex:1;min-width:0}
+.bw-sheet .bs-head h3{font-size:20px;font-weight:800;margin:0 0 4px}
+.bw-sheet .bs-head p{margin:0;font-size:13px;color:var(--ink-2);line-height:1.55}
+.bw-sheet .bs-art{width:78px;height:78px;flex:none}
+.bs-box{
+  display:flex;align-items:flex-end;gap:12px;padding:12px;border-radius:var(--r-sm);
+  background:#F5F2FC;
+}
+.bs-box label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-2);margin-bottom:6px;text-align:center}
+.bs-amt{flex:1;min-width:0}
+.bs-stepper{display:flex;align-items:center;gap:8px}
+.bs-step{
+  width:40px;height:40px;border-radius:50%;flex:none;display:grid;place-items:center;
+  background:#fff;border:1px solid #DDD6EC;font-size:22px;font-weight:500;color:var(--ink);
+}
+.bs-step:active{background:var(--primary-soft)}
+.bs-field{
+  flex:1;min-width:0;display:flex;align-items:center;gap:4px;padding:0 10px;
+  background:#fff;border:1px solid #DDD6EC;border-radius:12px;
+}
+.bs-field span{font-weight:800;color:var(--ink-2)}
+.bs-field input{
+  width:100%;min-width:0;border:none;background:none;padding:9px 0;text-align:center;
+  font:inherit;font-size:20px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums;
+  -moz-appearance:textfield;appearance:textfield;
+}
+.bs-field input::-webkit-outer-spin-button,.bs-field input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.bs-field input:focus{outline:none}
+.bs-field:focus-within{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft)}
+.bs-pct{flex:none;width:84px}
+.bs-pct b{
+  display:block;padding:9px 0;text-align:center;background:#fff;border-radius:12px;
+  font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;
+}
+.bs-unit{min-height:18px;margin:7px 2px 0;font-size:12px;color:var(--muted)}
+.bs-sec{margin:12px 2px 12px;font-size:14px;font-weight:700}
+.bs-opts{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.bs-opt{
+  position:relative;padding:14px 6px 10px;border-radius:var(--r-sm);text-align:center;
+  background:#fff;border:1.5px solid var(--line);color:var(--ink);
+}
+.bs-opt b{display:block;font-size:16px;font-weight:800;font-variant-numeric:tabular-nums}
+.bs-opt small{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.bs-opt.on{border-color:var(--primary);background:#F7F4FF}
+.bs-badge{
+  position:absolute;top:-10px;left:50%;transform:translateX(-50%);white-space:nowrap;
+  padding:2px 9px;border-radius:10px;background:var(--primary);color:#fff;font-size:11px;font-weight:700;
+}
+.bs-tip{
+  display:flex;gap:10px;margin-top:14px;padding:12px 13px;border-radius:var(--r-sm);
+  border:1px solid #E6E0F3;font-size:12.5px;color:var(--ink-2);line-height:1.6;
+}
+.bs-tip > span{font-size:20px;flex:none}
+.bs-tip b{display:block;color:var(--ink);font-size:13.5px}
+.bs-save{margin-top:16px}
+@media (max-width:370px){
+  .bs-step{width:34px;height:34px}
+  .bs-pct{width:70px}
+  .bs-field input{font-size:18px}
 }
 
 .legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}

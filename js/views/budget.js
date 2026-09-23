@@ -526,32 +526,46 @@ Views.budget = (function () {
       '</div></div>';
   }
 
+  /* השורה כולה היא כפתור שפותח את חלון העריכה. שדה הקלדה בתוך
+     השורה היה צר מדי לאצבע בטלפון, ולא היה בו מקום להצעות ולהסבר */
   function wizRow(plan, w, r) {
     var cat = Store.category(r.choice.cat);
-    var amt = Calc.num(wizAmount(w, r));
     var raw = wizAmount(w, r);
+    var amt = Calc.num(raw);
     var p = wizPct(amt, plan.available);
     var note = r.holidays
       ? '<small>' + r.holidays.map(function (h) { return h.name; }).join(', ') + '</small>'
       : (r.targets && r.targets.length ? '<small>מעדכן את הסעיף הקיים</small>' : '');
-    return '<div class="bw-row" data-row="' + r.id + '">' +
+    return '<button class="bw-row" data-action="bud-wiz-edit" data-id="' + r.id + '" ' +
+        'aria-label="עריכת הסכום של ' + UI.esc(r.choice.name) + '">' +
+      '<span class="bw-chev" aria-hidden="true">‹</span>' +
       '<span class="bw-row-art">' + wizArt(r.choice.art) + '</span>' +
-      '<div class="bw-row-body">' +
-        '<div class="bw-row-name">' + UI.esc(r.choice.name) + note + '</div>' +
-        '<div class="bar thin"><i style="width:' + Math.min(100, p) + '%;background:' + UI.toneInkHex(cat.tone) + '"></i></div>' +
-      '</div>' +
-      '<label class="bw-amt"><span>₪</span><input type="number" inputmode="numeric" min="0" step="1" ' +
-        'placeholder="0" aria-label="סכום ל' + UI.esc(r.choice.name) + '" ' +
-        'data-input="bud-wiz-amt" data-id="' + r.id + '" value="' + (raw === '' ? '' : Math.round(amt)) + '"></label>' +
+      '<span class="bw-row-body">' +
+        '<span class="bw-row-name">' + UI.esc(r.choice.name) + note + '</span>' +
+        '<span class="bar thin"><i style="width:' + Math.min(100, p) + '%;background:' + UI.toneInkHex(cat.tone) + '"></i></span>' +
+      '</span>' +
+      '<span class="bw-amt' + (raw === '' ? ' empty' : '') + '">' + (raw === '' ? 'הזינו סכום' : UI.money(amt)) + '</span>' +
       '<span class="bw-pct">' + p + '%</span>' +
-      '</div>';
+      '</button>';
   }
 
-  function wizStatus(plan, t) {
-    if (plan.available <= 0) return 'הזינו למעלה כמה יש לחלוקה, ונציע חלוקה.';
-    if (Math.abs(t.diff) < 1) return 'כל התקציב חולק ✓';
-    return t.diff > 0 ? 'נותרו ' + UI.money(t.diff) + ' שעוד לא חולקו'
-                      : 'חריגה של ' + UI.money(-t.diff) + ' מהתקציב הזמין';
+  /* כרטיס המצב שמעל הסה״כ: מאוזן, נותר לחלק, או חריגה */
+  function wizBalance(plan, t) {
+    if (plan.available <= 0) {
+      return '<div class="bw-balance"><span class="bw-bal-ico">💡</span><div><b>עוד אין תקציב לחלוקה</b>' +
+        '<small>הזינו למעלה כמה יש לחלוקה, ונציע חלוקה.</small></div></div>';
+    }
+    var pct = wizPct(t.sum, plan.available);
+    var sub = 'סה״כ הסכומים מסתכמים ל-' + pct + '% מהתקציב';
+    if (Math.abs(t.diff) < 1) {
+      return '<div class="bw-balance ok"><span class="bw-bal-ico">✓</span><div><b>התקציב מאוזן</b>' +
+        '<small>' + sub + '</small></div></div>';
+    }
+    return t.diff > 0
+      ? '<div class="bw-balance warn"><span class="bw-bal-ico">!</span><div><b>נותרו ' + UI.money(t.diff) + ' לחלוקה</b>' +
+          '<small>' + sub + '</small></div></div>'
+      : '<div class="bw-balance over"><span class="bw-bal-ico">!</span><div><b>חריגה של ' + UI.money(-t.diff) + '</b>' +
+          '<small>' + sub + '</small></div></div>';
   }
 
   function wizStep3(st, w) {
@@ -578,7 +592,8 @@ Views.budget = (function () {
 
     /* מי שהמשיך בטעות מהשלב הקודם צריך דרך חזרה גם כשגלל למטה —
        החץ שבראש המסך כבר מחוץ לתצוגה */
-    html += '<div class="section-title bw-sec"><span>הסעיפים שבחרתם</span>' +
+    html += '<div class="section-title bw-sec"><span>הסעיפים שבחרתם' +
+        (plan.rows.length ? '<small>לחצו על סעיף כדי לערוך את הסכום</small>' : '') + '</span>' +
       '<button class="btn sm soft" data-action="bud-wiz-step" data-step="1">✏️ שינוי הסעיפים</button></div>';
 
     if (!plan.rows.length) {
@@ -596,21 +611,22 @@ Views.budget = (function () {
         '</div>';
     }
 
-    var ok = Math.abs(t.diff) < 1;
+    html += wizBalance(plan, t);
     html += '<div class="bw-total-row">' +
-      '<span>סה״כ</span><b id="bw-sum">' + UI.money(t.sum) + '</b>' +
-      '<span class="bw-pct" id="bw-sum-pct">' + wizPct(t.sum, plan.available) + '%</span>' +
-      '</div>' +
-      '<div class="bw-status ' + (t.diff < -0.5 ? 'neg' : ok ? 'pos' : '') + '" id="bw-status">' + wizStatus(plan, t) + '</div>';
+      '<span>סה״כ</span><b>' + UI.money(t.sum) + '</b>' +
+      '<span class="bw-pct">' + wizPct(t.sum, plan.available) + '%</span>' +
+      '</div>';
 
     html += '<div class="bw-actions">' +
-      '<div class="btn-row">' +
-        '<button class="btn soft bw-reset" data-action="bud-wiz-reset">↺ איפוס</button>' +
-        '<button class="btn" data-action="bud-wiz-apply" id="bw-apply"' + (t.rows > 0 ? '' : ' disabled') + '>' +
-          'אישור והוספה לתקציב ←</button>' +
-      '</div>' +
       (plan.rows.length ? '<button class="linkbtn" data-action="bud-wiz-self">אחלק בעצמי</button>' : '') +
       '<button class="btn ghost bw-back" data-action="bud-wiz-step" data-step="1">→ חזרה לבחירת הסעיפים</button>' +
+      '</div>';
+
+    /* הפעולות הראשיות צמודות לתחתית המסך, כדי שלא יהיה צורך לגלול
+       אליהן אחרי כל עריכה */
+    html += '<div class="bw-bar">' +
+      '<button class="btn ghost bw-reset" data-action="bud-wiz-reset">↻ איפוס להצעה המקורית</button>' +
+      '<button class="btn" data-action="bud-wiz-apply"' + (t.rows > 0 ? '' : ' disabled') + '>שמור והמשך ←</button>' +
       '</div>';
     return html;
   }
@@ -632,30 +648,102 @@ Views.budget = (function () {
       '</div>';
   }
 
-  /* עדכון במקום אחרי הקלדת סכום: ציור מחדש היה גוזל את המיקוד
-     מהשדה באמצע ההקלדה */
-  function wizRepaint(w) {
+  /* ---------- חלון העריכה של סעיף בהצעה ----------
+     סכום עם כפתורי פלוס ומינוס, שלוש הצעות לבחירה מהירה, והסבר
+     קצר. שום דבר לא נשמר עד "שמירה" — סגירה משאירה את מה שהיה. */
+  function wizPerUnit(st, r, v) {
+    if (v <= 0) return '';
+    var kids = Calc.childCount(st), staff = Calc.staffCount(st);
+    if (r.holidays && r.holidays.length) {
+      var per = v / r.holidays.length;
+      return 'כ-' + UI.money(Math.round(per)) + ' לכל חג' +
+        (kids ? ', כ-' + UI.money(Math.round(per / kids)) + ' לילד בכל חג' : '');
+    }
+    if (r.choice.audience === 'staff_edu') return staff ? 'כ-' + UI.money(Math.round(v / staff)) + ' לכל איש צוות' : '';
+    return kids ? 'כ-' + UI.money(Math.round(v / kids)) + ' לילד' : '';
+  }
+
+  function wizSheet(w, id) {
     var st = Store.state;
     var plan = wizPlan(st, w);
-    var t = wizTotals(plan, w);
-    plan.rows.forEach(function (r) {
-      var row = document.querySelector('.bw-row[data-row="' + r.id + '"]');
-      if (!row) return;
-      var p = wizPct(Calc.num(wizAmount(w, r)), plan.available);
-      row.querySelector('.bw-pct').textContent = p + '%';
-      row.querySelector('.bar > i').style.width = Math.min(100, p) + '%';
-    });
-    var sum = document.getElementById('bw-sum');
-    if (sum) sum.textContent = UI.money(t.sum);
-    var pct = document.getElementById('bw-sum-pct');
-    if (pct) pct.textContent = wizPct(t.sum, plan.available) + '%';
-    var status = document.getElementById('bw-status');
-    if (status) {
-      status.textContent = wizStatus(plan, t);
-      status.className = 'bw-status ' + (t.diff < -0.5 ? 'neg' : Math.abs(t.diff) < 1 ? 'pos' : '');
+    var r = plan.rows.filter(function (x) { return x.id === id; })[0];
+    if (!r) return;
+    var info = BudgetPlan.about(id);
+    var step = BudgetPlan.step(plan.available || r.amount);
+    var value = Math.round(Calc.num(wizAmount(w, r)));
+    var opts = BudgetPlan.options(r.amount, plan.available || r.amount);
+
+    function optionsHTML() {
+      if (!opts.length) return '';
+      return '<div class="bs-sec">הצעות מהניסיון שלנו</div><div class="bs-opts">' +
+        opts.map(function (v, i) {
+          return '<button type="button" class="bs-opt' + (v === value ? ' on' : '') + '" data-v="' + v + '">' +
+            (i === 0 ? '<span class="bs-badge">מומלץ ✨</span>' : '') +
+            '<b>' + UI.money(v) + '</b><small>' + wizPct(v, plan.available) + '%</small></button>';
+        }).join('') + '</div>';
     }
-    var apply = document.getElementById('bw-apply');
-    if (apply) apply.disabled = !(t.rows > 0);
+
+    var body =
+      '<div class="bs-head">' +
+        '<div><h3>' + UI.esc(r.choice.name) + '</h3>' +
+          (info.desc ? '<p>' + UI.esc(info.desc) + '</p>' : '') + '</div>' +
+        '<span class="bs-art">' + wizArt(r.choice.art) + '</span>' +
+      '</div>' +
+      '<div class="bs-box">' +
+        '<div class="bs-amt"><label for="bs-input">סכום</label>' +
+          '<div class="bs-stepper">' +
+            '<button type="button" class="bs-step" data-d="1" aria-label="הוספה">+</button>' +
+            '<span class="bs-field"><span>₪</span><input id="bs-input" type="number" inputmode="numeric" ' +
+              'min="0" step="1" value="' + value + '"></span>' +
+            '<button type="button" class="bs-step" data-d="-1" aria-label="הפחתה">−</button>' +
+          '</div></div>' +
+        '<div class="bs-pct"><label>אחוז מהתקציב</label><b></b></div>' +
+      '</div>' +
+      '<div class="bs-unit"></div>' +
+      '<div class="bs-opts-wrap">' + optionsHTML() + '</div>' +
+      (info.tip ? '<div class="bs-tip"><span aria-hidden="true">💡</span><div><b>טיפ מאיתנו</b>' + UI.esc(info.tip) + '</div></div>' : '') +
+      '<button type="button" class="btn bs-save">שמירה</button>';
+
+    UI.modal({
+      body: body,
+      onMount: function (root, close) {
+        root.closest('.modal').classList.add('bw-sheet');
+        var input = root.querySelector('#bs-input');
+
+        function paint() {
+          root.querySelector('.bs-pct b').textContent = wizPct(value, plan.available) + '%';
+          root.querySelector('.bs-unit').textContent = wizPerUnit(st, r, value);
+          Array.prototype.forEach.call(root.querySelectorAll('.bs-opt'), function (b) {
+            b.classList.toggle('on', +b.getAttribute('data-v') === value);
+          });
+        }
+        function set(v, fromInput) {
+          value = Math.max(0, Math.round(Calc.num(v)));
+          if (!fromInput) input.value = value;
+          paint();
+        }
+
+        input.addEventListener('input', function () { set(input.value, true); });
+        Array.prototype.forEach.call(root.querySelectorAll('.bs-step'), function (b) {
+          b.addEventListener('click', function () {
+            var d = +b.getAttribute('data-d');
+            /* צעד מיישר קודם למדרגה, כדי ש-957 יהפוך ל-1,000 ולא ל-1,057 */
+            var next = d > 0 ? Math.floor(value / step) * step + step
+                             : Math.ceil(value / step) * step - step;
+            set(next);
+          });
+        });
+        Array.prototype.forEach.call(root.querySelectorAll('.bs-opt'), function (b) {
+          b.addEventListener('click', function () { set(b.getAttribute('data-v')); });
+        });
+        root.querySelector('.bs-save').addEventListener('click', function () {
+          w.amounts[id] = value;
+          close();
+          App.render();
+        });
+        paint();
+      }
+    });
   }
 
   function wizGo(w, step) {
@@ -1179,11 +1267,9 @@ Views.budget = (function () {
         w.total = Math.round(Calc.collectedTotal(Store.state));
         App.render();
       },
-      'bud-wiz-amt': function (el) {
+      'bud-wiz-edit': function (el) {
         var w = wiz();
-        if (!w) return;
-        w.amounts[el.getAttribute('data-id')] = el.value === '' ? '' : Math.max(0, Calc.num(el.value));
-        wizRepaint(w);
+        if (w) wizSheet(w, el.getAttribute('data-id'));
       },
       'bud-wiz-reset': function () {
         var w = wiz();
@@ -1191,16 +1277,14 @@ Views.budget = (function () {
         w.amounts = {};
         App.render();
       },
-      /* השדות מתרוקנים והסעיפים נשארים: מי שמעדיף לחלק בעצמו עדיין
-         נהנה ממד היתרה שמתעדכן תוך כדי הקלדה */
+      /* הסכומים מתרוקנים והסעיפים נשארים: מי שמעדיף לחלק בעצמו עדיין
+         נהנה מכרטיס היתרה שמתעדכן אחרי כל סעיף */
       'bud-wiz-self': function () {
         var w = wiz();
         if (!w) return;
         var st = Store.state;
         wizPlan(st, w).rows.forEach(function (r) { w.amounts[r.id] = ''; });
         App.render();
-        var first = document.querySelector('.bw-amt input');
-        if (first) first.focus();
       },
       'bud-wiz-apply': function () {
         var w = wiz();
