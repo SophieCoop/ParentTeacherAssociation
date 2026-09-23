@@ -45,10 +45,21 @@ Views.staff = (function () {
       'דרגה 1 היא הגבוהה ביותר, והיא משמשת לחישוב חלוקת תקציב המתנות. ' +
       'דרגה ' + Calc.lowestRank() + ' אינה מקבלת חלק בתקציב.</div>';
 
+    /* רק קטגוריות שיש בהן אנשים מקבלות כרטיס ודרגה. קטגוריה ריקה
+       מופיעה בצ'יפים בלבד, והכרטיס שלה נולד עם איש הצוות הראשון —
+       אחרת המסך מתמלא בכרטיסים ריקים ובדרגות שאין להן משמעות. */
     var shown = filter === 'all' ? levels : levels.filter(function (l) { return l.id === filter; });
-    html += shown.map(function (l) {
-      return groupCard(l, st.staff.filter(function (t) { return t.level === l.id; }));
-    }).join('');
+    shown.forEach(function (l) {
+      var people = st.staff.filter(function (t) { return t.level === l.id; });
+      if (people.length) html += groupCard(l, people);
+      else if (filter !== 'all') {
+        html += '<button class="st-empty" data-action="staff-add" data-level="' + l.id + '">' +
+          '+ הוספת איש צוות ל' + UI.esc(l.name) + '</button>';
+      }
+    });
+    if (!st.staff.length) {
+      html += UI.empty({ art: 'staff', title: 'עוד לא הוספתם צוות', text: 'הצוות עוזר בחישוב מתנות לחגים ולסוף שנה.' });
+    }
 
     if (filter === 'all') {
       var unknown = st.staff.filter(function (t) {
@@ -78,9 +89,7 @@ Views.staff = (function () {
         '<span class="st-count" aria-label="' + people.length + ' אנשי צוות">' + people.length + '</span>' +
         (level ? rankSelect(level) : '') +
       '</div>' +
-      (people.length
-        ? people.map(function (t) { return staffRow(t, level || Store.staffLevel(t.level)); }).join('')
-        : '<button class="st-empty" data-action="staff-add" data-level="' + lv.id + '">+ הוספת איש צוות</button>') +
+      people.map(function (t) { return staffRow(t, level || Store.staffLevel(t.level)); }).join('') +
       '</section>';
   }
 
