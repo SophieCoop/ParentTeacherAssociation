@@ -19,7 +19,31 @@ Views.budget = (function () {
     var full = st.children.filter(function (c) { return Calc.sharePercentOf(st, c) >= 100; }).length;
     var partial = st.children.length - full;
 
+    var f = Calc.budgetFrame(st);
     var html = '';
+
+    /* הכיוון שבו הוועד עובד — הדבר הראשון בהגדרות, כי הוא משנה את
+       משמעות כל המספרים שמתחתיו */
+    if (Calc.budgetDirectionsOn()) html += '<div class="card">' +
+      '<div class="card-title"><h2>כיוון העבודה</h2>' +
+      '<button class="btn sm soft" data-action="bud-collect">' +
+        (f.mode === 'collect' ? 'שינוי הסכום' : 'קביעת סכום') + '</button></div>' +
+      (f.mode === 'collect'
+        ? '<div class="flex-between">' +
+            '<div><div class="sum-value">' + UI.money(f.perChild) + '</div>' +
+            '<div class="small muted">נגבה מכל ילד</div></div>' +
+            '<span class="badge ok">גבייה קודם</span>' +
+          '</div>' +
+          '<div class="hint mt">התקציב הזמין הוא ' + UI.money(f.available) + ', וסעיפי ההוצאה נמדדים מולו. ' +
+            'ביטול הסכום יחזיר את הגבייה להיגזר מהתכנון.</div>'
+        : '<div class="flex-between">' +
+            '<div><div class="sum-value">' + UI.money(f.perChildPlanned) + '</div>' +
+            '<div class="small muted">נגזר לכל ילד מהתכנון</div></div>' +
+            '<span class="badge info">תכנון קודם</span>' +
+          '</div>' +
+          '<div class="hint mt">הגבייה נגזרת מסעיפי ההוצאה ומתעדכנת עם כל שינוי. ' +
+            'אפשר במקום זאת לקבוע סכום גבייה מראש ולתכנן בתוכו.</div>') +
+      '</div>';
 
     html += '<div class="card">' +
       '<div class="card-title"><h2>' + Lang.t('childrenCount') + '</h2>' +
@@ -135,6 +159,86 @@ Views.budget = (function () {
       '</div></div>';
   }
 
+  /* ============================================================
+     המסגרת התקציבית — הכרטיס שבראש מסך התכנון
+     ------------------------------------------------------------
+     שני ועדים עובדים בשני כיוונים הפוכים, ואותו מסך משרת את שניהם:
+
+     תכנון קודם — מוסיפים סעיפי הוצאה, והמסך אומר כמה זה יוצא לכל
+     ילד. זו הגבייה הנגזרת, והיא מתעדכנת עם כל סעיף.
+
+     גבייה קודם — קובעים כמה גובים מכל הורה, והמסך הופך למד: כמה
+     מהסכום כבר תוכנן וכמה נשאר לתכנן.
+
+     ההכרעה בין הכיוונים אינה שאלה שנשאלת — היא נגזרת ממה שכבר
+     הוזן (Calc.budgetFrame), וניתנת לשינוי בכל רגע.
+     ============================================================ */
+  function kidsChip(n) {
+    return '<div class="bf-kids"><span class="bf-kids-n">' + n + '</span>' +
+           '<span class="bf-kids-l">ילדים</span></div>';
+  }
+
+  function frameCard(st) {
+    if (!Calc.budgetDirectionsOn()) return '';
+    var f = Calc.budgetFrame(st);
+
+    /* ---- גבייה קודם: הסכום ידוע, והתקציב נמדד מולו ---- */
+    if (f.mode === 'collect') {
+      var over = f.remaining < -0.5;
+      return '<div class="bframe is-collect">' +
+        '<div class="bf-top">' +
+          '<div class="bf-main">' +
+            '<div class="bf-ico">🪙</div>' +
+            '<div><div class="bf-lab">התקציב הזמין</div>' +
+            '<div class="bf-val">' + UI.money(f.available) + '</div>' +
+            '<div class="bf-sub">' + UI.money(f.perChild) + ' × ' + f.kids + ' ילדים</div></div>' +
+          '</div>' +
+          '<div class="bf-side">' + kidsChip(f.kids) +
+            '<button class="linkbtn bf-edit" data-action="bud-collect">✏️ עריכת גבייה</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="bf-meter">' +
+          '<div class="flex-between"><b>' + f.pct + '%</b>' +
+            '<span class="small ' + (over ? 'neg' : 'muted') + '">' +
+              (over ? 'חריגה של ' + UI.money(-f.remaining) : 'נותר לתכנון: ' + UI.money(f.remaining)) +
+            '</span></div>' +
+          UI.bar(f.planned, f.available, over ? 'over' : 'ok') +
+          '<div class="small muted">תוכנן ' + UI.money(f.planned) + '</div>' +
+        '</div>' +
+        '</div>';
+    }
+
+    /* ---- תכנון קודם, ועוד אין סעיפים ---- */
+    if (!f.items) {
+      return '<div class="bframe">' +
+        '<div class="bf-top"><div class="bf-main">' +
+          '<div class="bf-ico">📊</div>' +
+          '<div><div class="bf-lab">עדיין לא נוסף אף סעיף</div>' +
+          '<div class="bf-sub">התחילו להוסיף סעיפי הוצאה כדי לבנות את התקציב</div></div>' +
+        '</div></div>' +
+        '<div class="bf-hint"><span>💡</span><div>לאחר שתוסיפו סעיפים, נחשב עבורכם את הסכום המומלץ לגבייה לכל ילד. ' +
+          '<button class="linkbtn" data-action="bud-collect">או שתקבעו את סכום הגבייה מראש</button></div></div>' +
+        '</div>';
+    }
+
+    /* ---- תכנון קודם, תוך כדי עבודה ---- */
+    return '<div class="bframe">' +
+      '<div class="bf-top">' +
+        '<div class="bf-main">' +
+          '<div class="bf-ico">📊</div>' +
+          '<div><div class="bf-lab">התקציב שנבנה עד עכשיו</div>' +
+          '<div class="bf-val">' + UI.money(f.planned) + '</div></div>' +
+        '</div>' +
+        kidsChip(f.kids) +
+      '</div>' +
+      '<button class="bf-per" data-action="bud-per-info">' +
+        '<div><div class="bf-lab">על בסיס התכנון הנוכחי</div>' +
+        '<div class="bf-per-val">כ-' + UI.money(f.perChildPlanned) + ' לילד</div></div>' +
+        '<span class="bf-i">i</span>' +
+      '</button>' +
+      '</div>';
+  }
+
   function tabItems() {
     var st = Store.state;
     var items = st.budgetItems.slice().sort(function (a, b) {
@@ -142,7 +246,8 @@ Views.budget = (function () {
     });
     var total = Calc.budgetTotal(st);
 
-    var html = UI.addBtn({ act: 'budget-add', label: 'הוספת סעיף הוצאה', cls: 'mb-add' });
+    var html = frameCard(st) +
+      UI.addBtn({ act: 'budget-add', label: 'הוספת סעיף הוצאה', cls: 'mb-add' });
 
     if (!items.length) {
       return html + UI.empty({
@@ -584,6 +689,61 @@ Views.budget = (function () {
       'budget-edit': function (el) { itemForm(Store.find('budgetItems', el.getAttribute('data-id'))); },
       'cat-add': function () { catForm(null); },
       'cat-edit': function (el) { catForm(Store.find('categories', el.getAttribute('data-id'))); },
+      /* קביעת סכום הגבייה לילד — המעבר לכיוון "גבייה קודם".
+         ריק או אפס מחזיר לכיוון השני, שבו הגבייה נגזרת מהתכנון. */
+      'bud-collect': function () {
+        var cur = Calc.collectPerChild(Store.state);
+        var kids = Calc.childCount(Store.state);
+        UI.formModal({
+          title: cur ? 'עריכת סכום הגבייה' : 'קביעת סכום הגבייה',
+          subtitle: 'כמה נגבה מכל הורה השנה',
+          submitLabel: 'שמירה',
+          fields: [
+            { name: 'perChild', label: 'סכום לילד', type: 'number', min: 0, value: cur || '',
+              placeholder: '500',
+              hint: kids ? 'עם ' + kids + ' ילדים ברשימה, זה התקציב שיעמוד לרשותכם. ' +
+                           'ילד שהצטרף באמצע השנה מחויב באופן יחסי.'
+                         : 'עדיין אין ילדים ברשימה — הסכום יוכפל במספר שיוזן שם.' }
+          ],
+          onSubmit: function (v) {
+            Store.state.settings.collectPerChild = Math.max(0, Calc.num(v.perChild));
+            Store.save();
+            App.render();
+            UI.toast(Store.state.settings.collectPerChild ? 'סכום הגבייה נשמר ✓' : 'חזרנו לתכנון קודם');
+          },
+          onDelete: cur ? function () {
+            Store.state.settings.collectPerChild = 0;
+            Store.save();
+            App.render();
+            UI.toast('הסכום בוטל — הגבייה תיגזר מהתכנון');
+          } : null,
+          deleteLabel: 'ביטול הסכום'
+        });
+      },
+      'bud-per-info': function () {
+        var st = Store.state;
+        UI.modal({
+          title: 'איך חושב הסכום לילד?',
+          subtitle: '',
+          body: '<p class="small" style="line-height:1.8;margin:0 0 12px">' +
+            'סכום כל סעיפי ההוצאה שתוכננו, מחולק בין הילדים שברשימה. ' +
+            'ילד שהצטרף באמצע השנה משתתף רק בסעיפים שהיו אחרי תאריך ההצטרפות שלו, ' +
+            'ולכן הסכום שלו נמוך יותר — והמספר כאן הוא של ילד שנמצא ' + Lang.t('placeIn') + ' כל השנה.</p>' +
+            '<div class="note"><div class="n-ico">💡</div><div>' +
+            'המספר מתעדכן עם כל סעיף שמוסיפים. אם אתם מעדיפים לקבוע מראש כמה לגבות ולתכנן בתוך הסכום — ' +
+            'אפשר לעשות את זה בכל רגע.</div></div>' +
+            '<button class="btn mt js-collect" type="button">קביעת סכום גבייה מראש</button>',
+          onMount: function (root, close) {
+            root.querySelector('.js-collect').addEventListener('click', function () {
+              close();
+              setTimeout(function () {
+                var actions = Views.budget.actions;
+                actions['bud-collect']();
+              }, 180);
+            });
+          }
+        });
+      },
       'bud-set': function (el) {
         Store.state.settings[el.getAttribute('data-key')] = el.value;
         Store.save();

@@ -208,18 +208,29 @@ Views.collection = (function () {
     /* התקציב המתוכנן וסך הגבייה הם אותו כסף משני כיוונים, ולכן
        אין טעם להציג שני מספרים זהים. החיוב של כל ילד מעוגל לשקל שלם,
        ולכן פער של עד חצי שקל לילד הוא רעש של עיגול. רק פער גדול מזה
-       הוא מידע — ואז מוצגת השורה יחד עם הסבר מאיפה הוא נובע. */
+       הוא מידע — ואז מוצגת השורה יחד עם הסבר מאיפה הוא נובע.
+
+       כשהוועד קבע סכום גבייה מראש הסיפור הפוך: הגבייה היא הנתון,
+       התקציב נמדד מולה, והפער ביניהם אינו תקלה אלא היתרה שעוד לא
+       תוכננה. לכן שם מוצגות שורות אחרות ואין אזהרה. */
     var budget = Calc.budgetTotal(st);
+    var collectFirst = Calc.collectFirst(st);
     var gap = Calc.round2(sum.due - budget);
     var slack = (st.children.length || 0) * 0.5 + 0.5;
-    var showGap = Math.abs(gap) > slack;
+    var showGap = !collectFirst && Math.abs(gap) > slack;
 
     var html = '<div class="card">' +
       '<div class="card-title"><h2>איך מחושב הסכום לכל הורה?</h2></div>' +
       '<table class="tbl slim"><tbody>' +
-        row('סה״כ תקציב מתוכנן', UI.money(budget)) +
-        row('ילד שהיה כל השנה משלם', '<b>' + UI.money(perFull) + '</b>') +
-        (showGap ? row('סה״כ לגבייה', UI.money(sum.due)) : '') +
+        (collectFirst
+          ? row('סכום שנקבע לכל ילד', '<b>' + UI.money(perFull) + '</b>') +
+            row('סה״כ לגבייה', UI.money(sum.due)) +
+            row('מתוכו תוכנן', UI.money(budget)) +
+            row('נותר לתכנון', '<span class="' + (sum.due - budget < -0.5 ? 'neg' : '') + '">' +
+                UI.money(Calc.round2(sum.due - budget)) + '</span>')
+          : row('סה״כ תקציב מתוכנן', UI.money(budget)) +
+            row('ילד שהיה כל השנה משלם', '<b>' + UI.money(perFull) + '</b>') +
+            (showGap ? row('סה״כ לגבייה', UI.money(sum.due)) : '')) +
         row('נגבה בפועל', '<span class="pos">' + UI.money(sum.paid) + '</span>') +
         /* כסף שנכנס בלי שם הורה — מהייבוא, או אחרי מחיקת ילד. הוא
            כלול בשורה שמעליו, והשורה הזאת רק אומרת כמה ממנו עוד לא
