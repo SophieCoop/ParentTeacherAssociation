@@ -272,6 +272,229 @@ Views.ideas = (function () {
   }
 
   /* ---------- טופס רעיון ---------- */
+  /* ---------- חלון בחירת אנשי צוות ----------
+     משותף לשורת ההוצאה שברעיון ולסעיף תקציב של הצוות החינוכי.
+     init: { staffIds, names, shared }. onOk מקבל את אותו מבנה אחרי
+     "אישור"; סגירה בלי אישור אינה משנה דבר.
+     opts.names: false מסתיר את הוספת השם החופשי. */
+  function staffPicker(init, onOk, opts) {
+    opts = opts || {};
+    var sel    = (init.staffIds || []).slice();
+    var extra  = (init.names || []).slice();
+    var shared = !!init.shared;
+    var closed = {};
+    var query  = '';
+
+    UI.modal({
+      title: 'בחרו אנשי צוות',
+      subtitle: 'סמנו למי מיועדת המתנה',
+      body:
+        '<div class="pk-top">' +
+          '<input class="input pk-search" type="search" placeholder="חיפוש בשם…" aria-label="חיפוש בשם">' +
+          '<button type="button" class="btn sm soft pk-clear">נקה הכל</button>' +
+        '</div>' +
+        '<label class="pk-shared">' +
+          '<input type="checkbox" class="pk-shared-in"' + (shared ? ' checked' : '') + '>' +
+          '<span><b>פריט אחד משותף</b><small>רכישה אחת לכל הנבחרים, בלי הכפלה במספרם</small></span>' +
+        '</label>' +
+        '<div class="pk-list"></div>' +
+        '<div class="pk-foot">' +
+          (opts.names === false ? '' :
+            '<button type="button" class="btn soft sm pk-add">✏️ + הוספת שם חופשי</button>') +
+          '<button type="button" class="btn pk-ok">אישור</button>' +
+        '</div>',
+
+      onMount: function (body, close) {
+        var list = body.querySelector('.pk-list');
+
+        function count() { return sel.length + extra.length; }
+
+        function updateFoot() {
+          body.querySelector('.pk-ok').textContent =
+            count() ? 'אישור (' + count() + ' נבחרו)' : 'אישור';
+        }
+
+        function matches(t) {
+          return !query || (t.name || '').toLowerCase().indexOf(query) > -1;
+        }
+
+        function drawList() {
+          var st = Store.state;
+          var html = '';
+
+          staffMix().forEach(function (x) {
+            var people = (st.staff || []).filter(function (t) { return t.level === x.level.id; });
+            var shown = people.filter(matches);
+            if (!shown.length) return;
+            var ids = people.map(function (t) { return t.id; });
+            var allOn = ids.every(function (id) { return sel.indexOf(id) > -1; });
+            var isClosed = !!closed[x.level.id];
+
+            html += '<div class="pk-group">' +
+              '<div class="pk-ghead">' +
+                '<button type="button" class="pk-gtog' + (isClosed ? ' closed' : '') + '" ' +
+                  'data-tog="' + x.level.id + '" aria-label="קיפול הקבוצה">' +
+                  UI.svgIcon('chevron', 14) + '</button>' +
+                '<span class="pk-gname">' + x.level.icon + ' ' +
+                  UI.esc(levelName(x.level.id, people.length)) + ' (' + people.length + ')</span>' +
+                '<label class="pk-gall"><span>בחרו הכל</span>' +
+                  '<input type="checkbox" data-gall="' + x.level.id + '"' + (allOn ? ' checked' : '') + '>' +
+                '</label>' +
+              '</div>' +
+              (isClosed ? '' : '<div class="pk-rows">' + shown.map(function (t) {
+                return '<label class="pk-row">' +
+                  '<input type="checkbox" data-id="' + t.id + '"' +
+                    (sel.indexOf(t.id) > -1 ? ' checked' : '') + '>' +
+                  '<span class="avatar" style="background:' + UI.toneVar(x.level.tone) + '">' +
+                    x.level.icon + '</span>' +
+                  '<span class="pk-body"><span class="pk-name">' + UI.esc(t.name) + '</span>' +
+                    '<span class="pk-role">' + UI.esc(t.role || x.level.name) + '</span></span>' +
+                  '</label>';
+              }).join('') + '</div>') +
+              '</div>';
+          });
+
+          /* אנשי צוות שהדרגה שלהם אינה מוכרת — אחרת הם ייעלמו מהבחירה */
+          var known = Store.STAFF_LEVELS.map(function (lv) { return lv.id; });
+          var orphans = (st.staff || []).filter(function (t) { return known.indexOf(t.level) < 0; });
+          var shownOrphans = orphans.filter(matches);
+          if (shownOrphans.length) {
+            var oIds = orphans.map(function (t) { return t.id; });
+            var oAll = oIds.every(function (id) { return sel.indexOf(id) > -1; });
+            html += '<div class="pk-group"><div class="pk-ghead">' +
+              '<span class="pk-gname">👤 שאר הצוות (' + orphans.length + ')</span>' +
+              '<label class="pk-gall"><span>בחרו הכל</span>' +
+                '<input type="checkbox" data-gother="1"' + (oAll ? ' checked' : '') + '></label>' +
+              '</div><div class="pk-rows">' + shownOrphans.map(function (t) {
+                return '<label class="pk-row">' +
+                  '<input type="checkbox" data-id="' + t.id + '"' +
+                    (sel.indexOf(t.id) > -1 ? ' checked' : '') + '>' +
+                  '<span class="avatar">👤</span>' +
+                  '<span class="pk-body"><span class="pk-name">' + UI.esc(t.name) + '</span>' +
+                    '<span class="pk-role">' + UI.esc(t.role || 'צוות') + '</span></span>' +
+                  '</label>';
+              }).join('') + '</div></div>';
+          }
+
+          var shownExtra = extra.filter(function (n) {
+            return !query || n.toLowerCase().indexOf(query) > -1;
+          });
+          if (shownExtra.length) {
+            html += '<div class="pk-group"><div class="pk-ghead">' +
+              '<span class="pk-gname">✏️ שמות חופשיים (' + extra.length + ')</span></div>' +
+              '<div class="pk-rows">' + shownExtra.map(function (n) {
+                return '<div class="pk-row static">' +
+                  '<button type="button" class="iconbtn del" data-rm="' + UI.esc(n) + '" ' +
+                    'aria-label="הסרת השם">✕</button>' +
+                  '<span class="avatar" style="background:var(--purple)">✏️</span>' +
+                  '<span class="pk-body"><span class="pk-name">' + UI.esc(n) + '</span>' +
+                    '<span class="pk-role">שם חופשי</span></span>' +
+                  '</div>';
+              }).join('') + '</div></div>';
+          }
+
+          if (!html) {
+            html = '<p class="small muted" style="text-align:center;margin:18px 0">' +
+              (query ? 'אין תוצאות לחיפוש.' : 'עוד לא נוספו אנשי צוות בלשונית "' + Lang.t('staffTeam') + '".') + '</p>';
+          }
+          list.innerHTML = html;
+          wireList();
+          updateFoot();
+        }
+
+        function wireList() {
+          Array.prototype.forEach.call(list.querySelectorAll('[data-id]'), function (cb) {
+            cb.addEventListener('change', function () {
+              var id = cb.getAttribute('data-id');
+              var at = sel.indexOf(id);
+              if (cb.checked && at < 0) sel.push(id);
+              if (!cb.checked && at > -1) sel.splice(at, 1);
+              drawList();
+            });
+          });
+          Array.prototype.forEach.call(list.querySelectorAll('[data-gall]'), function (cb) {
+            cb.addEventListener('change', function () {
+              var ids = idsOfLevel(cb.getAttribute('data-gall'));
+              ids.forEach(function (id) {
+                var at = sel.indexOf(id);
+                if (cb.checked && at < 0) sel.push(id);
+                if (!cb.checked && at > -1) sel.splice(at, 1);
+              });
+              drawList();
+            });
+          });
+          var other = list.querySelector('[data-gother]');
+          if (other) other.addEventListener('change', function () {
+            var known = Store.STAFF_LEVELS.map(function (lv) { return lv.id; });
+            (Store.state.staff || []).forEach(function (t) {
+              if (known.indexOf(t.level) > -1) return;
+              var at = sel.indexOf(t.id);
+              if (other.checked && at < 0) sel.push(t.id);
+              if (!other.checked && at > -1) sel.splice(at, 1);
+            });
+            drawList();
+          });
+          Array.prototype.forEach.call(list.querySelectorAll('[data-tog]'), function (btn) {
+            btn.addEventListener('click', function () {
+              var id = btn.getAttribute('data-tog');
+              closed[id] = !closed[id];
+              drawList();
+            });
+          });
+          Array.prototype.forEach.call(list.querySelectorAll('[data-rm]'), function (btn) {
+            btn.addEventListener('click', function () {
+              var n = btn.getAttribute('data-rm');
+              var at = extra.indexOf(n);
+              if (at > -1) extra.splice(at, 1);
+              drawList();
+            });
+          });
+        }
+
+        body.querySelector('.pk-search').addEventListener('input', function (e) {
+          query = (e.target.value || '').toLowerCase().trim();
+          drawList();
+        });
+        body.querySelector('.pk-clear').addEventListener('click', function () {
+          sel = []; extra = [];
+          drawList();
+        });
+        body.querySelector('.pk-shared-in').addEventListener('change', function (e) {
+          shared = e.target.checked;
+        });
+        var addBtn = body.querySelector('.pk-add');
+        if (addBtn) addBtn.addEventListener('click', function () {
+          addNameModal(function (name) {
+            if (extra.indexOf(name) < 0) extra.push(name);
+            drawList();
+          });
+        });
+        body.querySelector('.pk-ok').addEventListener('click', function () {
+          close();
+          onOk({ staffIds: sel.slice(), names: extra.slice(), shared: shared });
+        });
+
+        drawList();
+      }
+    });
+  }
+
+  /* הוספת שם של מי שאינו ברשימת הצוות */
+  function addNameModal(onAdd) {
+    UI.formModal({
+      title: 'הוספת שם חופשי',
+      subtitle: 'שם של מי שאינו ברשימת הצוות — למשל ' + Lang.t('leadSubstitute') + ' או ספק חיצוני',
+      submitLabel: 'הוסף',
+      fields: [{ name: 'pname', label: 'שם', value: '', required: true,
+                 placeholder: 'הקלידו שם…' }],
+      onSubmit: function (v) {
+        var name = (v.pname || '').trim();
+        if (!name) return false;
+        onAdd(name);
+      }
+    });
+  }
+
   function ideaForm(idea) {
     var isNew = !idea;
     idea = idea || { title: '', budgetItemId: '', categoryId: '', audiences: ['children'],
@@ -497,223 +720,13 @@ Views.ideas = (function () {
     function peoplePicker(i, root) {
       var l = lines[i];
       ensurePicked(l);
-
-      var sel    = lineIds(l).slice();
-      var extra  = lineNames(l).slice();
-      var shared = !!l.shared;
-      var closed = {};
-      var query  = '';
-
-      UI.modal({
-        title: 'בחרו אנשי צוות',
-        subtitle: 'סמנו למי מיועדת המתנה',
-        body:
-          '<div class="pk-top">' +
-            '<input class="input pk-search" type="search" placeholder="חיפוש בשם…" aria-label="חיפוש בשם">' +
-            '<button type="button" class="btn sm soft pk-clear">נקה הכל</button>' +
-          '</div>' +
-          '<label class="pk-shared">' +
-            '<input type="checkbox" class="pk-shared-in"' + (shared ? ' checked' : '') + '>' +
-            '<span><b>פריט אחד משותף</b><small>רכישה אחת לכל הנבחרים, בלי הכפלה במספרם</small></span>' +
-          '</label>' +
-          '<div class="pk-list"></div>' +
-          '<div class="pk-foot">' +
-            '<button type="button" class="btn soft sm pk-add">✏️ + הוספת שם חופשי</button>' +
-            '<button type="button" class="btn pk-ok">אישור</button>' +
-          '</div>',
-
-        onMount: function (body, close) {
-          var list = body.querySelector('.pk-list');
-
-          function count() { return sel.length + extra.length; }
-
-          function updateFoot() {
-            body.querySelector('.pk-ok').textContent =
-              count() ? 'אישור (' + count() + ' נבחרו)' : 'אישור';
-          }
-
-          function matches(t) {
-            return !query || (t.name || '').toLowerCase().indexOf(query) > -1;
-          }
-
-          function drawList() {
-            var st = Store.state;
-            var html = '';
-
-            staffMix().forEach(function (x) {
-              var people = (st.staff || []).filter(function (t) { return t.level === x.level.id; });
-              var shown = people.filter(matches);
-              if (!shown.length) return;
-              var ids = people.map(function (t) { return t.id; });
-              var allOn = ids.every(function (id) { return sel.indexOf(id) > -1; });
-              var isClosed = !!closed[x.level.id];
-
-              html += '<div class="pk-group">' +
-                '<div class="pk-ghead">' +
-                  '<button type="button" class="pk-gtog' + (isClosed ? ' closed' : '') + '" ' +
-                    'data-tog="' + x.level.id + '" aria-label="קיפול הקבוצה">' +
-                    UI.svgIcon('chevron', 14) + '</button>' +
-                  '<span class="pk-gname">' + x.level.icon + ' ' +
-                    UI.esc(levelName(x.level.id, people.length)) + ' (' + people.length + ')</span>' +
-                  '<label class="pk-gall"><span>בחרו הכל</span>' +
-                    '<input type="checkbox" data-gall="' + x.level.id + '"' + (allOn ? ' checked' : '') + '>' +
-                  '</label>' +
-                '</div>' +
-                (isClosed ? '' : '<div class="pk-rows">' + shown.map(function (t) {
-                  return '<label class="pk-row">' +
-                    '<input type="checkbox" data-id="' + t.id + '"' +
-                      (sel.indexOf(t.id) > -1 ? ' checked' : '') + '>' +
-                    '<span class="avatar" style="background:' + UI.toneVar(x.level.tone) + '">' +
-                      x.level.icon + '</span>' +
-                    '<span class="pk-body"><span class="pk-name">' + UI.esc(t.name) + '</span>' +
-                      '<span class="pk-role">' + UI.esc(t.role || x.level.name) + '</span></span>' +
-                    '</label>';
-                }).join('') + '</div>') +
-                '</div>';
-            });
-
-            /* אנשי צוות שהדרגה שלהם אינה מוכרת — אחרת הם ייעלמו מהבחירה */
-            var known = Store.STAFF_LEVELS.map(function (lv) { return lv.id; });
-            var orphans = (st.staff || []).filter(function (t) { return known.indexOf(t.level) < 0; });
-            var shownOrphans = orphans.filter(matches);
-            if (shownOrphans.length) {
-              var oIds = orphans.map(function (t) { return t.id; });
-              var oAll = oIds.every(function (id) { return sel.indexOf(id) > -1; });
-              html += '<div class="pk-group"><div class="pk-ghead">' +
-                '<span class="pk-gname">👤 שאר הצוות (' + orphans.length + ')</span>' +
-                '<label class="pk-gall"><span>בחרו הכל</span>' +
-                  '<input type="checkbox" data-gother="1"' + (oAll ? ' checked' : '') + '></label>' +
-                '</div><div class="pk-rows">' + shownOrphans.map(function (t) {
-                  return '<label class="pk-row">' +
-                    '<input type="checkbox" data-id="' + t.id + '"' +
-                      (sel.indexOf(t.id) > -1 ? ' checked' : '') + '>' +
-                    '<span class="avatar">👤</span>' +
-                    '<span class="pk-body"><span class="pk-name">' + UI.esc(t.name) + '</span>' +
-                      '<span class="pk-role">' + UI.esc(t.role || 'צוות') + '</span></span>' +
-                    '</label>';
-                }).join('') + '</div></div>';
-            }
-
-            var shownExtra = extra.filter(function (n) {
-              return !query || n.toLowerCase().indexOf(query) > -1;
-            });
-            if (shownExtra.length) {
-              html += '<div class="pk-group"><div class="pk-ghead">' +
-                '<span class="pk-gname">✏️ שמות חופשיים (' + extra.length + ')</span></div>' +
-                '<div class="pk-rows">' + shownExtra.map(function (n) {
-                  return '<div class="pk-row static">' +
-                    '<button type="button" class="iconbtn del" data-rm="' + UI.esc(n) + '" ' +
-                      'aria-label="הסרת השם">✕</button>' +
-                    '<span class="avatar" style="background:var(--purple)">✏️</span>' +
-                    '<span class="pk-body"><span class="pk-name">' + UI.esc(n) + '</span>' +
-                      '<span class="pk-role">שם חופשי</span></span>' +
-                    '</div>';
-                }).join('') + '</div></div>';
-            }
-
-            if (!html) {
-              html = '<p class="small muted" style="text-align:center;margin:18px 0">' +
-                (query ? 'אין תוצאות לחיפוש.' : 'עוד לא נוספו אנשי צוות בלשונית "' + Lang.t('staffTeam') + '".') + '</p>';
-            }
-            list.innerHTML = html;
-            wireList();
-            updateFoot();
-          }
-
-          function wireList() {
-            Array.prototype.forEach.call(list.querySelectorAll('[data-id]'), function (cb) {
-              cb.addEventListener('change', function () {
-                var id = cb.getAttribute('data-id');
-                var at = sel.indexOf(id);
-                if (cb.checked && at < 0) sel.push(id);
-                if (!cb.checked && at > -1) sel.splice(at, 1);
-                drawList();
-              });
-            });
-            Array.prototype.forEach.call(list.querySelectorAll('[data-gall]'), function (cb) {
-              cb.addEventListener('change', function () {
-                var ids = idsOfLevel(cb.getAttribute('data-gall'));
-                ids.forEach(function (id) {
-                  var at = sel.indexOf(id);
-                  if (cb.checked && at < 0) sel.push(id);
-                  if (!cb.checked && at > -1) sel.splice(at, 1);
-                });
-                drawList();
-              });
-            });
-            var other = list.querySelector('[data-gother]');
-            if (other) other.addEventListener('change', function () {
-              var known = Store.STAFF_LEVELS.map(function (lv) { return lv.id; });
-              (Store.state.staff || []).forEach(function (t) {
-                if (known.indexOf(t.level) > -1) return;
-                var at = sel.indexOf(t.id);
-                if (other.checked && at < 0) sel.push(t.id);
-                if (!other.checked && at > -1) sel.splice(at, 1);
-              });
-              drawList();
-            });
-            Array.prototype.forEach.call(list.querySelectorAll('[data-tog]'), function (btn) {
-              btn.addEventListener('click', function () {
-                var id = btn.getAttribute('data-tog');
-                closed[id] = !closed[id];
-                drawList();
-              });
-            });
-            Array.prototype.forEach.call(list.querySelectorAll('[data-rm]'), function (btn) {
-              btn.addEventListener('click', function () {
-                var n = btn.getAttribute('data-rm');
-                var at = extra.indexOf(n);
-                if (at > -1) extra.splice(at, 1);
-                drawList();
-              });
-            });
-          }
-
-          body.querySelector('.pk-search').addEventListener('input', function (e) {
-            query = (e.target.value || '').toLowerCase().trim();
-            drawList();
-          });
-          body.querySelector('.pk-clear').addEventListener('click', function () {
-            sel = []; extra = [];
-            drawList();
-          });
-          body.querySelector('.pk-shared-in').addEventListener('change', function (e) {
-            shared = e.target.checked;
-          });
-          body.querySelector('.pk-add').addEventListener('click', function () {
-            addNameModal(function (name) {
-              if (extra.indexOf(name) < 0) extra.push(name);
-              drawList();
-            });
-          });
-          body.querySelector('.pk-ok').addEventListener('click', function () {
-            l.staffIds = sel.slice();
-            l.names = extra.slice();
-            l.shared = shared;
-            l.levelId = '';          // הבחירה המפורשת מחליפה את הקיצור הישן
-            close();
-            drawLines(root);
-            refreshTotal(root);
-          });
-
-          drawList();
-        }
-      });
-    }
-
-    /* הוספת שם של מי שאינו ברשימת הצוות */
-    function addNameModal(onAdd) {
-      UI.formModal({
-        title: 'הוספת שם חופשי',
-        subtitle: 'שם של מי שאינו ברשימת הצוות — למשל ' + Lang.t('leadSubstitute') + ' או ספק חיצוני',
-        submitLabel: 'הוסף',
-        fields: [{ name: 'pname', label: 'שם', value: '', required: true,
-                   placeholder: 'הקלידו שם…' }],
-        onSubmit: function (v) {
-          var name = (v.pname || '').trim();
-          if (!name) return false;
-          onAdd(name);
-        }
+      staffPicker({ staffIds: lineIds(l), names: lineNames(l), shared: !!l.shared }, function (r) {
+        l.staffIds = r.staffIds;
+        l.names = r.names;
+        l.shared = r.shared;
+        l.levelId = '';          // הבחירה המפורשת מחליפה את הקיצור הישן
+        drawLines(root);
+        refreshTotal(root);
       });
     }
 
@@ -1065,6 +1078,8 @@ Views.ideas = (function () {
 
   return {
     render: render,
+    // חלון בחירת אנשי הצוות משמש גם את טופס סעיף התקציב
+    staffPicker: staffPicker,
     // נחשפים כדי שייצוא התמונה יציג בדיוק את אותם שמות
     itemName: itemName,
     audienceLabel: audienceLabel,
