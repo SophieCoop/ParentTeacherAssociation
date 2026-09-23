@@ -703,6 +703,29 @@ textarea.input{min-height:78px;resize:vertical}
 .bw-sec{margin-top:16px}
 .bw-sec > span small{display:block;font-size:12px;font-weight:400;color:var(--muted)}
 
+/* שורת "מתנות לחג" נפתחת לרשימת החגים, כל חג עם הסכום שלו */
+.bw-chev.hol{transform:rotate(90deg);transition:transform .15s ease;text-align:center}
+.bw-row.open .bw-chev.hol{transform:rotate(-90deg)}
+.bw-holwrap{border-bottom:1px solid var(--line)}
+.bw-list > .bw-holwrap:last-child{border-bottom:none}
+.bw-holwrap > .bw-row{border-bottom:none}
+.bw-holwrap.open{
+  margin:6px -6px;padding:0 6px 8px;border:1.5px solid #D9D0F5;border-radius:var(--r-sm);background:#FAF8FF;
+}
+.bw-hol-tools{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:2px 2px 8px}
+.bw-hol-tools .bw-inline{font-size:12.5px}
+.bw-hol-tools .btn.sm{padding:6px 12px}
+.bw-hol-list{background:#fff;border-radius:12px;padding:0 10px}
+.bw-hrow{
+  display:flex;align-items:center;gap:8px;width:100%;padding:7px 0;text-align:start;color:var(--ink);
+  border-bottom:1px solid var(--line);
+}
+.bw-hol-list > .bw-hrow:last-child{border-bottom:none}
+.bw-hrow-art{width:32px;height:32px;flex:none;font-size:24px;line-height:32px;text-align:center}
+.bw-hrow-name{flex:1;min-width:0;font-size:13.5px;font-weight:600}
+.bw-hrow-name small{display:block;font-size:11px;font-weight:400;color:var(--muted)}
+.bw-amt.sm{min-width:78px;padding:6px 8px;font-size:14px}
+
 /* כרטיס המצב: מאוזן, נותר לחלק, או חריגה */
 .bw-balance{
   display:flex;align-items:center;gap:12px;margin-top:12px;padding:12px 14px;
