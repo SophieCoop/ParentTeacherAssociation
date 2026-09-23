@@ -432,14 +432,15 @@ Views.budget = (function () {
     return '<img class="art" src="assets/icons/' + name + '.webp" alt="" width="176" height="176" decoding="async">';
   }
 
+  /* בחירת החגים היא פירוט של "מתנות לחג" ולא שלב בפני עצמו, ולכן
+     היא נספרת כחלק מהשלב הראשון */
   function wizHead(w) {
-    var steps = wizHasHolidays(w) ? 3 : 2;
-    var n = (w.step === 3 && steps === 2) ? 2 : w.step;
+    var label = w.step === 3 ? 'שלב 2 מתוך 2' : w.step === 2 ? 'שלב 1 מתוך 2 · בחירת חגים' : 'שלב 1 מתוך 2';
     return '<header class="pagehead" style="--tint:var(--pink)">' +
       '<button class="back" data-action="bud-wiz-back" aria-label="חזרה">→</button>' +
       '<div class="ph-icon has-art">' + UI.art('budget') + '</div>' +
       '<h1>תכנון תקציב</h1>' +
-      '<p>שלב ' + n + ' מתוך ' + steps + '</p>' +
+      '<p>' + label + '</p>' +
       '</header>';
   }
 
@@ -486,9 +487,7 @@ Views.budget = (function () {
         '</button>';
     }).join('');
     html += '<div class="bw-actions">' +
-      '<button class="btn" data-action="bud-wiz-step" data-step="3">המשך ←</button>' +
-      '<button class="linkbtn" data-action="bud-wiz-step" data-step="3">דלג על שלב זה</button>' +
-      '<button class="btn ghost bw-back" data-action="bud-wiz-step" data-step="1">→ חזרה לבחירת הסעיפים</button>' +
+      '<button class="btn" data-action="bud-wiz-hol-done">→ שמירה וחזרה לסעיפים</button>' +
       '</div>';
     return html;
   }
@@ -627,7 +626,7 @@ Views.budget = (function () {
 
   function wizRender(w) {
     var st = Store.state;
-    if (w.step === 2 && !wizHasHolidays(w)) w.step = 3;
+    if (w.step === 2 && !wizHasHolidays(w)) w.step = 1;
     return '<div class="bwiz">' + wizHead(w) +
       (w.step === 1 ? wizStep1(w) : w.step === 2 ? wizStep2(w) : wizStep3(st, w)) +
       '</div>';
@@ -1110,7 +1109,7 @@ Views.budget = (function () {
         var w = wiz();
         if (!w) return;
         if (w.step === 1) { App.setVs('budWiz', null); window.scrollTo(0, 0); App.render(); return; }
-        wizGo(w, w.step === 3 && wizHasHolidays(w) ? 2 : 1);
+        wizGo(w, 1);
       },
       'bud-wiz-pick': function (el) {
         var w = wiz(), id = el.getAttribute('data-id');
@@ -1121,7 +1120,12 @@ Views.budget = (function () {
           /* שומרים על סדר הקטלוג, כדי שההצעה תוצג באותו סדר כמו הבחירה */
           w.picks = BudgetPlan.CHOICES.map(function (c) { return c.id; })
             .filter(function (x) { return x === id || w.picks.indexOf(x) > -1; });
-          if (id === 'holidays' && !w.holidays.length) w.holidays = BudgetPlan.DEFAULT_HOLIDAYS.slice();
+          /* סימון "מתנות לחג" פותח מיד את בחירת החגים, שחוזרת לכאן */
+          if (id === 'holidays') {
+            if (!w.holidays.length) w.holidays = BudgetPlan.DEFAULT_HOLIDAYS.slice();
+            wizGo(w, 2);
+            return;
+          }
         }
         App.render();
       },
@@ -1134,7 +1138,15 @@ Views.budget = (function () {
       'bud-wiz-next': function () {
         var w = wiz();
         if (!w || !w.picks.length) return;
-        wizGo(w, wizHasHolidays(w) ? 2 : 3);
+        wizGo(w, 3);
+      },
+      /* מסך החגים תמיד חוזר לבחירת הסעיפים ולא ממשיך להצעה. מי שהוריד
+         את כל החגים בעצם ויתר על מתנות לחג, והסימון יורד גם מהכרטיס */
+      'bud-wiz-hol-done': function () {
+        var w = wiz();
+        if (!w) return;
+        if (!w.holidays.length) w.picks = w.picks.filter(function (x) { return x !== 'holidays'; });
+        wizGo(w, 1);
       },
       'bud-wiz-step': function (el) {
         var w = wiz();
