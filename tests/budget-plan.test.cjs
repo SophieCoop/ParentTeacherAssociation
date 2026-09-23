@@ -194,3 +194,13 @@ test('without a Hebrew calendar the holiday date falls back to a nearby fixed da
   // שנת לימודים לא תקינה — אין בה מה לסרוק
   assert.equal(ctx.BudgetPlan.holidayDate({ yearStart: '', yearEnd: '' }, 'pesach').slice(5), '04-10');
 });
+
+test('the edit sheet offers the proposed amount first, then a quarter less and a quarter more', () => {
+  const { BudgetPlan } = setup();
+  eq(BudgetPlan.options(2000, 11557), [2000, 1500, 2500]);
+  // סכום שאינו עגול נשאר כפי שהוא, וההצעות לצידו מעוגלות
+  eq(BudgetPlan.options(957, 11557), [957, 700, 1200]);
+  eq(BudgetPlan.options(0, 11557), [], 'nothing to suggest without a proposal');
+  assert.ok(BudgetPlan.CHOICES.every((c) => BudgetPlan.about(c.id).desc && BudgetPlan.about(c.id).tip),
+    'every choice has a description and a tip for its sheet');
+});
