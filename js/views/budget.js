@@ -220,6 +220,12 @@ Views.budget = (function () {
             UI.dateDayMonth(pr.length ? pr[0].end : b.endDate) + ')');
       }
       per = bits.join(' ');
+    } else if (b.audience === 'children' || b.audience === 'staff_edu') {
+      /* סכום "לכולם" — כמו הסעיפים שהעזר יוצר — מוצג באותה צורה של
+         סעיף לאדם, כדי שאפשר יהיה להשוות: כמה זה יוצא לכל אחד */
+      var n = b.audience === 'children' ? Calc.childCount(st)
+            : (Calc.itemStaffCount(st, b) !== null ? Calc.itemStaffCount(st, b) : Calc.staffCount(st));
+      if (n > 0 && amount > 0) per = '≈ ' + UI.money(Math.round(amount / n)) + ' × ' + Calc.audienceLabel(b.audience, n);
     }
     var sel = selState();
     var on = !!(sel && sel[b.id]);
