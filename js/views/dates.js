@@ -110,8 +110,7 @@ Views.dates = (function () {
       fields: [
         { name: 'title', label: 'כותרת', value: ev.title, required: true, placeholder: Lang.t('eventPlaceholder') },
         { name: 'date', label: 'תאריך', type: 'date', value: ev.date, required: true },
-        { name: 'icon', label: 'אימוג׳י', value: ev.icon, placeholder: '📅', half: true },
-        { name: 'tone', label: 'צבע', type: 'select', value: ev.tone, half: true, options: [
+        { name: 'tone', label: 'צבע', type: 'select', value: ev.tone, options: [
           { value: 'blue', label: 'כחול' }, { value: 'pink', label: 'ורוד' },
           { value: 'green', label: 'ירוק' }, { value: 'yellow', label: 'צהוב' },
           { value: 'purple', label: 'סגול' }, { value: 'peach', label: 'אפרסק' }
@@ -120,6 +119,9 @@ Views.dates = (function () {
       ],
       onSubmit: function (v) {
         v.type = 'event';
+        /* אין שדה אימוג׳י בטופס: אירוע חדש מקבל את לוח השנה, ואירוע
+           קיים שומר את האימוג׳י שכבר נבחר לו, כי העדכון ממזג שדות */
+        if (isNew) v.icon = '📅';
         if (isNew) Store.add('events', v);
         else Store.update('events', ev.id, v);
         App.render();
