@@ -37,6 +37,32 @@ Views.dates = (function () {
     return it.type === 'event' && it.refId;
   }
 
+  /* קישור שפותח את Google Calendar עם האירוע כבר ממולא. בכוונה בלי
+     חיבור לחשבון Google: חיבור כזה מחייב אימות של Google, ועד אז
+     המשתמשים רואים אזהרת "אפליקציה לא מאומתת". המחיר הוא שאת
+     התזכורות קובע היומן של המשתמש, לא אנחנו. */
+  function ymd(d) {
+    return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') +
+      String(d.getDate()).padStart(2, '0');
+  }
+  function gcalUrl(it) {
+    var end = new Date(it.next.getFullYear(), it.next.getMonth(), it.next.getDate() + 1);
+    var q = [
+      'action=TEMPLATE',
+      'text=' + encodeURIComponent(it.title),
+      /* אירוע של יום שלם — תאריך הסיום ביומן הוא היום שאחרי */
+      'dates=' + ymd(it.next) + '/' + ymd(end),
+      'details=' + encodeURIComponent((it.kind ? it.kind + ' · ' : '') + 'ועד ההורים')
+    ];
+    if (it.type === 'birthday') q.push('recur=' + encodeURIComponent('RRULE:FREQ=YEARLY'));
+    return 'https://calendar.google.com/calendar/render?' + q.join('&');
+  }
+
+  function calBtn(it) {
+    return '<button class="btn sm soft d-cal" data-action="date-gcal" data-id="' + UI.esc(it.id) + '" ' +
+      'aria-label="הוספה ליומן Google — ' + UI.esc(it.title) + '">📅 הוספה ליומן Google</button>';
+  }
+
   function dateRow(it) {
     var act = editable(it)
       ? ' data-action="date-edit" data-id="' + it.refId + '" style="cursor:pointer"'
@@ -47,6 +73,7 @@ Views.dates = (function () {
         '<span class="d-name">' + UI.esc(it.title) + '</span>' +
         '<span class="d-sub">' + UI.relativeDays(it.next) +
           (it.kind ? ' · ' + UI.esc(it.kind) : '') + '</span>' +
+        calBtn(it) +
       '</span>' +
       badge(it) +
       '</div>';
@@ -139,7 +166,13 @@ Views.dates = (function () {
     render: render,
     badge: badge,
     dateIcon: dateIcon,
+    gcalUrl: gcalUrl,
     actions: {
+      'date-gcal': function (el) {
+        var id = el.getAttribute('data-id');
+        var it = items().filter(function (x) { return x.id === id; })[0];
+        if (it) window.open(gcalUrl(it), '_blank', 'noopener');
+      },
       'date-add': function () { dateForm(null); },
       'date-edit': function (el) { dateForm(Store.find('events', el.getAttribute('data-id'))); },
       'date-month': function (el) {
