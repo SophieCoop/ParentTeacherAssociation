@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- אנדרואיד 11 ומטה. include אחד בלבד — כל השאר אינו מגובה. -->
+<full-backup-content>
+    <include domain="file" path="vaad-gan-backup.json" />
+</full-backup-content>
