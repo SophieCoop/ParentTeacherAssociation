@@ -39,3 +39,18 @@ node --test tests/*.test.cjs        # חייב לעבור במלואו
 
 הודעת קומיט פותחת בשורה אחת שאומרת מה השתנה, ואחריה פסקאות שמסבירות
 מה היה שבור ולמה התיקון נראה כך.
+
+## האפליקציה שבחנויות (`native/`)
+
+אותו אתר נארז גם כאפליקציה לאייפון ולאנדרואיד (Capacitor). הפרטים המלאים
+ב-`native/README.md`; מה שחשוב לכל שינוי באתר:
+
+- מה שנארז באפליקציה רשום ב-`native/web-files.json`. קובץ חדש ש-`index.html`
+  טוען חייב להיות בנתיב שמופיע שם — `tests/native-files.test.cjs` נכשל אחרת.
+- התנהגות שונה באפליקציה עוברת דרך `Native.is()` (`js/native.js`), ובאתר הכול
+  נשאר בדיוק כמו שהיה. אין שם שלב בנייה ואין תלויות — גם התוספים של Capacitor
+  נקראים דרך `Capacitor.Plugins`, בלי import.
+- אין `window.open`, `a[download]` או `navigator.share` בלי מסלול לאפליקציה:
+  ב-WebView הם לא עושים דבר. יש `Native.openExternal` ו-`Native.saveFile`.
+- `native/node_modules` ו-`native/www` אינם במאגר. `native/` אינו מוגש באתר
+  (`.vercelignore`).

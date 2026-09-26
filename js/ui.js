@@ -125,6 +125,9 @@ var UI = (function () {
         '<div class="m-body">' + (opts.body || '') + '</div>' +
       '</div>';
     document.getElementById('modal-root').appendChild(back);
+    // כפתור החזרה של אנדרואיד סוגר רק את העליון (closeTopModal), בעוד
+    // שמקש Escape סוגר את כולם — כל חלון מאזין לו בנפרד
+    back._close = close;
     openModals++;
     document.body.style.overflow = 'hidden';
 
@@ -610,11 +613,23 @@ var UI = (function () {
   function toneSoftHex(t) { return TONE_SOFT[t] || TONE_SOFT.purple; }
   function toneInkHex(t) { return TONE_INK[t] || TONE_INK.purple; }
 
+  /* החלון העליון שפתוח, אם יש. מחזיר אם נסגר חלון. */
+  function closeTopModal() {
+    var root = document.getElementById('modal-root');
+    var list = root ? root.querySelectorAll('.modal-back') : [];
+    var top = list.length ? list[list.length - 1] : null;
+    if (!top || !top._close) return false;
+    top._close();
+    return true;
+  }
+
   /* ---------- שיתוף בוואטסאפ ---------- */
   function whatsapp(text, phone) {
     var base = phone ? 'https://wa.me/' + normalizePhone(phone) : 'https://wa.me/';
     var url = base + '?text=' + encodeURIComponent(text);
-    window.open(url, '_blank', 'noopener');
+    // באפליקציה שבחנויות window.open מתנהג אחרת בכל פלטפורמה; ראו js/native.js
+    if (window.Native && Native.is()) Native.openExternal(url);
+    else window.open(url, '_blank', 'noopener');
   }
   function normalizePhone(p) {
     var digits = String(p || '').replace(/\D/g, '');
@@ -642,7 +657,7 @@ var UI = (function () {
     initials: initials, faceFor: faceFor, toneFor: toneFor,
     toneVar: toneVar, toneInk: toneInk, toneHex: toneHex,
     toneSoftHex: toneSoftHex, toneInkHex: toneInkHex,
-    toast: toast, modal: modal, formModal: formModal, confirmBox: confirmBox,
+    toast: toast, modal: modal, closeTopModal: closeTopModal, formModal: formModal, confirmBox: confirmBox,
     addBtn: addBtn,
     pageHead: pageHead, empty: empty, bar: bar, donut: donut, svgIcon: svgIcon, art: art, catIcon: catIcon,
     whatsapp: whatsapp, normalizePhone: normalizePhone, copyText: copyText

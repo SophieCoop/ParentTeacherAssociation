@@ -202,6 +202,8 @@ var App = (function () {
     }
     // המסך הראשון. מי שעדיין באשף ידווח דרך שלבי האשף עצמם.
     if (window.Analytics && Store.state.setupDone) Analytics.view(current);
+    // באפליקציה שבחנויות: המסך צויר, ומסך הפתיחה הנייטיבי יכול לרדת
+    if (window.Native) Native.started();
   }
 
   return {
@@ -211,9 +213,15 @@ var App = (function () {
   };
 })();
 
-/* הפעלה — עמידה גם במצב שבו הסקריפט נטען אחרי שהמסמך כבר מוכן */
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', App.init);
-} else {
-  App.init();
-}
+/* הפעלה — עמידה גם במצב שבו הסקריפט נטען אחרי שהמסמך כבר מוכן.
+   באפליקציה שבחנויות מחכים קודם ל-Native.ready: אם אחסון ה-WebView
+   נמחק, הנתונים משוחזרים מהעותק לפני ש-Store.load קורא אותם. באתר
+   ההפעלה נשארת סינכרונית, בדיוק כמו קודם. */
+(function () {
+  function start() {
+    if (window.Native && Native.is()) Native.ready().then(App.init);
+    else App.init();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
+})();

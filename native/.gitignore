@@ -1,0 +1,6 @@
+node_modules/
+# מועתק מהאתר בכל סנכרון — המקור הוא קבצי האתר בשורש המאגר
+www/
+android/keystore.properties
+*.keystore
+*.jks

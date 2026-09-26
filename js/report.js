@@ -236,6 +236,9 @@ var Report = (function () {
       var blob = new Blob([buf], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       });
+      /* ב-WebView של האפליקציה אין הורדות; הקובץ נמסר לחלון השיתוף של
+         הטלפון, שממנו שומרים אותו, שולחים או פותחים ב-Excel */
+      if (window.Native && Native.is()) return Native.saveFile(fileName(), blob, 'דוח ועד ההורים');
       var a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = fileName();

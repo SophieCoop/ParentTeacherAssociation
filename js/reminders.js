@@ -61,12 +61,105 @@ var Reminders = (function () {
     try { localStorage.setItem(KEY, JSON.stringify(keep)); } catch (e) {}
   }
 
+  /* ---------- תזמון מראש, באפליקציה שבחנויות ----------
+     באתר אין מי שישלח התראה כשהאפליקציה סגורה, ולכן היא נבדקת רק
+     בפתיחה. באפליקציה הטלפון עצמו מציג התראה בזמן שנקבע מראש — ולכן
+     שם מתזמנים כל תזכורת לתחילת השלב שלה, בתשע בבוקר, גם אם האפליקציה
+     לא תיפתח עד אז. שלב שכבר התחיל אינו מתוזמן: האפליקציה פתוחה ממילא
+     והפס שבמסך הבית מציג אותו. כך גם אין צורך לזכור מה כבר נשלח —
+     כל בדיקה מבטלת את כל מה שתוזמן ומתזמנת מחדש, ושום דבר לא יוצא פעמיים. */
+  var HOUR = 9;
+  var MAX_PENDING = 60;   // אייפון שומר עד 64 התראות מתוזמנות לכל אפליקציה
+
+  function plan(state, now, opts) {
+    opts = opts || {};
+    var hour = opts.hour == null ? HOUR : opts.hour;
+    var max = opts.max || MAX_PENDING;
+    now = now || new Date();
+    var ref = dayStart(now);
+    var slots = {};
+    Calc.allDates(state).forEach(function (it) {
+      var next = Calc.nextOccurrence(it, ref);
+      if (!next) return;
+      [WEEK, SOON].forEach(function (before) {
+        var at = new Date(next.getFullYear(), next.getMonth(), next.getDate() - before, hour);
+        if (at <= now) return;
+        var t = at.getTime();
+        (slots[t] = slots[t] || []).push({ it: it, days: before });
+      });
+    });
+    var out = [];
+    Object.keys(slots).map(Number).sort(function (a, b) { return a - b; }).forEach(function (t) {
+      var group = slots[t];
+      if (group.length > MAX_SEPARATE) {
+        out.push({ at: new Date(t), title: '🔔 ' + group.length + ' תאריכים קרובים',
+          body: group.map(function (g) { return g.it.title + ' — ' + when(g.days); }).join('\n') });
+      } else {
+        group.forEach(function (g) {
+          out.push({ at: new Date(t), title: '🔔 ' + g.it.title,
+            body: when(g.days) + (g.it.kind ? ' · ' + g.it.kind : '') });
+        });
+      }
+    });
+    return out.slice(0, max).map(function (n, i) { n.id = i + 1; return n; });
+  }
+
+  function isNative() { return !!(window.Native && Native.is()); }
+  var CHANNEL = 'reminders';
+
+  /* בדיקות רצופות (פתיחה, חזרה לאפליקציה, שינוי בנתונים) רצות בזו
+     אחר זו: שתיים במקביל היו עלולות להשאיר התראה מהתזמון הישן */
+  var queue = Promise.resolve();
+  function nativeCheck() {
+    queue = queue.then(function () {
+      var ln = Native.plugin('LocalNotifications');
+      if (!ln) return;
+      var jobs = Native.notifyPermission() === 'granted' ? plan(Store.state, new Date()) : [];
+      return ln.getPending().then(function (res) {
+        var ids = ((res && res.notifications) || []).map(function (n) { return { id: n.id }; });
+        return ids.length ? ln.cancel({ notifications: ids }) : null;
+      }).then(function () {
+        if (!jobs.length) return;
+        return ln.schedule({ notifications: jobs.map(function (j) {
+          return {
+            id: j.id, title: j.title, body: j.body, channelId: CHANNEL,
+            // אובייקט Date עובר כמו שהוא: הגשר של Capacitor ממיר אותו בשתי הפלטפורמות
+            schedule: { at: j.at, allowWhileIdle: true },
+            /* בלי זה התוסף מבקש התראה מדויקת לדקה, ובאנדרואיד — כשאין הרשאה
+               לכך (ואין, ראו AndroidManifest.xml) — הוא פותח למשתמש את מסך
+               ההגדרות "שעונים מעוררים ותזכורות" במקום לתזמן. נמצא באמולטור. */
+            isExactNotification: false
+          };
+        }) });
+      });
+    }).catch(function () {});
+    return queue;
+  }
+
+  function nativeInit() {
+    var ln = Native.plugin('LocalNotifications');
+    if (!ln) return;
+    // ערוץ משלו באנדרואיד, כדי שבהגדרות הטלפון ייראה בשם "תזכורות"
+    if (Native.platform() === 'android') {
+      ln.createChannel({ id: CHANNEL, name: 'תזכורות', importance: 4,
+        description: 'שבוע ויומיים לפני כל תאריך' }).catch(function () {});
+    }
+    // לחיצה על התראה פותחת את לוח התאריכים
+    ln.addListener('localNotificationActionPerformed', function () {
+      if (window.App && Store.state.setupDone) App.setView('dates');
+    });
+  }
+
   /* ---------- התראות מערכת ---------- */
   function supported() {
+    if (isNative()) return !!Native.plugin('LocalNotifications');
     return typeof window !== 'undefined' && 'Notification' in window &&
       'serviceWorker' in navigator;
   }
-  function permission() { return supported() ? Notification.permission : 'unsupported'; }
+  function permission() {
+    if (isNative()) return supported() ? Native.notifyPermission() : 'unsupported';
+    return supported() ? Notification.permission : 'unsupported';
+  }
 
   /* באנדרואיד ובאייפון אי אפשר לפתוח התראה ישירות מהדף, רק דרך
      Service Worker. ה-worker כאן לא מטפל בבקשות רשת בכלל, כך שהוא
@@ -90,6 +183,7 @@ var Reminders = (function () {
   }
 
   function check() {
+    if (isNative()) { nativeCheck(); return; }
     if (permission() !== 'granted') return;
     var list = due(Store.state);
     var sent = readSent();
@@ -115,6 +209,18 @@ var Reminders = (function () {
 
   /* חייב לרוץ מתוך לחיצה — הדפדפן חוסם בקשת הרשאה שלא יזם המשתמש */
   function enable() {
+    if (isNative()) {
+      Native.requestNotify().then(function (p) {
+        if (p === 'granted') {
+          UI.toast('ההתראות הופעלו 🔔');
+          check();
+        } else {
+          UI.toast('ההתראות לא הופעלו. אפשר להפעיל אותן בהגדרות הטלפון.');
+        }
+        if (window.App && App.render) App.render();
+      });
+      return;
+    }
     if (!supported()) {
       UI.toast('המכשיר הזה לא תומך בהתראות. באייפון — הוסיפו קודם את האתר למסך הבית.');
       return;
@@ -153,6 +259,7 @@ var Reminders = (function () {
   }
 
   function init() {
+    if (isNative()) nativeInit();
     check();
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState === 'visible') check();
@@ -160,7 +267,7 @@ var Reminders = (function () {
   }
 
   return {
-    due: due, when: when, check: check, enable: enable,
+    due: due, when: when, plan: plan, check: check, enable: enable,
     bannerHTML: bannerHTML, init: init, permission: permission
   };
 })();

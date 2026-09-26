@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- אנדרואיד 12 ומעלה: גם גיבוי לענן וגם העברה ישירה בין מכשירים
+     מעבירים רק את העותק של נתוני הוועד -->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="file" path="vaad-gan-backup.json" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="file" path="vaad-gan-backup.json" />
+    </device-transfer>
+</data-extraction-rules>

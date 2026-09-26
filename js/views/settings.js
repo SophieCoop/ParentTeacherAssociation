@@ -195,7 +195,8 @@ Views.settings = (function () {
               go.textContent = 'מכין את הקובץ…';
               Report.download().then(function () {
                 close();
-                UI.toast('הדוח הורד ✓');
+                // באפליקציה חלון השיתוף של הטלפון הוא האישור; הודעה מעליו מיותרת
+                if (!(window.Native && Native.is())) UI.toast('הדוח הורד ✓');
               }, function (err) {
                 go.disabled = false;
                 go.textContent = '⬇️ הורדת הקובץ';

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- כל הציור בשכבת הרקע והשכבה הקדמית ריקה: הציור אינו ניתן להפרדה מצבע
+     הכרטיס שמאחוריו. נוצר ע"י native/scripts/icons.py -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@mipmap/ic_launcher_background"/>
+    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+</adaptive-icon>

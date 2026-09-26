@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- צבע הרקע של האתר (bg) -->
+    <color name="splash_background">#FBF8F3</color>
+    <!-- הצבע הראשי של האתר (primary-dark) -->
+    <color name="colorPrimary">#8574D6</color>
+    <color name="colorPrimaryDark">#8574D6</color>
+    <color name="colorAccent">#9B8CE0</color>
+</resources>

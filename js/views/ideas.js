@@ -1188,7 +1188,16 @@ Views.ideas = (function () {
                                   navigator.canShare({ files: [file] }));
 
                 share.disabled = false;
-                if (canShare) {
+                /* באפליקציה שבחנויות: חלון השיתוף של הטלפון. ב-WebView של
+                   אנדרואיד אין navigator.share, ואין בו גם הורדות */
+                if (window.Native && Native.is()) {
+                  hint.textContent = 'נפתחת בחירת האפליקציה — בוחרים וואטסאפ ואת הקבוצה';
+                  share.addEventListener('click', function () {
+                    Native.saveFile(name, blob, idea.title || 'רעיון').catch(function () {
+                      UI.toast('השיתוף נכשל — אפשר לשלוח כטקסט');
+                    });
+                  });
+                } else if (canShare) {
                   hint.textContent = 'נפתחת בחירת האפליקציה — בוחרים וואטסאפ ואת הקבוצה';
                   share.addEventListener('click', function () {
                     navigator.share({ files: [file], title: idea.title || 'רעיון' })
