@@ -1564,8 +1564,6 @@ table.tbl tr td:first-child{font-weight:600}
 }
 .drow{display:flex;align-items:center;gap:12px;padding:11px 14px}
 .drow + .drow{border-top:1px solid var(--line)}
-/* מתחת לשם ולא לצדו — בטלפון צר כפתור בשורה עצמה חונק את השם */
-.d-cal{display:inline-block;margin-top:6px;padding:5px 10px;font-size:12px}
 
 /* ===================== מסך רחב ===================== */
 @media (min-width:900px){
