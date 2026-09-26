@@ -77,6 +77,8 @@ var Install = (function () {
                         /Safari/.test(ua) && !/Chrome|Chromium|Edg\//.test(ua);
 
   function standalone() {
+    // האפליקציה שבחנויות כבר מותקנת, גם אם display-mode שלה הוא browser
+    if (window.Native && Native.is()) return true;
     try {
       if (navigator.standalone) return true;                       // אייפון
       if (window.matchMedia &&
@@ -91,6 +93,7 @@ var Install = (function () {
   /* פיירפוקס במחשב אינו יודע להתקין אתרים, ואין לו מסך בית —
      הוראות שם היו שולחות את המשתמש לחפש כפתור שאינו קיים */
   function canInstall() {
+    if (window.Native && Native.is()) return false;
     if (deferred) return true;
     if (isIOS || isAndroid) return true;
     if (isFirefox) return false;

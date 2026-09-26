@@ -7,25 +7,31 @@ const path = require('node:path');
 /* היכן שהקישור שבמייל יחזור אליו. זהו פרמטר redirect_to בלבד — לאן
    הדפדפן מופנה אחרי שהאסימון אומת — ולכן אפשר לקבע אותו בלי לגעת
    באימות עצמו. */
-function setup(href) {
+function setup(href, native) {
   const url = new URL(href);
   const ctx = vm.createContext({
     console, setTimeout: () => 1, clearTimeout() {},
     fetch: () => new Promise(() => {}),
     localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} },
     location: { origin: url.origin, pathname: url.pathname, protocol: url.protocol, hostname: url.hostname },
-    window: {}, document: { addEventListener() {} }
+    window: {},
+    document: { addEventListener() {}, documentElement: { classList: { add() {} } } }
   });
   ctx.window = ctx;
-  for (const f of ['js/config.js', 'js/cloud.js']) {
+  // האפליקציה שבחנויות: Capacitor מזריק את עצמו לפני כל סקריפט של העמוד
+  if (native) {
+    ctx.Capacitor = { isNativePlatform: () => true, getPlatform: () => native,
+      isPluginAvailable: () => false, Plugins: {} };
+  }
+  for (const f of ['js/config.js', 'js/native.js', 'js/cloud.js']) {
     vm.runInContext(fs.readFileSync(path.join(__dirname, '..', f), 'utf8'), ctx);
   }
   return ctx;
 }
 
 /* returnUrl פרטי, ולכן נקרא דרך הכתובת שהוא בונה בבקשת ההרשמה */
-function redirectTo(href) {
-  const ctx = setup(href);
+function redirectTo(href, native) {
+  const ctx = setup(href, native);
   let asked = '';
   ctx.fetch = (u) => { asked = u; return new Promise(() => {}); };
   ctx.Cloud.signUp('d@e.com', 'secret123');
@@ -45,6 +51,13 @@ test('the production domain is used whatever host the sign-up came from', () => 
 test('local development still returns to where the work is happening', () => {
   assert.equal(redirectTo('http://localhost:8099/index.html'), 'http://localhost:8099/index.html');
   assert.equal(redirectTo('http://127.0.0.1:3000/index.html'), 'http://127.0.0.1:3000/index.html');
+});
+
+test('inside the store app the link returns to the website, not to the app\'s own localhost', () => {
+  /* הקישור נפתח בדפדפן של הטלפון. capacitor://localhost אינו ברשימה
+     המאושרת של Supabase, ו-https://localhost היה נפתח בדפדפן כדף שגיאה */
+  assert.equal(redirectTo('capacitor://localhost/index.html', 'ios'), 'https://www.vaadhorim.com/');
+  assert.equal(redirectTo('https://localhost/index.html', 'android'), 'https://www.vaadhorim.com/');
 });
 
 test('a missing site setting falls back to the current origin, never to nothing', () => {

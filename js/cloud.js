@@ -314,8 +314,13 @@ var Cloud = (function () {
 
      שימו לב שזהו הפרמטר redirect_to בלבד — לאן הדפדפן מופנה *אחרי*
      שהאסימון אומת. הוא אינו נוגע לאסימון עצמו ואינו משנה את אופן
-     האימות. בפיתוח מקומי לא נוגעים בכלום: שם חוזרים לאן שעובדים. */
+     האימות. בפיתוח מקומי לא נוגעים בכלום: שם חוזרים לאן שעובדים.
+
+     באפליקציה שבחנויות שם המחשב הוא גם כן localhost, אבל זו אינה סביבת
+     פיתוח: הקישור שבמייל נפתח בדפדפן של הטלפון, ולכן הוא חוזר לאתר.
+     שם החשבון מאושר, ובאפליקציה לוחצים "כבר אישרתי — התחברות". */
   function isLocal() {
+    if (window.Native && Native.is()) return false;
     try {
       return location.protocol === 'file:' ||
              /^(localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0)$/.test(location.hostname);
@@ -324,7 +329,8 @@ var Cloud = (function () {
 
   function returnUrl() {
     try {
-      var path = location.pathname || '/';
+      // הנתיב שבתוך האפליקציה (‎/index.html) אינו אומר דבר לאתר
+      var path = (window.Native && Native.is()) ? '/' : (location.pathname || '/');
       if (isLocal()) return location.origin + path;
       var site = (window.SiteConfig && SiteConfig.url) || '';
       return site ? site.replace(/\/+$/, '') + path : location.origin + path;
