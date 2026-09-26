@@ -39,6 +39,9 @@ Views.home = (function () {
         '</div></div></div>';
     }
 
+    /* תזכורות — שבוע ויומיים לפני כל תאריך, ובקשת ההרשאה להתראות */
+    if (window.Reminders) html += Reminders.bannerHTML();
+
     /* הקופה — כמה נותר מתוך כל מה שנאסף, ומי עדיין לא שילם */
     html += potHTML(ov, col);
 
@@ -172,5 +175,7 @@ Views.home = (function () {
       '</button>';
   }
 
-  return { render: render, actions: {} };
+  return { render: render, actions: {
+    'rem-enable': function () { Reminders.enable(); }
+  } };
 })();

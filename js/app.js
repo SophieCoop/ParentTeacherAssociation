@@ -175,6 +175,7 @@ var App = (function () {
     bind();
     // ספירת הכניסה — לפני הציור, כדי שההצעה שבמסך הבית תראה מספר מעודכן
     if (window.Install) Install.init();
+    if (window.Reminders) Reminders.init();
     // כשמגיעים מקישור האישור שבמייל, init מחזיר הבטחה עם תוצאת ההתחברות
     var fromEmail = null;
     if (window.Cloud) {
