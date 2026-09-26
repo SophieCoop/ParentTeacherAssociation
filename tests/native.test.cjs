@@ -50,11 +50,26 @@ function setup(opts = {}) {
     },
     LocalNotifications: { checkPermissions() { return Promise.resolve({ display: 'granted' }); } },
     SplashScreen: { hide() { calls.push(['hide']); return Promise.resolve(); } },
-    CapacitorUpdater: { notifyAppReady() { calls.push(['notifyAppReady']); return Promise.resolve(); } }
+    CapacitorUpdater: {
+      notifyAppReady() { calls.push(['notifyAppReady']); return Promise.resolve(); },
+      current() { return Promise.resolve({ bundle: opts.running || { id: 'builtin', version: '1.0.0' }, native: '1.0.0' }); },
+      getNextBundle() { return Promise.resolve(opts.queued || null); },
+      download(o) { calls.push(['download', o]); return Promise.resolve({ id: 'dl-' + o.version, version: o.version }); },
+      next(o) { calls.push(['next', o]); return Promise.resolve({ id: o.id }); }
+    }
+  };
+  /* הרשת: bundle.json המקומי (מה שארוז באפליקציה) ו-bundle.json של האתר */
+  const fetch = (url) => {
+    calls.push(['fetch', url]);
+    const local = url === 'bundle.json';
+    const body = local ? opts.builtin : opts.offer;
+    if (body === 'offline' || (!local && opts.offer === undefined)) return Promise.reject(new TypeError('Failed to fetch'));
+    if (body === undefined) return Promise.resolve({ ok: false, status: 404, json: () => Promise.reject(new Error()) });
+    return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(JSON.parse(JSON.stringify(body))) });
   };
 
   const ctx = vm.createContext({
-    console, Promise, JSON, String, Object, Date,
+    console, Promise, JSON, String, Object, Date, URL, fetch,
     setTimeout(fn) { timers.push(fn); return timers.length; },
     clearTimeout() {},
     requestAnimationFrame(fn) { fn(); },
@@ -186,4 +201,72 @@ test('a link meant for a new tab opens from the website, in the phone\'s browser
   click.fn({ target: { closest: () => a }, preventDefault() { prevented = true; } });
   assert.equal(prevented, true);
   assert.equal(ctx.location.href, 'https://www.vaadhorim.com/privacy.html');
+});
+
+/* ---------- בדיקת העדכון החי ---------- */
+
+const offer = (version, extra = {}) => ({ version, file: 'vaad-' + version + '.zip', checksum: 'c'.repeat(64), minBuild: 1, ...extra });
+const downloads = (calls) => calls.filter(c => c[0] === 'download');
+
+async function checked(opts) {
+  const t = setup(opts);
+  await t.ctx.Native.ready();   // פרטי הגרסה המותקנת (build 3)
+  const result = await t.ctx.Native.checkForUpdate();
+  return { ...t, result };
+}
+
+test('a newer bundle on the site is downloaded and queued for the next launch', async () => {
+  const { result, calls } = await checked({ builtin: { version: 'aaa' }, offer: offer('bbb') });
+  assert.equal(result, 'downloaded');
+  const d = downloads(calls);
+  assert.equal(d.length, 1);
+  assert.equal(d[0][1].url, 'https://www.vaadhorim.com/app-bundle/vaad-bbb.zip');
+  assert.equal(d[0][1].version, 'bbb');
+  assert.equal(d[0][1].checksum, 'c'.repeat(64));
+  assert.equal(calls.find(c => c[0] === 'next')[1].id, 'dl-bbb');
+  assert.ok(calls.some(c => c[0] === 'fetch' && c[1] === 'https://www.vaadhorim.com/app-bundle/bundle.json'));
+});
+
+test('a binary built from the deployed commit already has it — nothing is downloaded', async () => {
+  const { result, calls } = await checked({ builtin: { version: 'aaa' }, offer: offer('aaa') });
+  assert.equal(result, 'current');
+  assert.equal(downloads(calls).length, 0);
+});
+
+test('a bundle that already replaced the built-in one is compared by its own version', async () => {
+  const { result, calls } = await checked({ running: { id: 'x1', version: 'bbb' }, offer: offer('bbb') });
+  assert.equal(result, 'current');
+  assert.ok(!calls.some(c => c[0] === 'fetch' && c[1] === 'bundle.json'), 'no need to read the built-in files');
+});
+
+test('a bundle made for a newer native build waits for the store update', async () => {
+  const { result, calls } = await checked({ builtin: { version: 'aaa' }, offer: offer('bbb', { minBuild: 4 }) });
+  assert.equal(result, 'needs-store-update');
+  assert.equal(downloads(calls).length, 0);
+});
+
+test('a bundle already waiting for the next launch is not downloaded again', async () => {
+  const { result, calls } = await checked({ builtin: { version: 'aaa' }, offer: offer('bbb'), queued: { id: 'dl-bbb', version: 'bbb' } });
+  assert.equal(result, 'queued');
+  assert.equal(downloads(calls).length, 0);
+});
+
+test('offline, the check fails quietly — and does not run again on every return to the app', async () => {
+  const { result, ctx, calls } = await checked({ builtin: { version: 'aaa' }, offer: 'offline' });
+  assert.equal(result, 'failed');
+  assert.equal(await ctx.Native.checkForUpdate(), 'throttled');
+  assert.equal(downloads(calls).length, 0);
+});
+
+test('an explicit address (a local server, from the inspector) skips the half-hour wait', async () => {
+  const { ctx, calls } = await checked({ builtin: { version: 'aaa' }, offer: offer('aaa') });
+  assert.equal(await ctx.Native.checkForUpdate('http://localhost:8124'), 'current');
+  assert.ok(calls.some(c => c[0] === 'fetch' && c[1] === 'http://localhost:8124/bundle.json'));
+});
+
+test('an installed updater without the methods this code expects fails quietly', async () => {
+  const t = setup({ builtin: { version: 'aaa' }, offer: offer('bbb') });
+  await t.ctx.Native.ready();
+  t.ctx.Capacitor.Plugins.CapacitorUpdater.current = undefined;   // גרסה נייטיבית ישנה
+  assert.equal(await t.ctx.Native.checkForUpdate('http://localhost:8124'), 'failed');
 });

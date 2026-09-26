@@ -43,6 +43,7 @@ var Native = (function () {
       openExternal: function (url) { window.open(url, '_blank', 'noopener'); },
       notifyPermission: function () { return 'unsupported'; },
       requestNotify: function () { return Promise.resolve('unsupported'); },
+      checkForUpdate: function () { return Promise.resolve('unavailable'); },
       info: {}
     };
   }
@@ -72,6 +73,8 @@ var Native = (function () {
   function started() {
     // שתי מסגרות: הראשונה מציירת את העמוד, השנייה מבטיחה שהוא כבר על המסך
     requestAnimationFrame(function () { requestAnimationFrame(hideSplash); });
+    // בדיקת העדכון מחכה כמה שניות, כדי לא להתחרות בפתיחה עצמה על הרשת
+    setTimeout(function () { checkForUpdate(); }, 3000);
   }
 
   /* ---------- עותק של הנתונים מחוץ ל-WebView ----------
@@ -229,6 +232,73 @@ var Native = (function () {
     return readyP;
   }
 
+  /* ---------- בדיקת עדכון חי ----------
+     כל פריסה של האתר מפרסמת גם חבילה לאפליקציה (native/scripts/bundle.mjs):
+     app-bundle/bundle.json ולצידו zip. כאן בודקים אם היא שונה ממה שרץ,
+     ואם כן — מורידים אותה ברקע ומסמנים אותה לפעם הבאה. התוסף עובר אליה
+     כשהאפליקציה יוצאת לרקע או נפתחת מחדש, ולא באמצע עבודה; וחבילה שלא
+     הודיעה שעלתה (notifyAppReady, למעלה) מתגלגלת אחורה מעצמה.
+
+     אין כאן שום הודעה למשתמש: האפליקציה פשוט חוזרת יום אחד מעודכנת.
+     הערך המוחזר מתאר מה קרה — בשביל הבדיקות, ובשביל מי שבודק מה-inspector
+     (שם אפשר גם להעביר base אחר, למשל שרת מקומי). */
+  var CHECK_EVERY = 30 * 60 * 1000;   // האפליקציה נפתחת פעמים רבות ביום; חצי שעה מספיקה
+  var lastCheck = 0;
+
+  /* התוסף קורא לקבצים שארוזים באפליקציה "builtin", וזה לא אומר מה יש
+     בהם. copy-web.mjs כתב לצידם bundle.json עם הגרסה שלהם — וכך אפליקציה
+     שנבנתה מהקומיט שפורס יודעת שכבר יש לה בדיוק את מה שהאתר מציע. */
+  function builtinVersion() {
+    return fetch('bundle.json', { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (m) { return (m && typeof m.version === 'string' && m.version) || 'builtin'; },
+        function () { return 'builtin'; });
+  }
+
+  function checkForUpdate(base) {
+    if (!updater) return Promise.resolve('unavailable');
+    /* הזמן נרשם לפני הבדיקה ולא אחריה, כדי שבדיקה שנכשלה בלי רשת לא
+       תחזור בכל חזרה לאפליקציה. בדיקה עם base מפורש — תמיד. */
+    var now = Date.now();
+    if (!base && lastCheck && now - lastCheck < CHECK_EVERY) return Promise.resolve('throttled');
+    lastCheck = now;
+
+    var manifestUrl = String(base || siteUrl('app-bundle/')).replace(/\/?$/, '/') + 'bundle.json';
+    /* הכול בתוך שרשרת אחת: גם שגיאה סינכרונית — למשל מתודה שאין בגרסה
+       מותקנת ישנה של התוסף — נבלעת כ-'failed' ולא מפילה את העמוד */
+    return Promise.resolve().then(function () {
+      return Promise.all([
+        updater.current(),
+        fetch(manifestUrl, { cache: 'no-store' }).then(function (r) {
+          if (!r.ok) throw new Error('bundle.json ' + r.status);
+          return r.json();
+        })
+      ]);
+    }).then(function (res) {
+      var bundle = (res[0] && res[0].bundle) || {};
+      var offer = res[1];
+      if (!offer || !offer.version || !offer.file || !offer.checksum) return 'none';
+      // התוסף מסמן את הקבצים הארוזים לפי ה-id; ה-version שלהם שונה בין הפלטפורמות
+      var builtin = bundle.id === 'builtin' || bundle.version === 'builtin';
+      return (builtin ? builtinVersion() : Promise.resolve(bundle.version)).then(function (running) {
+        if (offer.version === running) return 'current';
+        /* חבילה שנבנתה לגרסה נייטיבית חדשה יותר (למשל כזו שקוראת לתוסף
+           שעוד אין בגרסה המותקנת) מחכה לעדכון מהחנות */
+        if ((offer.minBuild || 0) > (info.build || 0)) return 'needs-store-update';
+        return updater.getNextBundle().catch(function () { return null; }).then(function (queued) {
+          if (queued && queued.version === offer.version) return 'queued';
+          return updater.download({
+            url: new URL(offer.file, manifestUrl).href,
+            version: offer.version,
+            checksum: offer.checksum
+          }).then(function (b) {
+            return updater.next({ id: b.id });
+          }).then(function () { return 'downloaded'; });
+        });
+      });
+    }).catch(function () { return 'failed'; });   // בפעם הבאה ינסה שוב
+  }
+
   /* ---------- קישורים החוצה ----------
      ניווט של העמוד לכתובת שאינה של האפליקציה נמסר למערכת: וואטסאפ,
      חייגן או הדפדפן. כך בשתי הפלטפורמות (נבדק בקוד של Capacitor).
@@ -277,11 +347,12 @@ var Native = (function () {
   if (app) {
     // יציאה לרקע: העותק נכתב מיד, בלי לחכות לשנייה של ההשהיה
     app.addListener('pause', function () { flush(); });
-    // חזרה: ייתכן שההרשאה להתראות שונתה בינתיים בהגדרות הטלפון
+    // חזרה: ייתכן שההרשאה להתראות שונתה בינתיים בהגדרות הטלפון, ואולי פורסמה חבילה חדשה
     app.addListener('resume', function () {
       refreshNotify().then(function () {
         if (window.Reminders && Reminders.check) Reminders.check();
       });
+      checkForUpdate();
     });
 
     /* כפתור החזרה של אנדרואיד. המסכים מתחלפים בלי היסטוריה (replaceState),
@@ -306,6 +377,7 @@ var Native = (function () {
   return {
     is: is, platform: platform, plugin: plugin, siteUrl: siteUrl,
     ready: ready, started: started, openExternal: openExternal, saveFile: saveFile,
+    checkForUpdate: checkForUpdate,
     notifyPermission: function () { return notify; }, requestNotify: requestNotify,
     info: info
   };

@@ -1,3 +1,5 @@
 node_modules/
 .DS_Store
 *.log
+# חבילת העדכון החי נבנית בכל פריסה ב-Vercel (native/scripts/bundle.mjs)
+/app-bundle/

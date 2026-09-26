@@ -54,3 +54,9 @@ node --test tests/*.test.cjs        # חייב לעבור במלואו
   ב-WebView הם לא עושים דבר. יש `Native.openExternal` ו-`Native.saveFile`.
 - `native/node_modules` ו-`native/www` אינם במאגר. `native/` אינו מוגש באתר
   (`.vercelignore`).
+- כל מיזוג לענף הראשי מגיע גם לאפליקציות המותקנות, כעדכון חי: הפריסה ב-Vercel
+  בונה את `app-bundle/` (`native/scripts/bundle.mjs`), והאפליקציה מורידה אותו.
+  פריסה שהבנייה שלה נכשלת לא עולה לאוויר — האתר נשאר על הגרסה הקודמת.
+- קוד שמתחיל להשתמש בתוסף או במתודה נייטיבית שאין בגרסה המותקנת מחייב גרסה
+  בחנויות: מעלים את `bundleMinBuild` ב-`native/app-build.json`, כדי שאפליקציות
+  ישנות לא יורידו חבילה שהן לא יודעות להריץ.

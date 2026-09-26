@@ -1,3 +1,13 @@
 # האפליקציה שבחנויות: פרויקט Capacitor, לא חלק מהאתר. בלעדי זה Vercel היה
 # מגיש לכל העולם את קבצי הפרויקט הנייטיבי ואת node_modules שלו.
-/native
+#
+# יוצאים מהכלל רק מה שהפריסה עצמה צריכה כדי לבנות את חבילת העדכון החי
+# (buildCommand ב-vercel.json). הפקודה מוחקת את native/ כשהיא מסיימת,
+# כך שגם הקבצים האלה לא מוגשים באתר.
+/native/*
+!/native/scripts/
+/native/scripts/*
+!/native/scripts/bundle.mjs
+!/native/scripts/web-bundle.mjs
+!/native/web-files.json
+!/native/app-build.json
