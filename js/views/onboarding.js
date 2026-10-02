@@ -310,6 +310,12 @@ Views.onboarding = (function () {
   function setCount(kind, value) { Store.setHeadcount(kind, value); }
 
   /* ---------- תכנון תקציב (השלב האחרון) ---------- */
+  /* מה ההורה רואה בסוף — גם סעיף של הצוות מתחלק בין הילדים */
+  function perChild(b) {
+    var full = Calc.itemAllocation(Store.state, b).full;
+    return full > 0 ? '<div class="r-sub">' + UI.money(full) + ' לילד</div>' : '';
+  }
+
   function stepBudget(n) {
     var items = Store.state.budgetItems;
     var total = Calc.budgetTotal(Store.state);
@@ -328,9 +334,10 @@ Views.onboarding = (function () {
       (items.length ? items.map(function (b) {
         var cat = Store.category(b.categoryId);
         return '<div class="row" data-action="budget-edit" data-id="' + b.id + '" style="cursor:pointer"><div class="r-ico" style="background:' + UI.toneVar(cat.tone) + '">' + UI.catIcon(cat) + '</div>' +
-          '<div class="r-body"><div class="r-name">' + UI.esc(b.title || cat.name) + '</div>' +
+          '<div class="r-body"><div class="r-name" style="white-space:normal">' + UI.esc(b.title || cat.name) + '</div>' +
           '<div class="r-sub">' + UI.esc(cat.name) + (b.date ? ' · ' + UI.dateShort(b.date) : '') + '</div></div>' +
-          '<div class="r-end"><div class="r-amount">' + UI.money(Calc.itemAmount(Store.state, b)) + '</div></div></div>';
+          '<div class="r-end"><div class="r-amount">' + UI.money(Calc.itemAmount(Store.state, b)) + '</div>' +
+          perChild(b) + '</div></div>';
       }).join('') : UI.empty({ art: 'budget', title: 'עוד אין סעיפי תקציב', text: 'כמו מתנות ליום הולדת, כיבוד, חוגים ועוד.', action: { act: 'budget-add', label: 'הוספת סעיף תקציב' } })) +
       footer(n, 'סיימנו — כניסה לאפליקציה');
   }
