@@ -22,7 +22,7 @@ var Analytics = (function () {
     'view':        { screen: SCREENS },
     'wizard-step': { step: ['1', '2', '3', '4', '5'] },
     'setup-done':  { account: ['yes', 'no'] },
-    'account':     { action: ['signup', 'signin', 'confirmed'] },
+    'account':     { action: ['signup', 'signin', 'confirmed', 'google'] },
     'install':     { action: ['shown', 'manual', 'accepted', 'dismissed', 'never', 'installed'] },
     /* התזכורת לאישור המייל היא פס קבוע במסך הבית; הערכים שהיו שייכים
        לחלון הקופץ שקדם לו (shown / later / never) ירדו איתו */

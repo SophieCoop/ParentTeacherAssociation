@@ -63,7 +63,13 @@ var Features = {
      כיבוי אינו מוחק את הסכום שנקבע, רק מתעלם ממנו: האפליקציה חוזרת
      בדיוק להתנהגות הישנה, והדלקה מחדש מחזירה את המצב כמו שהיה.
      שימו לב שכל עוד הוא כבוי, החיוב לכל הורה נגזר שוב מהתכנון. */
-  budgetDirections: false
+  budgetDirections: false,
+
+  /* כניסה והרשמה עם חשבון Google, בלחיצה אחת ובלי סיסמה ומייל אישור.
+     כבוי עד שספק Google מוגדר ב-Supabase (Authentication → Providers)
+     — בלעדיו הכפתור היה מוביל לדף שגיאה של השרת. נדלק מהטבלה
+     feature_flags, בלי פריסה מחדש. */
+  googleSignIn: false
 };
 
 var CloudConfig = {
