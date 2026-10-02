@@ -107,7 +107,9 @@ Views.budget = (function () {
   function groupHead(group, sum, count) {
     return '<div class="group-head">' +
       '<div class="gh-top">' +
-        '<span class="g-label">' + group.icon + ' ' + UI.esc(group.name) + '</span>' +
+        '<span class="g-label">' + group.icon + ' ' + UI.esc(group.name) +
+          /* כמה אנשים בקבוצה — לפיהם מוכפל כל סעיף "לאדם" שבה */
+          (group.id ? ' (' + Calc.audienceCount(Store.state, group.id) + ')' : '') + '</span>' +
         '<span class="g-line"></span>' +
         '<span class="g-sum">' + count + (count === 1 ? ' סעיף' : ' סעיפים') + ' · ' + UI.money(sum) + '</span>' +
       '</div>' +
