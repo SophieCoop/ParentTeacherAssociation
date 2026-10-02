@@ -27,11 +27,15 @@ var NextStep = (function () {
         done: (state.budgetItems || []).length > 0,
         title: 'תכננו את התקציב',
         text: 'מתנות לחגים, ימי הולדת וסוף שנה — ומהם נגזר הסכום לכל הורה.' },
-      { id: 'payment', view: 'collection', button: 'לרישום תשלום',
+      /* "תשלומי ההורים" ולא "התשלום הראשון": רושמים כמה בבת אחת, ומי
+         שגובה בפייבוקס מייבא את כולם מהקובץ — ייבוא שמוצע רק כשהוא דלוק */
+      { id: 'payment', view: 'collection', button: 'לרישום תשלומים',
         done: (state.payments || []).length > 0,
-        title: 'רשמו את התשלום הראשון',
+        title: 'רשמו את תשלומי ההורים',
         text: (perChild ? 'כל הורה משלם בערך ' + UI.money(perChild) + '. ' : '') +
-              'רושמים כל תשלום שמגיע, ויודעים בכל רגע מי עוד לא שילם.' },
+              'אפשר לרשום כמה תשלומים בבת אחת' +
+              (typeof Features !== 'undefined' && Features.payboxImport
+                ? ', או לייבא קובץ אקסל מפייבוקס.' : '.') },
       { id: 'collect', view: 'collection', button: 'למצב הגבייה',
         done: col.done || col.due <= 0,
         title: open > 0
