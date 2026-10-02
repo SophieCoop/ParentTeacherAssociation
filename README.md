@@ -461,6 +461,61 @@ SheetJS בגרסה החופשית מזהה את ההצפנה אך אינה מפ�
 ב-`download` של עוגן נזרק בחלק מהדפדפנים, והקובץ יורד בשם `download` בלי
 סיומת. שם הוועד ממילא יושב בשורה הראשונה של גיליון הסיכום.
 
+### שותפים בוועד — הזמנת מישהי נוספת 👥
+
+בהרבה גנים וכיתות יש יותר מהורה אחד שעושה את העבודה של הוועד, ועד
+עכשיו כל אחד מהם היה חייב להזין את הנתונים בנפרד — אין דרך ששני
+חשבונות יראו באמת את אותו גן, כי כל חשבון מחזיק שורה משלו ב-`vaad_state`
+(ראו "איפה זה יושב" למעלה).
+
+**הרעיון.** מי שפתח/ה את הגן (הבעלים) שולח/ת קישור הזמנה חד-פעמי.
+מי שמקבל/ת אותו — עם חשבון קיים או בלי — מצטרף/ת כ**שותף/ה**: מרגע
+ההצטרפות שני החשבונות קוראים וכותבים לאותה שורה בדיוק, בדיוק כמו שני
+מכשירים של אותו חשבון מסתנכרנים היום. "האחרון מנצח" וזיהוי ההתנגשות
+שכבר קיימים (ראו "מה קורה כשעורכים בשני מכשירים במקביל?") עובדים בלי
+שינוי גם כששני הצדדים הם שני בני אדם שונים, לא רק שני מכשירים.
+
+**מי יכול להזמין, ומי יכול להצטרף.** רק הבעלים — מי שאינו שותף/ה של
+אף אחד — יכול/ה להזמין. שותף/ה שמקבל/ת הזמנה לגן אחר מחליף/ה את
+השותפות הקיימת (אי אפשר להיות שותף/ה בשני גנים במקביל), ומי שכבר יש
+לו/ה שותפים משלו/ה אינו/ה יכול/ה להצטרף לגן של מישהו אחר — כדי לא
+ליצור שרשרת של "שותף של שותף".
+
+**הקישור עצמו.** `הגדרות ⚙️ → שותפים בוועד → יצירת קישור הזמנה` יוצר
+שורה ב-`vaad_invites` עם טוקן אקראי (UUID), ושם הגן נשמר אז בשביל מסך
+ההצטרפות (שם הגן עצמו יושב בתוך ה-JSON של `vaad_state`, ולא נגיש בלי
+אימות). הקישור תקף שבוע ולשימוש חד-פעמי; "ביטול ההזמנה" מוחק את
+השורה, וקישור ישן שכבר נוצל תמיד נכשל.
+
+**בדיקת ההזמנה בלי להיחשף.** מי שלוחץ/ת על הקישור עדיין לא מחובר/ת,
+ולכן בדיקת הטוקן (`get_invite_info`) חייבת לרוץ בלי אימות (`anon`).
+מדיניות RLS רגילה שהייתה מאפשרת SELECT לפי טוקן הייתה חושפת את כל
+הטבלה למי שקורא בלי לסנן — ולכן הבדיקה עוברת דרך פונקציית RPC
+(`security definer`) שמקבלת טוקן בודד ומחזירה רק את מה שתואם אותו.
+אי אפשר "לרשום" מי מוזמן/ת בלי לדעת טוקן ספציפי, בדיוק כמו שאי אפשר
+לנחש קישור שיתוף של Google Docs.
+
+**ההצטרפות עצמה** (`accept_invite`, גם היא `security definer`) מוודאת
+שהטוקן תקף ולא נוצל, מסמנת אותו כמנוצל, ורושמת שורה ב-`vaad_members`
+— הכול בטרנזקציה אחת, כדי שאי אפשר יהיה לנצל את אותו קישור פעמיים
+בשתי לשוניות שרצות במקביל. ברגע שהשורה נרשמת, מדיניות ה-RLS של
+`vaad_state` (ראו הקוד למטה) מאפשרת גם לשותף/ה לקרוא ולכתוב את שורת
+הבעלים — לא רק לבעלים עצמו.
+
+**מה קורה במכשיר של השותף/ה.** הצטרפות אינה מיזוג: מה שהיה במכשיר
+(אם היה) נשאר שמור תחת החשבון שלו/ה, אבל התא הפעיל עובר לתא של
+הבעלים (`js/store.js`, אותו מנגנון "תא לכל בעלים" ששומר על הגן גם
+כשמתנתקים מחשבון) — כך שמהרגע הזה המסך מציג את נתוני הגן המשותף.
+"עזיבת הוועד המשותף" (בהגדרות) היא הפעולה ההפוכה: מסירה את השורה
+מ-`vaad_members` וחוזרת לתא האישי — ריק, אם לא היה בו משהו קודם.
+
+**מי שעדיין אין לו/ה חשבון.** קישור ההזמנה עובד גם למי שמעולם לא
+נכנס/ה לאתר: `js/views/join.js` מציג מסך הצטרפות לפני כל מסך אחר
+(גם לפני אשף ההקמה), ומציע לפתוח חשבון או להתחבר — דרך אותם טפסים
+בדיוק כמו בכל מקום אחר באתר. אם הפרויקט דורש אישור מייל, טוקן ההזמנה
+נשמר במכשיר ומצטרף לכתובת שאליה חוזר קישור האישור (`js/cloud.js`,
+`signUpRedirect`), כדי שההצטרפות תושלם גם אחרי הקפיצה למייל וחזרה.
+
 ### שחזור סיסמה, וקישור אישור שפג 🔑
 
 הסיסמה נבחרת באשף ההקמה, נכתבת פעם אחת, ואז נשכחת: כל עוד ההתחברות
@@ -596,6 +651,7 @@ js/views/               — המסכים:
   yearend.js              חישוב החזרים לסוף שנה
   settings.js             הגדרות, דוח כספי ואיפוס
   account.js              התחברות, מצב הסנכרון והכרעה בהתנגשות
+  join.js                 הצטרפות לוועד דרך קישור הזמנה (שותפים)
 ```
 
 ---
@@ -697,6 +753,134 @@ $$;
 
 revoke all on function public.delete_account() from public, anon;
 grant execute on function public.delete_account() to authenticated;
+```
+
+**שותפים בוועד** (ראו למעלה). שתי טבלאות, ושתי פונקציות שמחליפות
+חלק ממדיניות ה-RLS של `vaad_state` — כל אחת נגישה רק לדמות אחת
+(FK שמצביע על `auth.users` עם `on delete cascade` דואג שמחיקת חשבון
+מנקה אחריה גם כאן, בלי לגעת ב-`delete_account`):
+
+```sql
+create table public.vaad_members (
+  member_id    uuid primary key references auth.users (id) on delete cascade,
+  owner_id     uuid not null references auth.users (id) on delete cascade,
+  member_email text,
+  joined_at    timestamptz not null default now()
+);
+alter table public.vaad_members enable row level security;
+
+create policy "vaad_members_select_own" on public.vaad_members
+  for select using ((select auth.uid()) = owner_id or (select auth.uid()) = member_id);
+create policy "vaad_members_delete_own" on public.vaad_members
+  for delete using ((select auth.uid()) = owner_id or (select auth.uid()) = member_id);
+-- בכוונה אין מדיניות insert/update: שורה נוצרת רק בתוך accept_invite
+
+create table public.vaad_invites (
+  token      uuid primary key default gen_random_uuid(),
+  owner_id   uuid not null references auth.users (id) on delete cascade,
+  gan_name   text,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null default (now() + interval '7 days'),
+  used_at    timestamptz,
+  used_by    uuid references auth.users (id) on delete cascade
+);
+alter table public.vaad_invites enable row level security;
+
+create policy "vaad_invites_select_own" on public.vaad_invites
+  for select using ((select auth.uid()) = owner_id);
+create policy "vaad_invites_insert_own" on public.vaad_invites
+  for insert with check (
+    (select auth.uid()) = owner_id
+    and not exists (select 1 from public.vaad_members m where m.member_id = (select auth.uid()))
+  );
+create policy "vaad_invites_delete_own" on public.vaad_invites
+  for delete using ((select auth.uid()) = owner_id);
+
+-- vaad_state: הרחבת ה-select/insert/update כך שגם שותף/ה של הבעלים
+-- ייגש לאותה שורה. ה-delete נשאר אך ורק של הבעלים.
+drop policy "vaad_state_select_own" on public.vaad_state;
+create policy "vaad_state_select_own_or_member" on public.vaad_state
+  for select using (
+    (select auth.uid()) = user_id
+    or exists (select 1 from public.vaad_members m where m.owner_id = vaad_state.user_id and m.member_id = (select auth.uid()))
+  );
+
+drop policy "vaad_state_insert_own" on public.vaad_state;
+create policy "vaad_state_insert_own_or_member" on public.vaad_state
+  for insert with check (
+    (select auth.uid()) = user_id
+    or exists (select 1 from public.vaad_members m where m.owner_id = vaad_state.user_id and m.member_id = (select auth.uid()))
+  );
+
+drop policy "vaad_state_update_own" on public.vaad_state;
+create policy "vaad_state_update_own_or_member" on public.vaad_state
+  for update using (
+    (select auth.uid()) = user_id
+    or exists (select 1 from public.vaad_members m where m.owner_id = vaad_state.user_id and m.member_id = (select auth.uid()))
+  )
+  with check (
+    (select auth.uid()) = user_id
+    or exists (select 1 from public.vaad_members m where m.owner_id = vaad_state.user_id and m.member_id = (select auth.uid()))
+  );
+
+-- בדיקת הזמנה לפי טוקן, בלי אימות — ולכן לא select ישיר על הטבלה
+-- (ראו "בדיקת ההזמנה בלי להיחשף" למעלה)
+create or replace function public.get_invite_info(p_token uuid)
+returns table(owner_id uuid, gan_name text, valid boolean)
+language sql
+security definer
+set search_path = ''
+as $$
+  select owner_id, gan_name, (used_at is null and expires_at > now())
+  from public.vaad_invites
+  where token = p_token;
+$$;
+revoke all on function public.get_invite_info(uuid) from public;
+grant execute on function public.get_invite_info(uuid) to anon, authenticated;
+
+create or replace function public.accept_invite(p_token uuid)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  uid uuid := auth.uid();
+  inv record;
+begin
+  if uid is null then
+    raise exception 'not authenticated' using errcode = '28000';
+  end if;
+
+  select * into inv from public.vaad_invites where token = p_token for update;
+  if not found then
+    raise exception 'invite not found' using errcode = 'P0002';
+  end if;
+  if inv.used_at is not null then
+    raise exception 'invite already used' using errcode = 'P0001';
+  end if;
+  if inv.expires_at <= now() then
+    raise exception 'invite expired' using errcode = 'P0001';
+  end if;
+  if inv.owner_id = uid then
+    raise exception 'cannot join your own vaad' using errcode = 'P0001';
+  end if;
+  if exists (select 1 from public.vaad_members where owner_id = uid) then
+    raise exception 'owners cannot join another vaad' using errcode = 'P0001';
+  end if;
+
+  update public.vaad_invites set used_at = now(), used_by = uid where token = p_token;
+
+  insert into public.vaad_members (member_id, owner_id, member_email)
+  values (uid, inv.owner_id, auth.email())
+  on conflict (member_id) do update
+    set owner_id = excluded.owner_id, member_email = excluded.member_email, joined_at = now();
+
+  return inv.owner_id;
+end;
+$$;
+revoke all on function public.accept_invite(uuid) from public, anon;
+grant execute on function public.accept_invite(uuid) to authenticated;
 ```
 
 ואז לעדכן `url` ו-`key` ב-`js/config.js`.

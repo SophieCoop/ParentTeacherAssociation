@@ -15,6 +15,7 @@ var Cloud = (function () {
   var META_KEY    = 'vaad-gan-sync-v1';
   var PENDING_KEY = 'vaad-gan-pending-signup-v1';
   var CONFIRMED_KEY = 'vaad-gan-confirmed-v1';
+  var MEMBERSHIP_KEY = 'vaad-gan-membership-v1';
   var PUSH_DELAY  = 1500;   // המתנה אחרי שינוי לפני העלאה
   var POLL_GUARD  = 5000;   // מרווח מזערי בין סנכרונים יזומים
 
@@ -26,6 +27,12 @@ var Cloud = (function () {
   var pushTimer = null;
   var lastAuto = 0;
   var listeners = [];
+  /* שותפים בוועד: חשבון שהצטרף דרך הזמנה (js/views/join.js) אינו
+     הבעלים של הגן שהוא רואה, ולכן כל פנייה לענן — התא המקומי,
+     ה-pull וה-push — צריכה ללכת אל user_id של הבעלים ולא של עצמו.
+     membership נשמר לכל חשבון בנפרד, בדיוק כמו meta, ונקרא ברגע
+     שההתחברות עולה — לפני שתא כלשהו נטען. */
+  var membership = null;   // { ownerId } או null (חשבון עצמאי)
 
   var LABELS = {
     'off':        { icon: '📴', text: 'מקומי בלבד',      tone: 'neutral' },
@@ -55,8 +62,16 @@ var Cloud = (function () {
     return {
       status: status, icon: l.icon, text: l.text, tone: l.tone,
       error: lastError, email: session && session.user ? session.user.email : '',
-      lastSyncAt: meta.lastSyncAt, signedIn: signedIn(), enabled: enabled()
+      lastSyncAt: meta.lastSyncAt, signedIn: signedIn(), enabled: enabled(),
+      isMember: !!membership
     };
+  }
+
+  /* מזהה השורה ב-vaad_state שאליה הולכים pull ו-push: השורה של
+     החשבון עצמו, חוץ ממי שהצטרף לגן של מישהי אחרת — הוא תמיד הבעלים */
+  function effectiveId() {
+    if (membership) return membership.ownerId;
+    return session && session.user && session.user.id;
   }
 
   /* ---------- אחסון מקומי של ההתחברות ---------- */
@@ -77,7 +92,43 @@ var Cloud = (function () {
         var parsed = JSON.parse(m);
         Object.keys(parsed).forEach(function (k) { meta[k] = parsed[k]; });
       }
+      loadMembership();
     } catch (e) {}
+  }
+
+  /* ---------- מצב השותפות, נשמר לכל חשבון בנפרד ----------
+     נקרא פעם אחת בטעינת העמוד (loadLocal), לפני שיש הזדמנות לפנות
+     לענן — ולכן הוא עשוי להיות מיושן רגע לפני ש-sign-in או קישור
+     ההתחברות מרעננים אותו מול השרת (resolveMembership). זה מספיק כדי
+     לפתוח מיד את התא המקומי הנכון, ולא רק אחרי תשובת רשת. */
+  function membershipKey() {
+    var id = session && session.user && session.user.id;
+    return id ? MEMBERSHIP_KEY + ':' + id : MEMBERSHIP_KEY;
+  }
+  function loadMembership() {
+    try {
+      var raw = localStorage.getItem(membershipKey());
+      membership = raw ? JSON.parse(raw) : null;
+    } catch (e) { membership = null; }
+  }
+  function saveMembership() {
+    try {
+      if (membership) localStorage.setItem(membershipKey(), JSON.stringify(membership));
+      else localStorage.removeItem(membershipKey());
+    } catch (e) {}
+  }
+  /* תשובת האמת היחידה היא השרת: מי שהוסר כשותף, או שמעולם לא היה
+     כזה, חוזר למצב עצמאי. נקרא בכל כניסה לחשבון — לא בכל סנכרון —
+     כי שינוי שותפות קורה דרך פעולה מפורשת (הזמנה שהתקבלה, עזיבה,
+     הסרה), ואלה כבר מעדכנות את הערך בעצמן באותו רגע. */
+  function resolveMembership() {
+    var uid = session && session.user && session.user.id;
+    if (!uid) { membership = null; saveMembership(); return Promise.resolve(); }
+    return api('/rest/v1/' + CloudConfig.membersTable + '?select=owner_id&member_id=eq.' + encodeURIComponent(uid))
+      .then(function (rows) {
+        membership = (rows && rows[0]) ? { ownerId: rows[0].owner_id } : null;
+        saveMembership();
+      }, function () { membership = null; });
   }
   /* ---------- הרשמה שממתינה לאישור במייל ----------
      חשבון שנפתח ועדיין לא אושר אינו מקבל טוקן, ולכן אין סשן ואין
@@ -199,8 +250,7 @@ var Cloud = (function () {
   }
 
   function enterAccount() {
-    var id = session && session.user && session.user.id;
-    adoptOrUseSlot(id);
+    adoptOrUseSlot(effectiveId());
     /* הסמן מול השרת נשמר לכל חשבון בנפרד, ולכן אפשר להמשיך ממנו
        במקום להשוות מאפס: מי שמתנתק ומתחבר בחזרה לא ייראה כאילו שני
        הצדדים השתנו, ולא יישאל על התנגשות שלא הייתה. שינוי שלא הספיק
@@ -295,11 +345,13 @@ var Cloud = (function () {
       throw err;
     }).then(function (d) {
       saveSession(d);
-      enterAccount();
-      return sync(true).then(function (r) {
-        // ההתחברות משנה את המסך שצריך להיות מוצג, לא רק את הנתונים
-        if (window.App && App.render) App.render();
-        return r;
+      return resolveMembership().then(function () {
+        enterAccount();
+        return sync(true).then(function (r) {
+          // ההתחברות משנה את המסך שצריך להיות מוצג, לא רק את הנתונים
+          if (window.App && App.render) App.render();
+          return r;
+        });
       });
     });
   }
@@ -331,15 +383,30 @@ var Cloud = (function () {
     } catch (e) { return ''; }
   }
 
-  function signUp(email, password) {
+  /* קישור החזרה של הרשמה/אישור מחדש, עם טוקן ההזמנה הממתין (אם יש)
+     כך שהצטרפות לוועד דרך קישור הזמנה (js/views/join.js) לא נשכחת
+     כשהאישור דורש מייל: הטוקן חוזר עם הקישור וממתין שם לקריאה
+     השנייה. Views.join נטען אחרי cloud.js, ולכן הבדיקה כאן ובזמן
+     הקריאה בפועל ולא בטעינת הסקריפט. */
+  function signUpRedirect() {
     var back = returnUrl();
+    if (!back) return back;
+    var token = (window.Views && Views.join && Views.join.pendingToken && Views.join.pendingToken()) || '';
+    if (!token) return back;
+    return back + (back.indexOf('?') > -1 ? '&' : '?') + 'invite=' + encodeURIComponent(token);
+  }
+
+  function signUp(email, password) {
+    var back = signUpRedirect();
     return api('/auth/v1/signup' + (back ? '?redirect_to=' + encodeURIComponent(back) : ''), {
       method: 'POST', auth: false, body: { email: email, password: password }
     }).then(function (d) {
       if (d && d.access_token) {
         saveSession(d);
-        enterAccount();
-        return sync(true).then(function () { return { confirmed: true }; });
+        return resolveMembership().then(function () {
+          enterAccount();
+          return sync(true).then(function () { return { confirmed: true }; });
+        });
       }
       // הפרויקט דורש אישור מייל. נרשם כאן כדי שנוכל לתזכר על כך בהמשך
       setPendingSignup(email);
@@ -349,7 +416,7 @@ var Cloud = (function () {
 
   /* שליחת מייל האישור מחדש — למי שהמייל לא הגיע אליו או שאבד */
   function resendConfirm(email) {
-    var back = returnUrl();
+    var back = signUpRedirect();
     return api('/auth/v1/resend' + (back ? '?redirect_to=' + encodeURIComponent(back) : ''), {
       method: 'POST', auth: false, body: { type: 'signup', email: email }
     }).then(function () { return true; }, function (err) {
@@ -386,6 +453,7 @@ var Cloud = (function () {
   function signOut() {
     var token = session && session.access_token;
     clearSession();
+    membership = null;
     /* הגן נשאר על המכשיר, אבל תחת המפתח של בעליו ולא בדרכו של החשבון
        הבא. המכשיר חוזר לתא המקומי — ריק ברוב המקרים, ואז האשף נפתח. */
     if (window.Store && Store.useSlot) Store.useSlot('');
@@ -418,7 +486,9 @@ var Cloud = (function () {
       return api('/rest/v1/rpc/delete_account', { method: 'POST', body: {} });
     }).then(function () {
       try { localStorage.removeItem(META_KEY + ':' + uid); } catch (e) {}
+      try { localStorage.removeItem(MEMBERSHIP_KEY + ':' + uid); } catch (e) {}
       clearSession();
+      membership = null;
       if (window.Store && Store.dropSlot) Store.dropSlot(uid);
       meta = { lastServerAt: null, dirty: false, lastSyncAt: null };
       conflict = null;
@@ -432,7 +502,7 @@ var Cloud = (function () {
   function pull() {
     return fresh().then(function () {
       return api('/rest/v1/' + CloudConfig.table +
-                 '?select=data,updated_at&user_id=eq.' + encodeURIComponent(session.user.id));
+                 '?select=data,updated_at&user_id=eq.' + encodeURIComponent(effectiveId()));
     }).then(function (rows) { return (rows && rows[0]) || null; });
   }
 
@@ -441,7 +511,7 @@ var Cloud = (function () {
       return api('/rest/v1/' + CloudConfig.table + '?on_conflict=user_id', {
         method: 'POST',
         headers: { 'Prefer': 'resolution=merge-duplicates,return=representation' },
-        body: [{ user_id: session.user.id, data: Store.state, device: deviceLabel() }]
+        body: [{ user_id: effectiveId(), data: Store.state, device: deviceLabel() }]
       });
     }).then(function (rows) {
       var row = rows && rows[0];
@@ -544,6 +614,123 @@ var Cloud = (function () {
     return push().then(function () { setStatus('synced'); }).catch(failed);
   }
 
+  /* ---------- שותפים בוועד ----------
+     הבעלים (מי שאינו שותף אצל אף אחד) מזמין, והצד השני מצטרף דרך
+     קישור — ראו js/views/join.js. מאותו רגע effectiveId מצביע על
+     הבעלים, ושני הצדדים קוראים וכותבים לאותה שורה.
+
+     ההזמנה והצטרפות אליה עוברות דרך RPC בשרת (get_invite_info,
+     accept_invite) ולא דרך טבלה גלויה: טוקן ההזמנה הוא ה"סיסמה" של
+     הקישור, ומדיניות RLS שהייתה חושפת שורה לפי טוקן הייתה חושפת גם
+     את הטבלה כולה למי שמבקש בלי לסנן (ראו README). */
+  function inviteUrl(token) {
+    var site = (window.SiteConfig && SiteConfig.url) ||
+               (typeof location !== 'undefined' ? location.origin : '');
+    return site.replace(/\/+$/, '') + '/?invite=' + encodeURIComponent(token);
+  }
+
+  /* ההזמנה התקפה האחרונה של הבעלים, אם יש — כדי שמסך ההגדרות יציג
+     קישור קיים במקום ליצור אחד חדש בכל פתיחה */
+  function myInvite() {
+    var uid = session && session.user && session.user.id;
+    if (!uid || membership) return Promise.resolve(null);
+    return fresh().then(function () {
+      return api('/rest/v1/' + CloudConfig.invitesTable +
+                 '?select=token,expires_at,used_at&owner_id=eq.' + encodeURIComponent(uid) +
+                 '&used_at=is.null&order=created_at.desc&limit=1');
+    }).then(function (rows) {
+      var row = rows && rows[0];
+      if (!row || new Date(row.expires_at).getTime() <= Date.now()) return null;
+      return row;
+    });
+  }
+
+  function createInvite() {
+    var uid = session && session.user && session.user.id;
+    if (!uid) return Promise.reject(new Error('לא מחוברים לחשבון'));
+    if (membership) return Promise.reject(new Error('אי אפשר להזמין כשאת/ה עצמך שותפ/ה בוועד אחר'));
+    var ganName = (Store.state.gan && Store.state.gan.name) || '';
+    return fresh().then(function () {
+      return api('/rest/v1/' + CloudConfig.invitesTable, {
+        method: 'POST',
+        headers: { 'Prefer': 'return=representation' },
+        body: [{ owner_id: uid, gan_name: ganName }]
+      });
+    }).then(function (rows) { return rows && rows[0]; });
+  }
+
+  function revokeInvite(token) {
+    return fresh().then(function () {
+      return api('/rest/v1/' + CloudConfig.invitesTable + '?token=eq.' + encodeURIComponent(token),
+        { method: 'DELETE' });
+    }).then(function () { return true; });
+  }
+
+  function listMembers() {
+    var uid = session && session.user && session.user.id;
+    if (!uid || membership) return Promise.resolve([]);
+    return fresh().then(function () {
+      return api('/rest/v1/' + CloudConfig.membersTable +
+                 '?select=member_id,member_email,joined_at&owner_id=eq.' + encodeURIComponent(uid) +
+                 '&order=joined_at.asc');
+    }).then(function (rows) { return rows || []; });
+  }
+
+  function removeMember(memberId) {
+    var uid = session && session.user && session.user.id;
+    return fresh().then(function () {
+      return api('/rest/v1/' + CloudConfig.membersTable +
+                 '?owner_id=eq.' + encodeURIComponent(uid) + '&member_id=eq.' + encodeURIComponent(memberId),
+        { method: 'DELETE' });
+    }).then(function () { return true; });
+  }
+
+  /* פרטי הזמנה לפי טוקן — לפני התחברות, ולכן בלי אימות (auth:false) */
+  function inviteInfo(token) {
+    return api('/rest/v1/rpc/get_invite_info', {
+      method: 'POST', auth: false, body: { p_token: token }
+    }).then(function (rows) { return (rows && rows[0]) || null; });
+  }
+
+  /* קבלת ההזמנה: השרת מסמן אותה כמנוצלת ורושם שותפות (accept_invite,
+     security definer — כך שאי אפשר לרשום שותפות לגן שלא הוזמנו
+     אליו, ואי אפשר לנצל את אותה הזמנה פעמיים). אחרי אישור השרת
+     עוברים לתא המקומי של הבעלים בלי "לאמץ" מה שהיה באשף — זו הצטרפות
+     לגן קיים, לא מיזוג איתו. */
+  function acceptInvite(token) {
+    return fresh().then(function () {
+      return api('/rest/v1/rpc/accept_invite', { method: 'POST', body: { p_token: token } });
+    }).then(function (ownerId) {
+      membership = { ownerId: ownerId };
+      saveMembership();
+      Store.useSlot(ownerId);
+      meta = { lastServerAt: null, dirty: false, lastSyncAt: null };
+      saveMeta();
+      return sync(true);
+    });
+  }
+
+  /* עזיבת גן משותף — הפוך מ-acceptInvite: מסירים את רשומת השותפות
+     וחוזרים לתא האישי (ריק ברוב המקרים, ואז האשף נפתח מחדש) */
+  function leaveShared() {
+    if (!membership) return Promise.resolve(false);
+    var uid = session.user.id;
+    return fresh().then(function () {
+      return api('/rest/v1/' + CloudConfig.membersTable + '?member_id=eq.' + encodeURIComponent(uid),
+        { method: 'DELETE' });
+    }).then(function () {
+      membership = null;
+      saveMembership();
+      Store.useSlot(uid);
+      var stored = readMeta();
+      meta = stored
+        ? { lastServerAt: stored.lastServerAt || null, dirty: !!stored.dirty, lastSyncAt: stored.lastSyncAt || null }
+        : { lastServerAt: null, dirty: hasLocalContent(), lastSyncAt: null };
+      saveMeta();
+      return sync(true).then(function () { return true; });
+    });
+  }
+
   /* ---------- שינוי מקומי ---------- */
   function onLocalChange() {
     if (!enabled() || !signedIn()) return;
@@ -610,9 +797,11 @@ var Cloud = (function () {
         expires_in: parseInt(back.expires_in, 10) || 3600,
         user: u
       });
-      enterAccount();
-      return sync(true).then(function () {
-        return { ok: true, type: back.type || '', email: u.email || '' };
+      return resolveMembership().then(function () {
+        enterAccount();
+        return sync(true).then(function () {
+          return { ok: true, type: back.type || '', email: u.email || '' };
+        });
       });
     }).catch(function (e) {
       /* הטוקן שהגיע מהקישור היה תקף, ולכן האישור עצמו הצליח — רק
@@ -657,8 +846,10 @@ var Cloud = (function () {
 
     if (!signedIn()) { setStatus('signed-out'); return null; }
     /* התא הפעיל וההתחברות נכתבים תמיד יחד, אבל בטעינה הראשונה אחרי
-       העדכון עוד אין מצביע — והנתונים שבמכשיר שייכים למי שמחובר. */
-    adoptOrUseSlot(session.user && session.user.id);
+       העדכון עוד אין מצביע — והנתונים שבמכשיר שייכים למי שמחובר.
+       membership נטען כבר ב-loadLocal מהמטמון של החשבון הזה — לא
+       מרענן מול השרת כאן, כדי שהתא הנכון ייפתח בלי להמתין לרשת. */
+    adoptOrUseSlot(effectiveId());
     setStatus(meta.dirty ? 'pending' : 'synced');
     sync();
     listen();
@@ -674,6 +865,11 @@ var Cloud = (function () {
     isConfirmed: isConfirmed, markConfirmed: markConfirmed,
     deleteAccount: deleteAccount,
     sync: sync, onLocalChange: onLocalChange,
-    getConflict: getConflict, resolveConflict: resolveConflict
+    getConflict: getConflict, resolveConflict: resolveConflict,
+    /* שותפים בוועד */
+    isMember: function () { return !!membership; },
+    inviteUrl: inviteUrl, myInvite: myInvite, createInvite: createInvite, revokeInvite: revokeInvite,
+    listMembers: listMembers, removeMember: removeMember,
+    inviteInfo: inviteInfo, acceptInvite: acceptInvite, leaveShared: leaveShared
   };
 })();

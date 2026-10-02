@@ -8,7 +8,7 @@
    כדי להריץ את האפליקציה מקומית בלבד, בלי ענן — לרוקן את url.
    ============================================================ */
 /* מספר הגרסה מוצג בהגדרות — כך אפשר לוודא שהמכשיר טען את הקוד העדכני */
-var APP_VERSION = '2026.09.17h';
+var APP_VERSION = '2026.10.02a';
 
 /* הטלפון שאליו נפתחת שיחת הוואטסאפ מהכפתור שבהגדרות ⚙️ → עזרה.
    מספר ישראלי רגיל, למשל '0501234567'.
@@ -69,5 +69,9 @@ var Features = {
 var CloudConfig = {
   url:   'https://pbqmbwxlumvrfgfzepdq.supabase.co',
   key:   'sb_publishable_hyFmuRw3lIGweNzgdrbYhw__tMGO-LF',
-  table: 'vaad_state'
+  table: 'vaad_state',
+  /* שותפים בוועד (ראו js/views/join.js): הזמנה ורשימת מי שמצטרף
+     לראות ולערוך את אותו גן */
+  invitesTable: 'vaad_invites',
+  membersTable: 'vaad_members'
 };

@@ -79,6 +79,14 @@ var App = (function () {
     var root = document.getElementById('app');
     var st = state();
 
+    /* קישור הזמנה פתוח קודם לכל מסך אחר — גם לאשף ההקמה וגם למי
+       שכבר יש לו גן משלו במכשיר הזה (js/views/join.js) */
+    if (window.Views && Views.join && Views.join.active()) {
+      root.className = 'shell shell-plain';
+      root.innerHTML = '<div class="page">' + Views.join.render() + '</div>';
+      return;
+    }
+
     /* כל עוד ההקמה לא הושלמה, האשף הוא המסך — גם למי שכבר מחובר
        לחשבון. פתיחת החשבון היא השלב הראשון באשף עצמו, ולכן תנאי
        שמדלג עליו בגלל התחברות היה זורק החוצה את מי שאישר את המייל
@@ -176,6 +184,8 @@ var App = (function () {
     // ספירת הכניסה — לפני הציור, כדי שההצעה שבמסך הבית תראה מספר מעודכן
     if (window.Install) Install.init();
     if (window.Reminders) Reminders.init();
+    // תופס ?invite= מהכתובת לפני ש-Cloud.init קורא את שאר הכתובת
+    if (window.Views && Views.join && Views.join.init) Views.join.init();
     // כשמגיעים מקישור האישור שבמייל, init מחזיר הבטחה עם תוצאת ההתחברות
     var fromEmail = null;
     if (window.Cloud) {

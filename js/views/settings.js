@@ -5,6 +5,81 @@ var Views = (typeof Views === 'undefined') ? {} : Views;
 
 Views.settings = (function () {
 
+  /* ---------- שותפים בוועד ----------
+     רשימת השותפים וקישור ההזמנה מגיעים מהענן, ולכן לא זמינים בזמן
+     הציור הראשון (סינכרוני) — נטענים ב-mount ומצוירים מחדש לתוך
+     partners-panel בלבד, בלי לצייר את כל המסך שוב. */
+  var partnersCache = { loaded: false, busy: false, members: [], invite: null };
+
+  function loadPartnersData() {
+    if (!Cloud.signedIn() || Cloud.isMember()) return;
+    if (partnersCache.loaded || partnersCache.busy) return;
+    partnersCache.busy = true;
+    Promise.all([Cloud.listMembers(), Cloud.myInvite()]).then(function (res) {
+      partnersCache.busy = false;
+      partnersCache.loaded = true;
+      partnersCache.members = res[0] || [];
+      partnersCache.invite = res[1] || null;
+      refreshPartnersPanel();
+    }, function () { partnersCache.busy = false; });
+  }
+
+  function refreshPartnersPanel() {
+    var el = document.getElementById('partners-panel');
+    if (el) el.innerHTML = partnersInner();
+  }
+
+  function partnersInner() {
+    if (!partnersCache.loaded) return '<p class="small muted mb0">טוען…</p>';
+    var html = '';
+
+    if (partnersCache.members.length) {
+      html += partnersCache.members.map(function (m) {
+        return '<div class="row" style="box-shadow:none;background:#FAF8FD">' +
+          '<div class="r-ico" style="background:#fff">🙋</div>' +
+          '<div class="r-body"><div class="r-name">' + UI.esc(m.member_email || 'שותף/ה') + '</div></div>' +
+          '<button class="linkbtn" data-action="pt-remove" data-id="' + UI.esc(m.member_id) + '">הסרה</button>' +
+          '</div>';
+      }).join('');
+    } else {
+      html += '<p class="small muted">עדיין אין שותפים בגישה.</p>';
+    }
+
+    if (partnersCache.invite) {
+      var url = Cloud.inviteUrl(partnersCache.invite.token);
+      html += '<div class="note mt" style="text-align:start"><div class="n-ico">🔗</div><div>' +
+        '<b>קישור הזמנה פעיל</b>' +
+        '<p class="small" style="word-break:break-all;margin:6px 0 0">' + UI.esc(url) + '</p>' +
+        '</div></div>' +
+        '<div class="btn-row mt">' +
+          '<button class="btn ghost" data-action="pt-share" data-url="' + UI.esc(url) + '">שליחת הקישור</button>' +
+          '<button class="btn soft" data-action="pt-revoke">ביטול ההזמנה</button>' +
+        '</div>';
+    } else {
+      html += '<button class="btn mt" data-action="pt-invite">יצירת קישור הזמנה</button>';
+    }
+    return html;
+  }
+
+  function partnersCard() {
+    if (!window.Cloud || !Cloud.enabled() || !Cloud.signedIn()) return '';
+
+    if (Cloud.isMember()) {
+      return '<div class="card">' +
+        '<div class="card-title"><h2>שותפים בוועד</h2></div>' +
+        '<p class="small muted">את/ה שותפ/ה בגן הזה — הנתונים משותפים עם מי שפתח/ה אותו.</p>' +
+        '<button class="btn danger mt" data-action="pt-leave">עזיבת הוועד המשותף</button>' +
+        '</div>';
+    }
+
+    return '<div class="card">' +
+      '<div class="card-title"><h2>שותפים בוועד</h2></div>' +
+      '<p class="small muted">כשיש יותר מוועד אחד בגן או בכיתה — אפשר להזמין עוד מישהי לראות ' +
+      'ולערוך יחד את אותם הנתונים, בלי להזין אותם פעמיים.</p>' +
+      '<div id="partners-panel">' + partnersInner() + '</div>' +
+      '</div>';
+  }
+
   /* הטלפון של בעל האתר, לכתיבה בוואטסאפ. יושב ב-js/config.js;
      בלעדיו אין למי לפנות, ועדיף בלי כפתור מאשר כפתור שאינו מגיע לאיש. */
   function supportPhone() {
@@ -35,6 +110,7 @@ Views.settings = (function () {
     var html = UI.pageHead({ title: 'הגדרות', subtitle: 'פרטי הוועד, דוח כספי ואיפוס', icon: '⚙️', tone: 'mint', back: 'home' });
 
     html += Views.account.panel();
+    html += partnersCard();
 
     html += '<div class="card">' +
       '<div class="card-title"><h2>פרטי הוועד</h2></div>' +
@@ -127,7 +203,60 @@ Views.settings = (function () {
 
   return {
     render: render,
+    mount: function () { loadPartnersData(); },
     actions: {
+      'pt-invite': function () {
+        UI.toast('יוצר קישור…');
+        Cloud.createInvite().then(function (row) {
+          partnersCache.invite = row;
+          refreshPartnersPanel();
+          UI.toast('הקישור מוכן ✓');
+        }, function (err) { UI.toast((err && err.message) || 'יצירת הקישור נכשלה'); });
+      },
+      'pt-revoke': function () {
+        if (!partnersCache.invite) return;
+        UI.confirmBox('ביטול ההזמנה?',
+          'מי שעדיין לא לחץ/ה על הקישור לא יוכל/תוכל להשתמש בו יותר.',
+          function () {
+            Cloud.revokeInvite(partnersCache.invite.token).then(function () {
+              partnersCache.invite = null;
+              refreshPartnersPanel();
+              UI.toast('ההזמנה בוטלה');
+            }, function (err) { UI.toast((err && err.message) || 'הביטול נכשל'); });
+          }, 'ביטול ההזמנה');
+      },
+      'pt-share': function (el) {
+        var url = el.getAttribute('data-url');
+        if (navigator.share) {
+          navigator.share({ title: 'הצטרפות לוועד', text: 'הוזמנת/ה להצטרף לוועד ב' + Lang.t('brand'), url: url })
+            .catch(function () {});
+        } else {
+          UI.copyText(url);
+        }
+      },
+      'pt-remove': function (el) {
+        var id = el.getAttribute('data-id');
+        UI.confirmBox('הסרת השותף/ה?',
+          'לא יראו ולא יוכלו לערוך יותר את נתוני הגן, עד שיוזמנו מחדש.',
+          function () {
+            Cloud.removeMember(id).then(function () {
+              partnersCache.loaded = false;
+              loadPartnersData();
+              UI.toast('הוסר/ה');
+            }, function (err) { UI.toast((err && err.message) || 'ההסרה נכשלה'); });
+          }, 'הסרה');
+      },
+      'pt-leave': function () {
+        UI.confirmBox('לעזוב את הוועד המשותף?',
+          'תחזרו לנתונים שלכם במכשיר הזה — ריקים אם עוד לא הקמתם גן משלכם.',
+          function () {
+            Cloud.leaveShared().then(function () {
+              App.setVs('wizStep', 0);
+              App.render();
+              UI.toast('עזבת את הוועד המשותף');
+            }, function (err) { UI.toast((err && err.message) || 'העזיבה נכשלה'); });
+          }, 'עזיבה');
+      },
       /* הסיור יושב על מסך הבית, ולכן חוזרים אליו לפני שמתחילים */
       'set-tour': function () {
         App.setView('home');
