@@ -331,6 +331,15 @@ var Cloud = (function () {
     } catch (e) { return ''; }
   }
 
+  /* Google מחזיר לכאן עם הטוקנים בכתובת, בדיוק כמו קישור האישור
+     שבמייל, ולכן החזרה עוברת באותו מסלול (takeAuthRedirect). הכתובת
+     חייבת להופיע ברשימת ה-Redirect URLs של Supabase. */
+  function signInWithGoogle() {
+    var back = returnUrl();
+    location.assign(CloudConfig.url + '/auth/v1/authorize?provider=google' +
+      (back ? '&redirect_to=' + encodeURIComponent(back) : ''));
+  }
+
   function signUp(email, password) {
     var back = returnUrl();
     return api('/auth/v1/signup' + (back ? '?redirect_to=' + encodeURIComponent(back) : ''), {
@@ -668,7 +677,7 @@ var Cloud = (function () {
   return {
     init: init, info: info, onChange: onChange,
     enabled: enabled, signedIn: signedIn,
-    signIn: signIn, signUp: signUp, signOut: signOut, resendConfirm: resendConfirm,
+    signIn: signIn, signInWithGoogle: signInWithGoogle, signUp: signUp, signOut: signOut, resendConfirm: resendConfirm,
     sendRecovery: sendRecovery, updatePassword: updatePassword,
     pendingSignup: pendingSignup, clearPendingSignup: clearPendingSignup,
     isConfirmed: isConfirmed, markConfirmed: markConfirmed,

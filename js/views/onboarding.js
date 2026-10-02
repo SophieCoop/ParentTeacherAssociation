@@ -529,6 +529,7 @@ Views.onboarding = (function () {
     /* ברירת המחדל — הטופס */
     return top +
       '<div class="card">' +
+        Views.account.googleHTML() +
         '<p class="small muted" style="margin:0 0 14px">' +
           'החשבון נפתח עכשיו, וכל מה שתזינו בשלבים הבאים נשמר בענן תוך כדי. ' +
           'כך הנתונים מגובים מהרגע הראשון, ואפשר להמשיך לעבוד מכל מכשיר.' +
@@ -546,7 +547,8 @@ Views.onboarding = (function () {
         '<button class="btn" data-action="wiz-cloud-signup">פתיחת חשבון והמשך</button>' +
         '<button class="btn ghost" style="margin-top:9px" data-action="acc-signin">כבר יש לי חשבון — התחברות</button>' +
       '</div>' +
-      '<div class="hint" style="text-align:center">כדי להשתמש באפליקציה צריך חשבון — מייל וסיסמה. ' +
+      '<div class="hint" style="text-align:center">כדי להשתמש באפליקציה צריך חשבון' +
+      (Features.googleSignIn ? '' : ' — מייל וסיסמה') + '. ' +
       'כך הנתונים נשמרים ולא הולכים לאיבוד.</div>';
   }
 
