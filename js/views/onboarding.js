@@ -312,17 +312,14 @@ Views.onboarding = (function () {
   /* ---------- תכנון תקציב (השלב האחרון) ---------- */
   /* סעיף של הצוות מוכפל במספר אנשי הצוות, לא במספר הילדים, ולכן
      הסכום לאדם שלו נכתב "לאיש צוות" — 250 ₪ "לילד" היה נקרא כאילו
-     כל הורה משלם 250 ₪. מתחתיו, כמה זה בכל זאת יוצא לכל ילד, כי
-     ההורים הם שמממנים גם אותו. */
+     כל הורה משלם 250 ₪. שאר הסעיפים מראים כמה הם יוצאים לכל ילד. */
   function perChild(b) {
     var bd = Calc.itemBreakdown(Store.state, b);
-    var full = Calc.itemAllocation(Store.state, b).full;
-    var html = '';
     if (bd.perPerson && b.audience === 'staff_edu') {
-      html += '<div class="r-sub">' + UI.money(bd.rate) + ' לאיש צוות</div>';
+      return '<div class="r-sub">' + UI.money(bd.rate) + ' לאיש צוות</div>';
     }
-    if (full > 0) html += '<div class="r-sub">' + UI.money(full) + ' לילד</div>';
-    return html;
+    var full = Calc.itemAllocation(Store.state, b).full;
+    return full > 0 ? '<div class="r-sub">' + UI.money(full) + ' לילד</div>' : '';
   }
 
   function stepBudget(n) {
