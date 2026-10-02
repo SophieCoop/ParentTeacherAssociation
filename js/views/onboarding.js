@@ -310,10 +310,19 @@ Views.onboarding = (function () {
   function setCount(kind, value) { Store.setHeadcount(kind, value); }
 
   /* ---------- תכנון תקציב (השלב האחרון) ---------- */
-  /* מה ההורה רואה בסוף — גם סעיף של הצוות מתחלק בין הילדים */
+  /* סעיף של הצוות מוכפל במספר אנשי הצוות, לא במספר הילדים, ולכן
+     הסכום לאדם שלו נכתב "לאיש צוות" — 250 ₪ "לילד" היה נקרא כאילו
+     כל הורה משלם 250 ₪. מתחתיו, כמה זה בכל זאת יוצא לכל ילד, כי
+     ההורים הם שמממנים גם אותו. */
   function perChild(b) {
+    var bd = Calc.itemBreakdown(Store.state, b);
     var full = Calc.itemAllocation(Store.state, b).full;
-    return full > 0 ? '<div class="r-sub">' + UI.money(full) + ' לילד</div>' : '';
+    var html = '';
+    if (bd.perPerson && b.audience === 'staff_edu') {
+      html += '<div class="r-sub">' + UI.money(bd.rate) + ' לאיש צוות</div>';
+    }
+    if (full > 0) html += '<div class="r-sub">' + UI.money(full) + ' לילד</div>';
+    return html;
   }
 
   function stepBudget(n) {
