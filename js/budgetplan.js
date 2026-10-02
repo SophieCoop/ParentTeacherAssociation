@@ -409,7 +409,39 @@ var BudgetPlan = (function () {
     return { add: add, update: update };
   }
 
+  /* ---------- תקציב התחלתי לאשף ההקמה ----------
+     מי שמגיע לשלב התקציב באשף כבר הקליד ילדים וצוות, ושלב ריק אחרי
+     כל זה הוא המקום שבו רוב המשתמשים עזבו — דילגו, וקיבלו מסך בית
+     שמראה ₪0. לכן השלב נפתח עם הסעיפים שכמעט כל ועד צריך, והמשתמש
+     רק מתקן. הסכומים הם לאדם: בגן גדול יותר הסכום גדל מעצמו. */
+  var STARTER = [
+    { choice: 'holidays',      holiday: 'purim',   aud: 'children', rate: 20 },
+    { choice: 'holidays',      holiday: 'pesach',  aud: 'children', rate: 20 },
+    { choice: 'holidays',      holiday: 'shavuot', aud: 'children', rate: 20 },
+    { choice: 'yearend_kids',                      aud: 'children', rate: 50 },
+    { choice: 'holidays',      holiday: 'pesach',  aud: 'staff',    rate: 100 },
+    { choice: 'yearend_staff',                     aud: 'staff',    rate: 250 }
+  ];
+
+  function starter(settings) {
+    return STARTER.map(function (s) {
+      var c = choice(s.choice);
+      var a = HOLIDAY_AUDS.filter(function (x) { return x.id === s.aud; })[0];
+      var h = s.holiday ? holiday(s.holiday) : null;
+      return {
+        categoryId: c.cat,
+        title: h ? h.gift + a.suffix : c.name,
+        date: h ? holidayDate(settings, h.id) : ((settings && settings.yearEnd) || ''),
+        note: '', audience: a.audience, basis: 'per_person', period: 'year', rate: s.rate,
+        periods: [], startDate: '', endDate: '',
+        /* אותו מפתח שהצעת החלוקה נותנת, כדי שתזהה את הסעיפים כשלה */
+        plan: h ? 'holidays:' + h.id + ':' + s.aud : c.id
+      };
+    });
+  }
+
   return {
+    starter: starter,
     CHOICES: CHOICES, HOLIDAYS: HOLIDAYS, HOLIDAY_AUDS: HOLIDAY_AUDS, audsOf: audsOf,
     DEFAULT_PICKS: DEFAULT_PICKS, DEFAULT_HOLIDAYS: DEFAULT_HOLIDAYS,
     choice: choice, holiday: holiday, keyOf: keyOf,

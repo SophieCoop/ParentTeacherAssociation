@@ -313,14 +313,21 @@ Views.onboarding = (function () {
   function stepBudget(n) {
     var items = Store.state.budgetItems;
     var total = Calc.budgetTotal(Store.state);
+    var kids = Calc.childCount(Store.state);
     return head(n, 'תכנון תקציב', 'סעיפי ההוצאה המתוכננים לשנה — אפשר לעדכן בכל רגע') +
       '<div class="summary"><div class="sum-top"><div>' +
         '<div class="sum-label">סה״כ תקציב מתוכנן</div>' +
-        '<div class="sum-value">' + UI.money(total) + '</div></div>' +
+        '<div class="sum-value">' + UI.money(total) + '</div>' +
+        (kids && total ? '<div class="sum-label">בערך ' + UI.money(Math.round(total / kids)) + ' לכל ילד</div>' : '') +
+        '</div>' +
         '<button class="btn sm" data-action="budget-add">+ סעיף</button></div></div>' +
+      (Store.state.settings.starterBudget && items.length ? '<div class="note mt"><div class="n-ico">✨</div><div>' +
+        '<b>הכנו לכם תקציב התחלתי</b>' +
+        'מתנות לחגים ולסוף השנה, לפי מספר הילדים והצוות. לחיצה על סעיף פותחת אותו לעריכה או למחיקה.' +
+        '</div></div>' : '') +
       (items.length ? items.map(function (b) {
         var cat = Store.category(b.categoryId);
-        return '<div class="row"><div class="r-ico" style="background:' + UI.toneVar(cat.tone) + '">' + UI.catIcon(cat) + '</div>' +
+        return '<div class="row" data-action="budget-edit" data-id="' + b.id + '" style="cursor:pointer"><div class="r-ico" style="background:' + UI.toneVar(cat.tone) + '">' + UI.catIcon(cat) + '</div>' +
           '<div class="r-body"><div class="r-name">' + UI.esc(b.title || cat.name) + '</div>' +
           '<div class="r-sub">' + UI.esc(cat.name) + (b.date ? ' · ' + UI.dateShort(b.date) : '') + '</div></div>' +
           '<div class="r-end"><div class="r-amount">' + UI.money(Calc.itemAmount(Store.state, b)) + '</div></div></div>';
@@ -535,6 +542,9 @@ Views.onboarding = (function () {
     if (n === 0) return splash();
     var list = stepList();
     var i = Math.min(Math.max(n, 1), list.length);
+    /* כאן ולא במעבר בין השלבים: לשלב התקציב מגיעים גם מהמשך הקמה
+       שנעצרה, ולא רק מכפתור "המשך" */
+    if (list[i - 1] === stepBudget) seedBudget();
     return list[i - 1](i);
   }
 
@@ -552,6 +562,16 @@ Views.onboarding = (function () {
   }
 
   /* מעבר לשלב הבא, או סיום אם זה היה האחרון */
+  /* פעם אחת בלבד, ורק כשאין עדיין סעיפים: מי שמחק את ההצעה, או
+     שכבר תכנן תקציב במכשיר אחר, לא יקבל אותה שוב */
+  function seedBudget() {
+    var st = Store.state;
+    if (st.settings.starterBudget || st.budgetItems.length) return;
+    BudgetPlan.starter(st.settings).forEach(function (b) { Store.add('budgetItems', b); });
+    st.settings.starterBudget = true;
+    Store.save();
+  }
+
   function advance() {
     var n = step();
     App.setVs('wizDetail', '');
