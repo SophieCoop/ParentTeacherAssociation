@@ -209,25 +209,31 @@ Views.budget = (function () {
     var cat = Store.category(b.categoryId);
     var amount = Calc.itemAmount(st, b);
     var bd = Calc.itemBreakdown(st, b);
-    var per = '';
-    if (bd.perPerson || bd.monthly) {
-      var bits = [UI.money(bd.rate)];
-      if (bd.perPerson) bits.push('× ' + Calc.audienceLabel(bd.audience, bd.count));
-      if (bd.monthly)   bits.push('× ' + bd.months + ' ח׳');
-      if (bd.customWindow) {
-        var pr = Calc.validPeriods(b);
-        bits.push(pr.length > 1
-          ? '(' + pr.length + ' תקופות)'
-          : '(' + UI.dateDayMonth(pr.length ? pr[0].start : b.startDate) + '–' +
-            UI.dateDayMonth(pr.length ? pr[0].end : b.endDate) + ')');
-      }
-      per = bits.join(' ');
-    } else if (b.audience === 'children' || b.audience === 'staff_edu') {
+    /* מימין מה שמייחד את הסעיף (חודשים, תקופות); משמאל, מתחת לסך,
+       הסכום לאדם. מספר הילדים או אנשי הצוות אינו חוזר בשורה — הוא
+       כתוב בכותרת הקבוצה, ובכל שורה הוא היה רק עוד רעש */
+    var unit = b.audience === 'children' ? ' לילד' : b.audience === 'staff_edu' ? ' לאיש צוות' : '';
+    var bits = [];
+    if (bd.monthly) bits.push(bd.months + ' ח׳');
+    if (bd.monthly && bd.customWindow) {
+      var pr = Calc.validPeriods(b);
+      bits.push(pr.length > 1
+        ? '(' + pr.length + ' תקופות)'
+        : '(' + UI.dateDayMonth(pr.length ? pr[0].start : b.startDate) + '–' +
+          UI.dateDayMonth(pr.length ? pr[0].end : b.endDate) + ')');
+    }
+    var per = bits.join(' ');
+    var each = '';
+    if (bd.perPerson) {
+      each = UI.money(bd.rate) + unit + (bd.monthly ? ' לחודש' : '');
+    } else if (unit) {
       /* סכום "לכולם" — כמו הסעיפים שהעזר יוצר — מוצג באותה צורה של
          סעיף לאדם, כדי שאפשר יהיה להשוות: כמה זה יוצא לכל אחד */
       var n = b.audience === 'children' ? Calc.childCount(st)
             : (Calc.itemStaffCount(st, b) !== null ? Calc.itemStaffCount(st, b) : Calc.staffCount(st));
-      if (n > 0 && amount > 0) per = '≈ ' + UI.money(Math.round(amount / n)) + ' × ' + Calc.audienceLabel(b.audience, n);
+      if (n > 0 && amount > 0) each = '≈ ' + UI.money(Math.round(amount / n)) + unit;
+    } else if (bd.monthly) {
+      each = UI.money(bd.rate) + ' לחודש';
     }
     var sel = selState();
     var on = !!(sel && sel[b.id]);
@@ -242,7 +248,8 @@ Views.budget = (function () {
           (b.date ? '<span class="bi-date">🗓 ' + UI.dateShort(b.date) + '</span>' : '') +
           '<span class="bi-sub">' + (per ? per + ' · ' : '') + UI.esc(cat.name) + '</span>' +
         '</span>' +
-        '<span class="bi-end"><b class="bi-amount">' + UI.money(amount) + '</b>' +
+        '<span class="bi-end"><span class="bi-amt"><b class="bi-amount">' + UI.money(amount) + '</b>' +
+          (each ? '<span class="bi-each">' + each + '</span>' : '') + '</span>' +
           (sel ? '' : '<span class="bi-chev">' + UI.svgIcon('chevron', 16) + '</span>') + '</span>' +
       '</button>' +
       '</div>';
