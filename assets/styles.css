@@ -2091,3 +2091,9 @@ table.ye-tbl td:nth-child(2),table.ye-tbl td:nth-child(3){text-align:center}
 .google-btn{display:flex;align-items:center;justify-content:center;gap:10px}
 .or-line{display:flex;align-items:center;gap:10px;margin:14px 0;color:var(--muted);font-size:12.5px}
 .or-line::before,.or-line::after{content:"";flex:1;height:1px;background:var(--line)}
+
+/* כרטיס "הצעד הבא" במסך הבית */
+.next-step{border:1.5px solid var(--purple)}
+.next-step .ns-label{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px}
+.next-step .ns-title{font-size:17px;font-weight:800;color:var(--ink)}
+.next-step .ns-text{font-size:13.5px;color:var(--muted);margin:6px 0 12px;line-height:1.5}
