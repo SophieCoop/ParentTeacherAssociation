@@ -39,6 +39,10 @@ Views.home = (function () {
         '</div></div></div>';
     }
 
+    /* הצעד הבא — מה לעשות עכשיו, כל עוד משהו מהעבודה הבסיסית חסר.
+       לפני הקופה, כי בתחילת הדרך הקופה מראה ₪0 ואינה אומרת דבר */
+    if (window.NextStep) html += NextStep.cardHTML(st);
+
     /* תזכורות — שבוע ויומיים לפני כל תאריך, ובקשת ההרשאה להתראות */
     if (window.Reminders) html += Reminders.bannerHTML();
 
