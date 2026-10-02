@@ -32,10 +32,18 @@ Views.join = (function () {
     } catch (e) {}
   }
 
+  /* דגל היכולת — ראו js/config.js, Features.sharedCommittee. כל עוד
+     הוא כבוי, קישור הזמנה לא נתפס ולא נשמר כלל: מי שפותח אותו רואה
+     את האפליקציה הרגילה, לא מסך הצטרפות חצי-עובד. */
+  function enabled() {
+    return typeof Cloud !== 'undefined' && Cloud.partnersEnabled && Cloud.partnersEnabled();
+  }
+
   /* נקרא פעם אחת מ-App.init, לפני ש-Cloud.init קורא את שאר הכתובת —
      כך שגם טוקן שמצטרף לקישור האישור (חוזר כפרמטר רגיל בכתובת, לא
      אחרי ה-#) נתפס באותה דרך כמו הקישור המקורי */
   function init() {
+    if (!enabled()) return;
     try {
       var m = (location.search || '').match(/[?&]invite=([^&]+)/);
       if (!m) return;
@@ -45,7 +53,7 @@ Views.join = (function () {
   }
 
   function pendingToken() { return readPending(); }
-  function active() { return !!readPending(); }
+  function active() { return enabled() && !!readPending(); }
 
   function clearPending() {
     writePending('');

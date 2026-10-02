@@ -12,7 +12,7 @@ Views.settings = (function () {
   var partnersCache = { loaded: false, busy: false, members: [], invite: null };
 
   function loadPartnersData() {
-    if (!Cloud.signedIn() || Cloud.isMember()) return;
+    if (!Cloud.partnersEnabled() || !Cloud.signedIn() || Cloud.isMember()) return;
     if (partnersCache.loaded || partnersCache.busy) return;
     partnersCache.busy = true;
     Promise.all([Cloud.listMembers(), Cloud.myInvite()]).then(function (res) {
@@ -62,7 +62,7 @@ Views.settings = (function () {
   }
 
   function partnersCard() {
-    if (!window.Cloud || !Cloud.enabled() || !Cloud.signedIn()) return '';
+    if (!window.Cloud || !Cloud.enabled() || !Cloud.signedIn() || !Cloud.partnersEnabled()) return '';
 
     if (Cloud.isMember()) {
       return '<div class="card">' +

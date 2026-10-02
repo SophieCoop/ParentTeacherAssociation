@@ -68,6 +68,9 @@ function setup(membershipRow) {
   for (const f of ['js/config.js', 'js/store.js', 'js/cloud.js']) {
     vm.runInContext(fs.readFileSync(path.join(__dirname, '..', f), 'utf8'), ctx);
   }
+  // הטסטים האלה בודקים את מנגנון השותפות עצמו, לא את דגל היכולת
+  // (Features.sharedCommittee, כבוי כברירת מחדל — ראו js/config.js)
+  ctx.Features.sharedCommittee = true;
   return { ctx: ctx, calls: calls };
 }
 
@@ -136,5 +139,20 @@ test('createInvite is refused for someone who is themselves a member', () => {
   const { ctx } = setup(OWNER);
   return ctx.Cloud.signIn('m@example.com', 'secret123').then(function () {
     return assert.rejects(ctx.Cloud.createInvite());
+  });
+});
+
+test('the whole feature is blocked while its flag is off, not just hidden from the menu', () => {
+  const { ctx } = setup(null);
+  ctx.Features.sharedCommittee = false;   // ברירת המחדל האמיתית — כבוי
+  return ctx.Cloud.signIn('m@example.com', 'secret123').then(function () {
+    assert.equal(ctx.Cloud.partnersEnabled(), false);
+    return Promise.all([
+      assert.rejects(ctx.Cloud.createInvite()),
+      assert.rejects(ctx.Cloud.acceptInvite('some-token')),
+      ctx.Cloud.inviteInfo('some-token').then(function (info) {
+        assert.equal(info, null, 'a token lookup is a no-op while the flag is off, not a real RPC call');
+      })
+    ]);
   });
 });

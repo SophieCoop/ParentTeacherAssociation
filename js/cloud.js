@@ -623,6 +623,13 @@ var Cloud = (function () {
      accept_invite) ולא דרך טבלה גלויה: טוקן ההזמנה הוא ה"סיסמה" של
      הקישור, ומדיניות RLS שהייתה חושפת שורה לפי טוקן הייתה חושפת גם
      את הטבלה כולה למי שמבקש בלי לסנן (ראו README). */
+  /* דגל היכולת — ראו js/config.js. נבדק כאן, לא רק במסכים: מי שמגיע
+     לפעולה בדרך אחרת (קישור ישן, קריאה ישירה) נחסם גם הוא, לא רק
+     הכפתור נעלם מהתפריט. */
+  function partnersEnabled() {
+    return typeof Features !== 'undefined' && !!Features && Features.sharedCommittee === true;
+  }
+
   function inviteUrl(token) {
     var site = (window.SiteConfig && SiteConfig.url) ||
                (typeof location !== 'undefined' ? location.origin : '');
@@ -646,6 +653,7 @@ var Cloud = (function () {
   }
 
   function createInvite() {
+    if (!partnersEnabled()) return Promise.reject(new Error('היכולת הזו עוד לא פעילה'));
     var uid = session && session.user && session.user.id;
     if (!uid) return Promise.reject(new Error('לא מחוברים לחשבון'));
     if (membership) return Promise.reject(new Error('אי אפשר להזמין כשאת/ה עצמך שותפ/ה בוועד אחר'));
@@ -687,6 +695,7 @@ var Cloud = (function () {
 
   /* פרטי הזמנה לפי טוקן — לפני התחברות, ולכן בלי אימות (auth:false) */
   function inviteInfo(token) {
+    if (!partnersEnabled()) return Promise.resolve(null);
     return api('/rest/v1/rpc/get_invite_info', {
       method: 'POST', auth: false, body: { p_token: token }
     }).then(function (rows) { return (rows && rows[0]) || null; });
@@ -698,6 +707,7 @@ var Cloud = (function () {
      עוברים לתא המקומי של הבעלים בלי "לאמץ" מה שהיה באשף — זו הצטרפות
      לגן קיים, לא מיזוג איתו. */
   function acceptInvite(token) {
+    if (!partnersEnabled()) return Promise.reject(new Error('היכולת הזו עוד לא פעילה'));
     return fresh().then(function () {
       return api('/rest/v1/rpc/accept_invite', { method: 'POST', body: { p_token: token } });
     }).then(function (ownerId) {
@@ -867,6 +877,7 @@ var Cloud = (function () {
     sync: sync, onLocalChange: onLocalChange,
     getConflict: getConflict, resolveConflict: resolveConflict,
     /* שותפים בוועד */
+    partnersEnabled: partnersEnabled,
     isMember: function () { return !!membership; },
     inviteUrl: inviteUrl, myInvite: myInvite, createInvite: createInvite, revokeInvite: revokeInvite,
     listMembers: listMembers, removeMember: removeMember,
