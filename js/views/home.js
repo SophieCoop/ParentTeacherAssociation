@@ -43,9 +43,6 @@ Views.home = (function () {
        לפני הקופה, כי בתחילת הדרך הקופה מראה ₪0 ואינה אומרת דבר */
     if (window.NextStep) html += NextStep.cardHTML(st);
 
-    /* תזכורות — שבוע ויומיים לפני כל תאריך, ובקשת ההרשאה להתראות */
-    if (window.Reminders) html += Reminders.bannerHTML();
-
     /* הקופה — כמה נותר מתוך כל מה שנאסף, ומי עדיין לא שילם */
     html += potHTML(ov, col);
 

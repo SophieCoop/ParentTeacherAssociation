@@ -130,7 +130,7 @@ var Reminders = (function () {
     });
   }
 
-  /* ---------- הפס במסך הבית ---------- */
+  /* ---------- הפס במסך התאריכים ---------- */
   function bannerHTML() {
     var list = due(Store.state);
     var ask = permission() === 'default';

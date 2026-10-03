@@ -114,6 +114,11 @@ Views.dates = (function () {
 
     html += UI.addBtn({ act: 'date-add', label: 'הוספת תאריך', cls: 'mb-add' });
 
+    /* תזכורות — שבוע ויומיים לפני כל תאריך, ובקשת ההרשאה להתראות.
+       יושב כאן ולא במסך הבית: ההתראות הן על התאריכים, ומי שמגיע לכאן
+       הוא מי שאכפת לו מהם. במסך הבית זה היה עוד פס שדוחק את הקופה. */
+    if (window.Reminders) html += Reminders.bannerHTML();
+
     var list = items();
     if (!list.length) {
       return html + UI.empty({ art: 'dates', title: 'אין תאריכים',
